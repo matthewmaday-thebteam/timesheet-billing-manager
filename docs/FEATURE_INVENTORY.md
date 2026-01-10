@@ -1,0 +1,227 @@
+# Timesheet & Billing Manager - Feature Inventory
+
+## Feature Summary
+
+| ID | Feature | Status | Priority | Component |
+|----|---------|--------|----------|-----------|
+| F001 | Dashboard Overview | Complete | P0 | Dashboard.tsx |
+| F002 | Stats Cards | Complete | P0 | StatsOverview.tsx |
+| F003 | Date Range Filter | Complete | P0 | DateRangeFilter.tsx |
+| F004 | Under Hours Alert | Complete | P0 | UnderHoursAlert.tsx |
+| F005 | Project Cards | Complete | P0 | ProjectCard.tsx |
+| F006 | Resource Rows | Complete | P0 | ResourceRow.tsx |
+| F007 | Task List | Complete | P0 | TaskList.tsx |
+| F008 | Bulgarian Holiday Calculator | Complete | P0 | holidays.ts |
+| F009 | Working Days Calculation | Complete | P0 | holidays.ts |
+| F010 | Data Aggregation | Complete | P0 | calculations.ts |
+| F011 | Supabase Integration | Complete | P0 | supabase.ts |
+| F012 | Manual Data Refresh | Complete | P1 | Dashboard.tsx |
+
+---
+
+## Detailed Feature Descriptions
+
+### F001: Dashboard Overview
+**Component**: `src/components/Dashboard.tsx`
+**Description**: Main container component that orchestrates the entire dashboard view.
+
+| Capability | Details |
+|------------|---------|
+| Layout | Header + main content area |
+| State Management | Date range state with useState |
+| Data Fetching | useTimesheetData hook integration |
+| Error Handling | Error message display |
+| Loading State | Spinner with loading message |
+
+---
+
+### F002: Stats Cards
+**Component**: `src/components/StatsOverview.tsx`
+**Description**: Four summary statistic cards displayed at top of dashboard.
+
+| Card | Data Source | Color |
+|------|-------------|-------|
+| Total Hours | Sum of all project minutes / 60 | Blue |
+| Projects | projects.length | Green |
+| Resources | resources.length | Purple |
+| Under Hours | underHoursItems.length | Red (if > 0) |
+
+---
+
+### F003: Date Range Filter
+**Component**: `src/components/DateRangeFilter.tsx`
+**Description**: Three-mode date selection interface.
+
+| Mode | UI Element | Behavior |
+|------|------------|----------|
+| Current Month | Button | Sets range to 1st of month → end of month |
+| Select Month | Prev/Next arrows + month display | Navigate months |
+| Custom Range | Two date inputs | Manual start/end selection |
+
+**State**:
+- `mode`: 'current' | 'month' | 'custom'
+- `selectedMonth`: Date for month navigation
+
+---
+
+### F004: Under Hours Alert
+**Component**: `src/components/UnderHoursAlert.tsx`
+**Description**: Warning banner showing resources below hour target.
+
+| Element | Content |
+|---------|---------|
+| Header | Count of under-hours resources + prorated target |
+| Subheader | Monthly target + working days info |
+| Resource List | Name, actual hours, expected hours, deficit |
+
+**Props**:
+- `items`: UnderHoursResource[]
+- `expectedHours`: number
+- `workingDaysElapsed`: number
+- `workingDaysTotal`: number
+
+---
+
+### F005: Project Cards
+**Component**: `src/components/ProjectCard.tsx`
+**Description**: Expandable card showing project summary.
+
+| State | Display |
+|-------|---------|
+| Collapsed | Project name, resource count, total hours |
+| Expanded | + ResourceRow for each team member |
+
+**Interaction**: Click to expand/collapse
+
+---
+
+### F006: Resource Rows
+**Component**: `src/components/ResourceRow.tsx`
+**Description**: Expandable row within project showing resource hours.
+
+| State | Display |
+|-------|---------|
+| Collapsed | Resource name, hours on project |
+| Expanded | + TaskList showing all tasks |
+
+**Interaction**: Click to expand/collapse
+
+---
+
+### F007: Task List
+**Component**: `src/components/TaskList.tsx`
+**Description**: Detailed task breakdown with daily entries.
+
+| Element | Content |
+|---------|---------|
+| Task Row | Task name, total hours |
+| Date Entries | Up to 5 dates shown, "+N more" for overflow |
+
+---
+
+### F008: Bulgarian Holiday Calculator
+**Component**: `src/utils/holidays.ts`
+**Description**: Dynamic calculation of Bulgarian public holidays.
+
+| Function | Purpose |
+|----------|---------|
+| `getOrthodoxEaster(year)` | Calculate Orthodox Easter date |
+| `getBulgarianHolidays(year)` | Return all holidays for a year |
+| `isBulgarianHoliday(date)` | Check if date is a holiday |
+
+**Holidays Calculated**:
+- 10 fixed-date holidays
+- 4 Easter-related holidays (variable dates)
+
+---
+
+### F009: Working Days Calculation
+**Component**: `src/utils/holidays.ts`
+**Description**: Calculate working days excluding weekends and holidays.
+
+| Function | Purpose |
+|----------|---------|
+| `isWorkingDay(date)` | Check if date is a working day |
+| `countWorkingDays(start, end)` | Count working days in range |
+| `getWorkingDaysInMonth(date)` | Get total and elapsed working days |
+
+---
+
+### F010: Data Aggregation
+**Component**: `src/utils/calculations.ts`
+**Description**: Transform raw timesheet entries into hierarchical views.
+
+| Function | Output |
+|----------|--------|
+| `aggregateByProject()` | ProjectSummary[] with nested resources/tasks |
+| `aggregateByResource()` | ResourceSummary[] with tasks (for under-hours) |
+| `getUnderHoursResources()` | UnderHoursResource[] filtered list |
+| `getProratedExpectedHours()` | Calculated expected hours |
+
+---
+
+### F011: Supabase Integration
+**Component**: `src/lib/supabase.ts` + `src/hooks/useTimesheetData.ts`
+**Description**: Database connection and data fetching.
+
+| Element | Purpose |
+|---------|---------|
+| Supabase Client | Configured with URL + service role key |
+| useTimesheetData Hook | Fetch, cache, and aggregate data |
+
+**Query**: `timesheet_daily_rollups` filtered by date range
+
+---
+
+### F012: Manual Data Refresh
+**Component**: `src/components/Dashboard.tsx`
+**Description**: Button to manually reload data.
+
+| Element | Behavior |
+|---------|----------|
+| Refresh Button | Calls `refetch()` from useTimesheetData |
+| Location | Dashboard header, right side |
+
+---
+
+## Component Dependency Map
+
+```
+App.tsx
+└── Dashboard.tsx
+    ├── DateRangeFilter.tsx
+    ├── UnderHoursAlert.tsx
+    ├── StatsOverview.tsx
+    └── ProjectCard.tsx
+        └── ResourceRow.tsx
+            └── TaskList.tsx
+
+Hooks:
+└── useTimesheetData.ts
+    └── supabase.ts
+
+Utils:
+├── calculations.ts
+│   └── holidays.ts
+└── holidays.ts
+```
+
+---
+
+## File Inventory
+
+| File | Type | Lines | Purpose |
+|------|------|-------|---------|
+| `src/App.tsx` | Component | 7 | Root component |
+| `src/components/Dashboard.tsx` | Component | 85 | Main dashboard |
+| `src/components/DateRangeFilter.tsx` | Component | 95 | Date selection |
+| `src/components/StatsOverview.tsx` | Component | 45 | Stats cards |
+| `src/components/UnderHoursAlert.tsx` | Component | 60 | Alert banner |
+| `src/components/ProjectCard.tsx` | Component | 55 | Project display |
+| `src/components/ResourceRow.tsx` | Component | 42 | Resource display |
+| `src/components/TaskList.tsx` | Component | 35 | Task display |
+| `src/hooks/useTimesheetData.ts` | Hook | 55 | Data fetching |
+| `src/lib/supabase.ts` | Config | 10 | DB client |
+| `src/utils/calculations.ts` | Utility | 215 | Aggregation logic |
+| `src/utils/holidays.ts` | Utility | 115 | Holiday logic |
+| `src/types/index.ts` | Types | 40 | TypeScript interfaces |
