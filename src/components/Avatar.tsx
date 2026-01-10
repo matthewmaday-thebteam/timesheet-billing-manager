@@ -14,7 +14,7 @@ export function Avatar({ name = 'Matthew Maday', size = 32 }: AvatarProps) {
 
   return (
     <div
-      className="rounded-full flex items-center justify-center text-[#FFFFFF] font-medium"
+      className="rounded-full flex items-center justify-center text-[#FFFFFF] font-medium border border-[#EAEAEA]"
       style={{
         width: size,
         height: size,

@@ -28,7 +28,7 @@ export function Dashboard() {
     setRatesVersion(v => v + 1);
   }, []);
 
-  const { projects, resources, loading, error, refetch } = useTimesheetData(dateRange);
+  const { entries, projects, resources, loading, error, refetch } = useTimesheetData(dateRange);
 
   // Use the earlier of: end of selected range or today
   const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
@@ -127,6 +127,7 @@ export function Dashboard() {
         isOpen={isUnderHoursModalOpen}
         onClose={() => setIsUnderHoursModalOpen(false)}
         items={underHoursItems}
+        entries={entries}
         expectedHours={expectedHours}
         workingDaysElapsed={workingDays.elapsed}
         workingDaysTotal={workingDays.total}

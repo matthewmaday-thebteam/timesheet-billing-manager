@@ -40,3 +40,26 @@ export interface DateRange {
 }
 
 export type DateFilterMode = 'current' | 'month' | 'custom';
+
+// Employee/Resource Management Types
+export type EmploymentType = 'full-time' | 'part-time';
+
+export interface Resource {
+  id: string;
+  external_label: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  teams_account: string | null;
+  employment_type: EmploymentType;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResourceFormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  teams_account: string;
+  employment_type: EmploymentType;
+}
