@@ -102,11 +102,11 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                    resource.employment_type === 'full-time'
+                    resource.employment_type?.name === 'Full-time'
                       ? 'bg-[#F5F5F5] text-[#000000]'
                       : 'bg-[#FAFAFA] text-[#666666]'
                   }`}>
-                    {resource.employment_type === 'full-time' ? 'Full-time' : 'Part-time'}
+                    {resource.employment_type?.name || 'Unknown'}
                   </span>
                 </td>
                 <td className="px-4 py-3">

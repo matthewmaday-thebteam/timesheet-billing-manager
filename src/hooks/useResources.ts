@@ -24,7 +24,10 @@ export function useResources(): UseResourcesResult {
     try {
       const { data, error: queryError } = await supabase
         .from('resources')
-        .select('*')
+        .select(`
+          *,
+          employment_type:employment_types(*)
+        `)
         .order('external_label', { ascending: true });
 
       if (queryError) {
@@ -57,7 +60,7 @@ export function useResources(): UseResourcesResult {
               last_name: data.last_name || null,
               email: data.email || null,
               teams_account: data.teams_account || null,
-              employment_type: data.employment_type,
+              employment_type_id: data.employment_type_id,
               updated_at: new Date().toISOString(),
             }
           : r
@@ -72,7 +75,7 @@ export function useResources(): UseResourcesResult {
           last_name: data.last_name || null,
           email: data.email || null,
           teams_account: data.teams_account || null,
-          employment_type: data.employment_type,
+          employment_type_id: data.employment_type_id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id);

@@ -26,8 +26,10 @@ export function useTimesheetData(dateRange: DateRange): UseTimesheetDataResult {
       const startDate = format(dateRange.start, 'yyyy-MM-dd');
       const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
+      // Query the normalized view instead of raw table
+      // v_timesheet_entries ensures proper defaults and filters out invalid rows
       const { data, error: queryError } = await supabase
-        .from('timesheet_daily_rollups')
+        .from('v_timesheet_entries')
         .select('*')
         .gte('work_date', startDate)
         .lte('work_date', endDate)

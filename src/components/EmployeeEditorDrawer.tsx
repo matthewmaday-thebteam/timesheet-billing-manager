@@ -7,6 +7,7 @@ interface EmployeeEditorDrawerProps {
   resource: Resource | null;
   onSave: (id: string, data: ResourceFormData) => Promise<boolean>;
   isSaving: boolean;
+  employmentTypes: EmploymentType[];
 }
 
 interface FormErrors {
@@ -21,13 +22,14 @@ export function EmployeeEditorDrawer({
   resource,
   onSave,
   isSaving,
+  employmentTypes,
 }: EmployeeEditorDrawerProps) {
   const [formData, setFormData] = useState<ResourceFormData>({
     first_name: '',
     last_name: '',
     email: '',
     teams_account: '',
-    employment_type: 'full-time',
+    employment_type_id: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -40,7 +42,7 @@ export function EmployeeEditorDrawer({
         last_name: resource.last_name || '',
         email: resource.email || '',
         teams_account: resource.teams_account || '',
-        employment_type: resource.employment_type || 'full-time',
+        employment_type_id: resource.employment_type_id || '',
       });
       setErrors({});
       setTouched({});
@@ -231,12 +233,16 @@ export function EmployeeEditorDrawer({
                     Employment Type
                   </label>
                   <select
-                    value={formData.employment_type}
-                    onChange={(e) => handleInputChange('employment_type', e.target.value as EmploymentType)}
+                    value={formData.employment_type_id}
+                    onChange={(e) => handleInputChange('employment_type_id', e.target.value)}
                     className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
                   >
-                    <option value="full-time">Full-time</option>
-                    <option value="part-time">Part-time</option>
+                    <option value="">Select employment type</option>
+                    {employmentTypes.map((et) => (
+                      <option key={et.id} value={et.id}>
+                        {et.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useResources } from '../../hooks/useResources';
+import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorDrawer } from '../EmployeeEditorDrawer';
 import type { Resource } from '../../types';
 
 export function EmployeesPage() {
   const { resources, loading, error, updateResource, isUpdating } = useResources();
+  const { employmentTypes } = useEmploymentTypes();
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -52,13 +54,13 @@ export function EmployeesPage() {
         <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
           <p className="text-[12px] text-[#666666] mb-1">Full-time</p>
           <p className="text-2xl font-semibold text-[#000000]">
-            {resources.filter(r => r.employment_type === 'full-time').length}
+            {resources.filter(r => r.employment_type?.name === 'Full-time').length}
           </p>
         </div>
         <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
           <p className="text-[12px] text-[#666666] mb-1">Part-time</p>
           <p className="text-2xl font-semibold text-[#000000]">
-            {resources.filter(r => r.employment_type === 'part-time').length}
+            {resources.filter(r => r.employment_type?.name === 'Part-time').length}
           </p>
         </div>
         <div className={`p-4 rounded-lg border ${
@@ -101,6 +103,7 @@ export function EmployeesPage() {
         resource={selectedResource}
         onSave={updateResource}
         isSaving={isUpdating}
+        employmentTypes={employmentTypes}
       />
     </div>
   );
