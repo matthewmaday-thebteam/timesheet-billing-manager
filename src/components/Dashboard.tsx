@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
+import { getBillingRates, calculateTotalRevenue } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
 import { StatsOverview } from './StatsOverview';
 import { UnderHoursAlert } from './UnderHoursAlert';
 import { ProjectCard } from './ProjectCard';
+import { BillingRatesTable } from './BillingRatesTable';
 import type { DateRange } from '../types';
 
 export function Dashboard() {
@@ -17,6 +19,12 @@ export function Dashboard() {
     };
   });
 
+  // Force re-render when billing rates change
+  const [ratesVersion, setRatesVersion] = useState(0);
+  const handleRatesChange = useCallback(() => {
+    setRatesVersion(v => v + 1);
+  }, []);
+
   const { projects, resources, loading, error, refetch } = useTimesheetData(dateRange);
 
   // Use the earlier of: end of selected range or today
@@ -24,6 +32,12 @@ export function Dashboard() {
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
   const underHoursItems = getUnderHoursResources(resources, effectiveEndDate);
+
+  // Calculate revenue (re-calculates when ratesVersion changes)
+  const rates = getBillingRates();
+  const totalRevenue = calculateTotalRevenue(projects, rates);
+  // Use ratesVersion to ensure React sees this as a dependency
+  void ratesVersion;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -68,6 +82,12 @@ export function Dashboard() {
               projects={projects}
               resources={resources}
               underHoursCount={underHoursItems.length}
+              totalRevenue={totalRevenue}
+            />
+
+            <BillingRatesTable
+              projects={projects}
+              onRatesChange={handleRatesChange}
             />
 
             <div className="space-y-3">
