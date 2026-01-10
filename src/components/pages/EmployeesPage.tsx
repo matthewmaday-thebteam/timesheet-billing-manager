@@ -2,23 +2,27 @@ import { useState } from 'react';
 import { useResources } from '../../hooks/useResources';
 import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
-import { EmployeeEditorDrawer } from '../EmployeeEditorDrawer';
+import { EmployeeEditorModal } from '../EmployeeEditorModal';
 import type { Resource } from '../../types';
 
 export function EmployeesPage() {
   const { resources, loading, error, updateResource, isUpdating } = useResources();
   const { employmentTypes } = useEmploymentTypes();
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRowClick = (resource: Resource) => {
     setSelectedResource(resource);
-    setIsDrawerOpen(true);
+    setIsModalOpen(true);
   };
 
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
     setSelectedResource(null);
+  };
+
+  const handleSaveResource = async (id: string, data: import('../../types').ResourceFormData) => {
+    return updateResource(id, data, employmentTypes);
   };
 
   const incompleteCount = resources.filter(r => !r.email || !r.first_name).length;
@@ -46,9 +50,9 @@ export function EmployeesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-          <p className="text-[12px] text-[#666666] mb-1">Total Employees</p>
+          <p className="text-[12px] text-[#666666] mb-1">Total</p>
           <p className="text-2xl font-semibold text-[#000000]">{resources.length}</p>
         </div>
         <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
@@ -63,12 +67,24 @@ export function EmployeesPage() {
             {resources.filter(r => r.employment_type?.name === 'Part-time').length}
           </p>
         </div>
+        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
+          <p className="text-[12px] text-[#666666] mb-1">Contractor</p>
+          <p className="text-2xl font-semibold text-[#000000]">
+            {resources.filter(r => r.employment_type?.name === 'Contractor').length}
+          </p>
+        </div>
+        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
+          <p className="text-[12px] text-[#666666] mb-1">Vendor</p>
+          <p className="text-2xl font-semibold text-[#000000]">
+            {resources.filter(r => r.employment_type?.name === 'Vendor').length}
+          </p>
+        </div>
         <div className={`p-4 rounded-lg border ${
           incompleteCount > 0
             ? 'bg-[#FFF7ED] border-[#FFEDD5]'
             : 'bg-[#FFFFFF] border-[#EAEAEA]'
         }`}>
-          <p className="text-[12px] text-[#666666] mb-1">Incomplete Records</p>
+          <p className="text-[12px] text-[#666666] mb-1">Incomplete</p>
           <p className={`text-2xl font-semibold ${
             incompleteCount > 0 ? 'text-[#C2410C]' : 'text-[#000000]'
           }`}>
@@ -96,12 +112,12 @@ export function EmployeesPage() {
         onRowClick={handleRowClick}
       />
 
-      {/* Employee Editor Drawer */}
-      <EmployeeEditorDrawer
-        isOpen={isDrawerOpen}
-        onClose={handleCloseDrawer}
+      {/* Employee Editor Modal */}
+      <EmployeeEditorModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
         resource={selectedResource}
-        onSave={updateResource}
+        onSave={handleSaveResource}
         isSaving={isUpdating}
         employmentTypes={employmentTypes}
       />

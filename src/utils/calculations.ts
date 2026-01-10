@@ -13,7 +13,10 @@ export function getWeekKey(dateStr: string): string {
   return format(weekStart, 'yyyy-MM-dd');
 }
 
-export function aggregateByProject(entries: TimesheetEntry[]): ProjectSummary[] {
+export function aggregateByProject(
+  entries: TimesheetEntry[],
+  displayNameLookup?: Map<string, string>
+): ProjectSummary[] {
   const projectMap = new Map<string, {
     totalMinutes: number;
     resourceMap: Map<string, {
@@ -82,6 +85,7 @@ export function aggregateByProject(entries: TimesheetEntry[]): ProjectSummary[] 
       }
       resources.push({
         userName,
+        displayName: displayNameLookup?.get(userName) || userName,
         totalMinutes: resourceData.totalMinutes,
         weeklyMinutes: resourceData.weeklyMinutes,
         tasks: tasks.sort((a, b) => b.totalMinutes - a.totalMinutes),
@@ -97,7 +101,10 @@ export function aggregateByProject(entries: TimesheetEntry[]): ProjectSummary[] 
   return projects.sort((a, b) => b.totalMinutes - a.totalMinutes);
 }
 
-export function aggregateByResource(entries: TimesheetEntry[]): ResourceSummary[] {
+export function aggregateByResource(
+  entries: TimesheetEntry[],
+  displayNameLookup?: Map<string, string>
+): ResourceSummary[] {
   const resourceMap = new Map<string, {
     totalMinutes: number;
     weeklyMinutes: Map<string, number>;
@@ -147,6 +154,7 @@ export function aggregateByResource(entries: TimesheetEntry[]): ResourceSummary[
     }
     resources.push({
       userName,
+      displayName: displayNameLookup?.get(userName) || userName,
       totalMinutes: data.totalMinutes,
       weeklyMinutes: data.weeklyMinutes,
       tasks: tasks.sort((a, b) => b.totalMinutes - a.totalMinutes),
@@ -158,6 +166,7 @@ export function aggregateByResource(entries: TimesheetEntry[]): ResourceSummary[
 
 export interface UnderHoursResource {
   userName: string;
+  displayName: string;
   actualHours: number;
   expectedHours: number;
   deficit: number;
@@ -187,6 +196,7 @@ export function getUnderHoursResources(
       const actualHours = resource.totalMinutes / 60;
       underHours.push({
         userName: resource.userName,
+        displayName: resource.displayName,
         actualHours,
         expectedHours: proratedHours,
         deficit: proratedHours - actualHours,

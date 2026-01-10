@@ -149,7 +149,7 @@ export function UnderHoursModal({
                       />
                     </svg>
                     <div className="w-2 h-2 rounded-full bg-[#EE0000]" />
-                    <span className="text-sm font-medium text-[#000000]">{item.userName}</span>
+                    <span className="text-sm font-medium text-[#000000]">{item.displayName}</span>
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-medium text-[#000000]">

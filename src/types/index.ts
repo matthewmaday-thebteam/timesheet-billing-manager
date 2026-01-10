@@ -23,6 +23,7 @@ export interface TaskSummary {
 
 export interface ResourceSummary {
   userName: string;
+  displayName: string;
   totalMinutes: number;
   weeklyMinutes: Map<string, number>; // week start date -> minutes
   tasks: TaskSummary[];

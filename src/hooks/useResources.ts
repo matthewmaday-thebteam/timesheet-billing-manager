@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Resource, ResourceFormData } from '../types';
+import type { Resource, ResourceFormData, EmploymentType } from '../types';
 
 interface UseResourcesResult {
   resources: Resource[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
-  updateResource: (id: string, data: ResourceFormData) => Promise<boolean>;
+  updateResource: (id: string, data: ResourceFormData, employmentTypes?: EmploymentType[]) => Promise<boolean>;
   isUpdating: boolean;
 }
 
@@ -46,8 +46,11 @@ export function useResources(): UseResourcesResult {
     fetchResources();
   }, [fetchResources]);
 
-  const updateResource = useCallback(async (id: string, data: ResourceFormData): Promise<boolean> => {
+  const updateResource = useCallback(async (id: string, data: ResourceFormData, employmentTypes?: EmploymentType[]): Promise<boolean> => {
     setIsUpdating(true);
+
+    // Find the employment type object for the optimistic update
+    const newEmploymentType = employmentTypes?.find(et => et.id === data.employment_type_id);
 
     // Optimistic update - update local state immediately
     const previousResources = [...resources];
@@ -61,6 +64,7 @@ export function useResources(): UseResourcesResult {
               email: data.email || null,
               teams_account: data.teams_account || null,
               employment_type_id: data.employment_type_id,
+              employment_type: newEmploymentType || r.employment_type,
               updated_at: new Date().toISOString(),
             }
           : r

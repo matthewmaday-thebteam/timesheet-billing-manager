@@ -25,7 +25,7 @@ export function ResourceRow({ resource }: ResourceRowProps) {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span className="text-sm font-medium text-[#000000]">{resource.userName}</span>
+          <span className="text-sm font-medium text-[#000000]">{resource.displayName}</span>
         </div>
         <span className="text-sm font-medium text-[#000000]">
           {minutesToHours(resource.totalMinutes)}h

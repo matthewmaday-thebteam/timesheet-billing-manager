@@ -7,6 +7,8 @@ interface ModalProps {
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   stickyHeader?: React.ReactNode;
+  footer?: React.ReactNode;
+  centerTitle?: boolean;
 }
 
 const maxWidthClasses = {
@@ -25,6 +27,8 @@ export function Modal({
   children,
   maxWidth = '2xl',
   stickyHeader,
+  footer,
+  centerTitle = false,
 }: ModalProps) {
   const handleEscape = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -46,40 +50,65 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-[1000] overflow-hidden">
       {/* Backdrop with blur */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
+        className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-200 ease-out"
         onClick={onClose}
       />
 
       {/* Modal container */}
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div
-          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] flex flex-col overflow-hidden`}
+          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-[#FFFFFF] rounded-xl flex flex-col overflow-hidden`}
+          style={{
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header - Always Sticky */}
-          <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-[#EAEAEA] bg-[#FFFFFF]">
-            <h2 className="text-lg font-semibold text-[#000000]">{title}</h2>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
-            >
-              <svg
-                className="w-5 h-5 text-[#666666]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {/* Header */}
+          <div className={`flex-shrink-0 flex items-center ${centerTitle ? 'justify-center relative' : 'justify-between'} p-6 border-b border-[#EAEAEA] bg-[#FFFFFF]`}>
+            {centerTitle && (
+              <button
+                onClick={onClose}
+                className="absolute left-6 p-1 rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5 text-[#666666]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+            <h2 className="text-lg font-semibold text-[#000000]">{title}</h2>
+            {!centerTitle && (
+              <button
+                onClick={onClose}
+                className="p-1 rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
+              >
+                <svg
+                  className="w-5 h-5 text-[#666666]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Optional Sticky Header Section (for summary cards, etc.) */}
@@ -90,7 +119,14 @@ export function Modal({
           )}
 
           {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">{children}</div>
+          <div className="flex-1 overflow-y-auto p-8 scrollbar-thin">{children}</div>
+
+          {/* Footer - Optional action buttons area */}
+          {footer && (
+            <div className="flex-shrink-0 flex items-center justify-end gap-3 px-8 py-4 border-t border-[#EAEAEA] bg-[#FAFAFA]">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

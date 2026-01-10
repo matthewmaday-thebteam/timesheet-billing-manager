@@ -13,7 +13,7 @@ export function NavItem({ label, isActive, onClick }: NavItemProps) {
         transition-all duration-200 ease-out
         ${isActive ? 'text-[#000000]' : 'text-[#666666] hover:text-[#000000]'}
         hover:bg-[#F5F5F5]
-        focus:outline-none focus:ring-1 focus:ring-black
+        focus:outline-none
       `}
     >
       {label}

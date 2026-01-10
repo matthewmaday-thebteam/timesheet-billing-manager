@@ -101,11 +101,7 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                   <span className="text-sm text-[#666666]">{resource.teams_account || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                    resource.employment_type?.name === 'Full-time'
-                      ? 'bg-[#F5F5F5] text-[#000000]'
-                      : 'bg-[#FAFAFA] text-[#666666]'
-                  }`}>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#F5F5F5] text-[#000000]">
                     {resource.employment_type?.name || 'Unknown'}
                   </span>
                 </td>
@@ -118,10 +114,7 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                       Incomplete
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[#F0FDF4] text-[#166534]">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                    <span className="text-xs font-medium text-[#666666]">
                       Complete
                     </span>
                   )}
