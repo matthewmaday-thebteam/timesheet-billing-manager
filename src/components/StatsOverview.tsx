@@ -35,7 +35,7 @@ export function StatsOverview({ projects, resources, underHoursCount, totalReven
       color: 'bg-purple-50 text-purple-700 border-purple-200',
     },
     {
-      label: 'Under Hours',
+      label: 'Resources Under Target',
       value: underHoursCount.toString(),
       color: underHoursCount > 0
         ? 'bg-red-50 text-red-700 border-red-200'
