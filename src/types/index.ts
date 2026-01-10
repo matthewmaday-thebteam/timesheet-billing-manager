@@ -70,3 +70,19 @@ export interface ResourceFormData {
   teams_account: string;
   employment_type_id: string;
 }
+
+// Bulgarian Holidays Types
+export interface BulgarianHoliday {
+  id: string;
+  holiday_name: string;
+  holiday_date: string;
+  is_system_generated: boolean;
+  year: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HolidayFormData {
+  holiday_name: string;
+  holiday_date: string;
+}
