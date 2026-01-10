@@ -16,6 +16,9 @@
 | F010 | Data Aggregation | Complete | P0 | calculations.ts |
 | F011 | Supabase Integration | Complete | P0 | supabase.ts |
 | F012 | Manual Data Refresh | Complete | P1 | Dashboard.tsx |
+| F013 | Billing Rates Table | Complete | P1 | BillingRatesTable.tsx |
+| F014 | Revenue Calculation | Complete | P1 | billing.ts |
+| F015 | Revenue Stats Card | Complete | P1 | StatsOverview.tsx |
 
 ---
 
@@ -37,14 +40,15 @@
 
 ### F002: Stats Cards
 **Component**: `src/components/StatsOverview.tsx`
-**Description**: Four summary statistic cards displayed at top of dashboard.
+**Description**: Five summary statistic cards displayed at top of dashboard.
 
 | Card | Data Source | Color |
 |------|-------------|-------|
 | Total Hours | Sum of all project minutes / 60 | Blue |
-| Projects | projects.length | Green |
+| Total Revenue | Sum of (hours × rate) per project | Green |
+| Projects | projects.length | Indigo |
 | Resources | resources.length | Purple |
-| Under Hours | underHoursItems.length | Red (if > 0) |
+| Resources Under Target | underHoursItems.length | Red (if > 0) / Gray |
 
 ---
 
@@ -184,6 +188,51 @@
 
 ---
 
+### F013: Billing Rates Table
+**Component**: `src/components/BillingRatesTable.tsx`
+**Description**: Expandable table for viewing and editing project billing rates.
+
+| Feature | Description |
+|---------|-------------|
+| Expandable | Collapsed by default, shows total revenue summary |
+| Inline Edit | Click rate to edit, Enter/Escape to save/cancel |
+| Auto-save | Rates persist to localStorage on change |
+| Sorting | Projects sorted by revenue (highest first) |
+
+**Props**:
+- `projects`: ProjectSummary[]
+- `onRatesChange`: () => void (callback to trigger re-render)
+
+---
+
+### F014: Revenue Calculation
+**Component**: `src/utils/billing.ts`
+**Description**: Billing rate management and revenue calculation utilities.
+
+| Function | Purpose |
+|----------|---------|
+| `getBillingRates()` | Load rates from localStorage with defaults |
+| `setProjectRate()` | Save rate for a project |
+| `calculateProjectRevenue()` | Calculate revenue for one project |
+| `calculateTotalRevenue()` | Calculate revenue across all projects |
+| `formatCurrency()` | Format number as USD currency string |
+
+**Default Rates**: Pre-configured for known clients (FoodCycleScience, Neocurrency, etc.)
+
+---
+
+### F015: Revenue Stats Card
+**Component**: `src/components/StatsOverview.tsx`
+**Description**: Total Revenue card in stats overview.
+
+| Property | Value |
+|----------|-------|
+| Color | Green (bg-green-50, text-green-700) |
+| Format | USD currency ($X,XXX.XX) |
+| Position | Second card (after Total Hours) |
+
+---
+
 ## Component Dependency Map
 
 ```
@@ -192,6 +241,7 @@ App.tsx
     ├── DateRangeFilter.tsx
     ├── UnderHoursAlert.tsx
     ├── StatsOverview.tsx
+    ├── BillingRatesTable.tsx
     └── ProjectCard.tsx
         └── ResourceRow.tsx
             └── TaskList.tsx
@@ -203,6 +253,7 @@ Hooks:
 Utils:
 ├── calculations.ts
 │   └── holidays.ts
+├── billing.ts
 └── holidays.ts
 ```
 
@@ -213,15 +264,17 @@ Utils:
 | File | Type | Lines | Purpose |
 |------|------|-------|---------|
 | `src/App.tsx` | Component | 7 | Root component |
-| `src/components/Dashboard.tsx` | Component | 85 | Main dashboard |
+| `src/components/Dashboard.tsx` | Component | 110 | Main dashboard |
 | `src/components/DateRangeFilter.tsx` | Component | 95 | Date selection |
-| `src/components/StatsOverview.tsx` | Component | 45 | Stats cards |
+| `src/components/StatsOverview.tsx` | Component | 60 | Stats cards (5 cards including revenue) |
 | `src/components/UnderHoursAlert.tsx` | Component | 60 | Alert banner |
 | `src/components/ProjectCard.tsx` | Component | 55 | Project display |
 | `src/components/ResourceRow.tsx` | Component | 42 | Resource display |
 | `src/components/TaskList.tsx` | Component | 35 | Task display |
+| `src/components/BillingRatesTable.tsx` | Component | 180 | Billing rates editor |
 | `src/hooks/useTimesheetData.ts` | Hook | 55 | Data fetching |
 | `src/lib/supabase.ts` | Config | 10 | DB client |
 | `src/utils/calculations.ts` | Utility | 215 | Aggregation logic |
 | `src/utils/holidays.ts` | Utility | 115 | Holiday logic |
+| `src/utils/billing.ts` | Utility | 55 | Billing rates & revenue |
 | `src/types/index.ts` | Types | 40 | TypeScript interfaces |

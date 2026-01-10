@@ -24,11 +24,12 @@ The Timesheet & Billing Manager is a web-based dashboard application that provid
 ### 2.1 Dashboard Overview
 
 #### 2.1.1 Stats Cards
-The dashboard displays four summary statistics:
+The dashboard displays five summary statistics:
 - **Total Hours**: Sum of all hours logged in the selected period
+- **Total Revenue**: Calculated revenue based on hours × project billing rates
 - **Projects**: Count of unique projects with logged time
 - **Resources**: Count of unique team members with logged time
-- **Under Hours**: Count of resources below the prorated monthly target
+- **Resources Under Target**: Count of resources below the prorated monthly target
 
 #### 2.1.2 Date Range Selection
 Users can filter data by three modes:
@@ -169,11 +170,49 @@ Project (Total Hours)
 - Project hours = Sum of all resource hours on that project
 - Task hours = Sum of all daily entries for that task
 
+### 5.5 Billing Rates
+- Rates stored per project in localStorage
+- Default rates applied for known projects on first load
+- Revenue = Hours × Hourly Rate
+
 ---
 
-## 6. Future Considerations
+## 6. Billing & Revenue
 
-### 6.1 Potential Enhancements
+### 6.1 Billing Rates Table
+An expandable section allowing users to view and edit hourly billing rates per project.
+
+| Feature | Description |
+|---------|-------------|
+| View Mode | Collapsed by default, shows total revenue |
+| Edit Mode | Click rate to inline edit, Enter/Escape to save/cancel |
+| Persistence | Rates saved to localStorage |
+| Sorting | Projects sorted by revenue (highest first) |
+
+### 6.2 Default Billing Rates
+| Project | Rate (USD/hr) |
+|---------|---------------|
+| FoodCycleScience | $60.00 |
+| One Wealth Management | $80.00 |
+| Neocurrency | $52.36 |
+| Crossroads | $50.00 |
+| ShoreCapital | $50.00 |
+| Yavor-M | $50.00 |
+| MPS 2.0 | $45.00 |
+| Client Services | $45.00 |
+| ACE | $40.00 |
+
+### 6.3 Revenue Calculation
+- **Per Project**: `Hours × Rate`
+- **Total Revenue**: Sum of all project revenues
+- **Display**: USD currency format ($X,XXX.XX)
+- **Updates**: Real-time recalculation when rates change
+
+---
+
+## 7. Future Considerations
+
+### 7.1 Potential Enhancements
 - Email/Slack notifications for under-hours alerts
 - Export to CSV/PDF
 - Trend charts and graphs
@@ -181,6 +220,6 @@ Project (Total Hours)
 - Billing rate integration
 - Invoice generation
 
-### 6.2 Scalability
+### 7.2 Scalability
 - Current architecture supports hundreds of resources
 - May need pagination for very large datasets
