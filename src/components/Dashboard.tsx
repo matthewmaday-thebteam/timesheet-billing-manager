@@ -5,9 +5,9 @@ import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } 
 import { getBillingRates, calculateTotalRevenue } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
 import { StatsOverview } from './StatsOverview';
-import { UnderHoursAlert } from './UnderHoursAlert';
 import { ProjectCard } from './ProjectCard';
 import { BillingRatesTable } from './BillingRatesTable';
+import { UnderHoursModal } from './UnderHoursModal';
 import type { DateRange } from '../types';
 
 export function Dashboard() {
@@ -18,6 +18,9 @@ export function Dashboard() {
       end: endOfMonth(now),
     };
   });
+
+  // Modal state for under hours
+  const [isUnderHoursModalOpen, setIsUnderHoursModalOpen] = useState(false);
 
   // Force re-render when billing rates change
   const [ratesVersion, setRatesVersion] = useState(0);
@@ -40,71 +43,94 @@ export function Dashboard() {
   void ratesVersion;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Timesheet Dashboard</h1>
+    <>
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Page Header */}
+        <section>
+          <div className="flex justify-between items-end mb-4">
+            <h2 className="text-lg font-semibold tracking-tight text-[#000000]">
+              Timesheet Dashboard
+            </h2>
             <button
               onClick={refetch}
-              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors text-[#000000] focus:ring-1 focus:ring-black focus:outline-none"
             >
               Refresh
             </button>
           </div>
-        </div>
-      </header>
+        </section>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         <DateRangeFilter dateRange={dateRange} onChange={setDateRange} />
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            Error loading data: {error}
+          <div className="p-4 bg-[#FFFFFF] border border-[#EE0000] rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#EE0000]" />
+              <span className="text-sm text-[#EE0000]">Error loading data: {error}</span>
+            </div>
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600">Loading timesheet data...</span>
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#EAEAEA] border-t-[#000000]" />
+            <span className="ml-3 text-sm text-[#666666]">Loading timesheet data...</span>
           </div>
         ) : (
           <>
-            <UnderHoursAlert
-              items={underHoursItems}
-              expectedHours={expectedHours}
-              workingDaysElapsed={workingDays.elapsed}
-              workingDaysTotal={workingDays.total}
-            />
-
             <StatsOverview
               projects={projects}
               resources={resources}
               underHoursCount={underHoursItems.length}
               totalRevenue={totalRevenue}
+              onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
             />
 
-            <BillingRatesTable
-              projects={projects}
-              onRatesChange={handleRatesChange}
-            />
+            {/* Billing Rates Section */}
+            <section>
+              <div className="flex justify-between items-end mb-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#000000]">
+                  Billing & Revenue
+                </h2>
+              </div>
+              <BillingRatesTable
+                projects={projects}
+                onRatesChange={handleRatesChange}
+              />
+            </section>
 
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-gray-900">Projects</h2>
+            {/* Projects Section */}
+            <section>
+              <div className="flex justify-between items-end mb-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#000000]">
+                  Projects
+                </h2>
+              </div>
               {projects.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
-                  No timesheet data found for this period
+                <div className="text-center py-8 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
+                  <p className="text-sm text-[#666666]">No timesheet data found for this period</p>
                 </div>
               ) : (
-                projects.map((project) => (
-                  <ProjectCard key={project.projectName} project={project} />
-                ))
+                <div className="space-y-3">
+                  {projects.map((project) => (
+                    <ProjectCard key={project.projectName} project={project} />
+                  ))}
+                </div>
               )}
-            </div>
+            </section>
           </>
         )}
       </main>
-    </div>
+
+      {/* Under Hours Modal */}
+      <UnderHoursModal
+        isOpen={isUnderHoursModalOpen}
+        onClose={() => setIsUnderHoursModalOpen(false)}
+        items={underHoursItems}
+        expectedHours={expectedHours}
+        workingDaysElapsed={workingDays.elapsed}
+        workingDaysTotal={workingDays.total}
+      />
+    </>
   );
 }

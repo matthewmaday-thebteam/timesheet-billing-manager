@@ -42,34 +42,34 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="flex flex-wrap items-center gap-4 p-6 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
       <div className="flex gap-2">
         <button
           onClick={() => handleModeChange('current')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
             mode === 'current'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-[#000000] text-[#FFFFFF]'
+              : 'bg-[#FAFAFA] text-[#000000] border border-[#EAEAEA] hover:bg-[#F5F5F5]'
           }`}
         >
           Current Month
         </button>
         <button
           onClick={() => handleModeChange('month')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
             mode === 'month'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-[#000000] text-[#FFFFFF]'
+              : 'bg-[#FAFAFA] text-[#000000] border border-[#EAEAEA] hover:bg-[#F5F5F5]'
           }`}
         >
           Select Month
         </button>
         <button
           onClick={() => handleModeChange('custom')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
             mode === 'custom'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-[#000000] text-[#FFFFFF]'
+              : 'bg-[#FAFAFA] text-[#000000] border border-[#EAEAEA] hover:bg-[#F5F5F5]'
           }`}
         >
           Custom Range
@@ -80,20 +80,20 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleMonthChange('prev')}
-            className="p-1.5 rounded hover:bg-gray-100"
+            className="p-1.5 rounded-md border border-[#EAEAEA] hover:bg-[#FAFAFA] transition-colors focus:ring-1 focus:ring-black focus:outline-none"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-medium min-w-[120px] text-center">
+          <span className="text-sm font-medium text-[#000000] min-w-[120px] text-center">
             {format(selectedMonth, 'MMMM yyyy')}
           </span>
           <button
             onClick={() => handleMonthChange('next')}
-            className="p-1.5 rounded hover:bg-gray-100"
+            className="p-1.5 rounded-md border border-[#EAEAEA] hover:bg-[#FAFAFA] transition-colors focus:ring-1 focus:ring-black focus:outline-none"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -106,19 +106,19 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
             type="date"
             value={format(dateRange.start, 'yyyy-MM-dd')}
             onChange={(e) => handleCustomDateChange('start', e.target.value)}
-            className="px-2 py-1.5 text-sm border border-gray-300 rounded-md"
+            className="px-3 py-1.5 text-sm border border-[#EAEAEA] rounded-md bg-[#FFFFFF] text-[#000000] focus:ring-1 focus:ring-black focus:outline-none"
           />
-          <span className="text-gray-500">to</span>
+          <span className="text-[#666666]">/</span>
           <input
             type="date"
             value={format(dateRange.end, 'yyyy-MM-dd')}
             onChange={(e) => handleCustomDateChange('end', e.target.value)}
-            className="px-2 py-1.5 text-sm border border-gray-300 rounded-md"
+            className="px-3 py-1.5 text-sm border border-[#EAEAEA] rounded-md bg-[#FFFFFF] text-[#000000] focus:ring-1 focus:ring-black focus:outline-none"
           />
         </div>
       )}
 
-      <div className="ml-auto text-sm text-gray-500">
+      <div className="ml-auto text-sm text-[#666666]">
         {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
       </div>
     </div>

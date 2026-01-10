@@ -62,14 +62,14 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-6 text-left hover:bg-[#FAFAFA] transition-colors focus:ring-1 focus:ring-black focus:outline-none"
       >
         <div className="flex items-center gap-3">
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-[#666666] transition-transform ${isExpanded ? 'rotate-90' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -77,60 +77,63 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div>
-            <h3 className="font-semibold text-gray-900">Billing Rates & Revenue</h3>
-            <p className="text-sm text-gray-500">Click to edit hourly rates per project</p>
+            <h3 className="text-sm font-semibold text-[#000000]">Billing Rates & Revenue</h3>
+            <p className="text-[12px] text-[#666666]">Click to edit hourly rates per project</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-lg font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
-          <div className="text-xs text-gray-500">total revenue</div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#50E3C2]" />
+            <span className="text-lg font-semibold text-[#000000]">{formatCurrency(totalRevenue)}</span>
+          </div>
+          <div className="text-[12px] text-[#666666]">total revenue</div>
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-100">
+        <div className="border-t border-[#EAEAEA]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-[#FAFAFA]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[12px] font-medium text-[#666666] uppercase tracking-wider">
                   Project
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-[12px] font-medium text-[#666666] uppercase tracking-wider">
                   Hours
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-[12px] font-medium text-[#666666] uppercase tracking-wider">
                   Rate ($/hr)
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-[12px] font-medium text-[#666666] uppercase tracking-wider">
                   Revenue
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#EAEAEA]">
               {sortedProjects.map((project) => {
                 const rate = rates[project.projectName] ?? 0;
                 const revenue = calculateProjectRevenue(project, rates);
                 const isEditing = editingProject === project.projectName;
 
                 return (
-                  <tr key={project.projectName} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                  <tr key={project.projectName} className="hover:bg-[#FAFAFA] transition-colors">
+                    <td className="px-6 py-4 text-sm text-[#000000]">
                       {project.projectName}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                    <td className="px-6 py-4 text-sm text-[#666666] text-right">
                       {minutesToHours(project.totalMinutes)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-6 py-4 text-right">
                       {isEditing ? (
                         <div className="flex items-center justify-end gap-1">
-                          <span className="text-gray-400">$</span>
+                          <span className="text-[#666666]">$</span>
                           <input
                             type="number"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, project.projectName)}
                             onBlur={() => handleEditSave(project.projectName)}
-                            className="w-20 px-2 py-1 text-sm text-right border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-20 px-2 py-1 text-sm text-right border border-[#000000] rounded-md bg-[#FFFFFF] focus:ring-1 focus:ring-black focus:outline-none"
                             step="0.01"
                             min="0"
                             autoFocus
@@ -139,8 +142,8 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
                       ) : (
                         <button
                           onClick={() => handleEditStart(project.projectName)}
-                          className={`px-2 py-1 text-sm rounded hover:bg-gray-100 transition-colors ${
-                            rate === 0 ? 'text-red-500' : 'text-gray-700'
+                          className={`px-2 py-1 text-sm rounded-md hover:bg-[#FAFAFA] border border-transparent hover:border-[#EAEAEA] transition-colors ${
+                            rate === 0 ? 'text-[#EE0000]' : 'text-[#000000]'
                           }`}
                           title="Click to edit"
                         >
@@ -148,8 +151,8 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium text-right">
-                      <span className={revenue > 0 ? 'text-green-600' : 'text-gray-400'}>
+                    <td className="px-6 py-4 text-sm font-medium text-right">
+                      <span className={revenue > 0 ? 'text-[#000000]' : 'text-[#888888]'}>
                         {formatCurrency(revenue)}
                       </span>
                     </td>
@@ -157,16 +160,16 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
                 );
               })}
             </tbody>
-            <tfoot className="bg-gray-50">
+            <tfoot className="bg-[#FAFAFA]">
               <tr>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                <td className="px-6 py-4 text-sm font-semibold text-[#000000]">
                   Total
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="px-6 py-4 text-sm font-semibold text-[#000000] text-right">
                   {minutesToHours(projects.reduce((sum, p) => sum + p.totalMinutes, 0))}
                 </td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3 text-sm font-bold text-green-600 text-right">
+                <td className="px-6 py-4"></td>
+                <td className="px-6 py-4 text-sm font-semibold text-[#000000] text-right">
                   {formatCurrency(totalRevenue)}
                 </td>
               </tr>
