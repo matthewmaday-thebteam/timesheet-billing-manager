@@ -34,7 +34,6 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
   const [isSaving, setIsSaving] = useState(false);
   const [pendingAvatarBlob, setPendingAvatarBlob] = useState<Blob | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastResetKey, setLastResetKey] = useState<string>('');
 
@@ -57,7 +56,6 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
       setErrors({});
       setPendingAvatarBlob(null);
       setAvatarPreviewUrl(null);
-      setSuccessMessage(null);
       setErrorMessage(null);
     }
   }, [resetKey, lastResetKey, currentFirstName, currentLastName, currentEmail]);
@@ -84,14 +82,12 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
     if (errors[field as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-    setSuccessMessage(null);
     setErrorMessage(null);
   };
 
   const handleImageCropped = (blob: Blob, previewUrl: string) => {
     setPendingAvatarBlob(blob);
     setAvatarPreviewUrl(previewUrl);
-    setSuccessMessage(null);
     setErrorMessage(null);
   };
 
@@ -122,7 +118,6 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
     if (!validateForm() || !user) return;
 
     setIsSaving(true);
-    setSuccessMessage(null);
     setErrorMessage(null);
 
     try {
@@ -150,31 +145,15 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
 
       // Update email if changed
       const emailChanged = formData.email !== currentEmail;
-      let emailConfirmationRequired = false;
 
       if (emailChanged) {
-        const { error, emailConfirmationRequired: confirmRequired } = await updateEmail(
-          formData.email
-        );
+        const { error } = await updateEmail(formData.email);
         if (error) throw error;
-        emailConfirmationRequired = confirmRequired;
       }
 
-      // Show success message
-      if (emailConfirmationRequired) {
-        setSuccessMessage(
-          'Profile updated. A confirmation email has been sent to your new email address.'
-        );
-      } else {
-        setSuccessMessage('Profile updated successfully.');
-        // Close after short delay
-        setTimeout(() => {
-          onClose();
-        }, 1500);
-      }
-
-      // Clear pending avatar
+      // Clear pending avatar and close modal
       setPendingAvatarBlob(null);
+      onClose();
     } catch (error) {
       console.error('Profile update error:', error);
       setErrorMessage(
@@ -232,28 +211,6 @@ export function ProfileEditorModal({ isOpen, onClose }: ProfileEditorModalProps)
                 />
               </svg>
               <span className="text-sm text-error">{errorMessage}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Success Message */}
-        {successMessage && (
-          <div className="p-3 bg-success-light border border-success rounded-lg">
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-success"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-sm text-success">{successMessage}</span>
             </div>
           </div>
         )}

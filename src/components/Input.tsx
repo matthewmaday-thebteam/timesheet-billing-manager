@@ -8,8 +8,8 @@
  * @category Atom
  *
  * Token Usage:
- * - Colors: vercel-gray-*, error, error-text
- * - Border: vercel-gray-100, vercel-gray-600 (focus)
+ * - Colors: vercel-gray-*, bteam-brand (error)
+ * - Border: vercel-gray-100, vercel-gray-600 (focus), bteam-brand (error)
  * - Radius: rounded-md
  *
  * Accessibility:
@@ -47,7 +47,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const baseClasses = 'w-full bg-white rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0';
 
     const stateClasses = error
-      ? 'border-error focus:border-error focus:ring-error'
+      ? 'border-bteam-brand focus:border-bteam-brand focus:ring-bteam-brand'
       : 'border-vercel-gray-100 focus:border-vercel-gray-600 focus:ring-vercel-gray-600';
 
     const disabledClasses = 'disabled:bg-vercel-gray-50 disabled:text-vercel-gray-200 disabled:cursor-not-allowed';
