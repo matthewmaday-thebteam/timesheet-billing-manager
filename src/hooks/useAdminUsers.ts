@@ -39,11 +39,21 @@ export function useAdminUsers(): UseAdminUsersReturn {
     setLoading(true);
     setError(null);
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated. Please log in again.');
+      }
+
       const { data, error: rpcError } = await supabase.rpc('admin_list_users');
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        console.error('RPC Error:', rpcError);
+        throw new Error(rpcError.message || 'Failed to fetch users');
+      }
       setUsers(data || []);
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to fetch users';
+      console.error('fetchUsers error:', e);
       setError(message);
     } finally {
       setLoading(false);
