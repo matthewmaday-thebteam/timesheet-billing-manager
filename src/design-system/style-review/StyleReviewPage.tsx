@@ -1,14 +1,13 @@
 /**
- * Style Review Surface - Dev-only Component
+ * Style Review Surface - Design System Documentation
  *
- * This page displays all official components and proposed variants side-by-side
- * for visual comparison. Only accessible in development mode.
- *
- * @dev-only This route is excluded from production builds
+ * This page displays all official components and design tokens for
+ * visual reference. Accessible via the Docs dropdown in the main header.
  */
 
 import { useState } from 'react';
 import { MeshGradientBackground } from '../patterns/MeshGradientBackground';
+import { TypographyPreview } from '../Typography';
 import { Modal } from '../../components/Modal';
 import { Select } from '../../components/Select';
 import { Avatar } from '../../components/Avatar';
@@ -19,15 +18,27 @@ import { Spinner } from '../../components/Spinner';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { Badge } from '../../components/Badge';
+import { DatePicker } from '../../components/DatePicker';
+import { HolidayCalendar } from '../../components/HolidayCalendar';
+import { AccordionNested } from '../../components/AccordionNested';
+import type { AccordionNestedLevel2Item } from '../../components/AccordionNested';
+import { AccordionFlat } from '../../components/AccordionFlat';
+import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatFooterCell } from '../../components/AccordionFlat';
 
-type Section = 'tokens' | 'atoms' | 'molecules' | 'patterns';
+type Section = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export function StyleReviewPage({ onClose }: { onClose: () => void }) {
-  const [activeSection, setActiveSection] = useState<Section>('tokens');
+interface StyleReviewPageProps {
+  onClose: () => void;
+  initialSection?: Section;
+}
+
+export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleReviewPageProps) {
+  const [activeSection, setActiveSection] = useState<Section>(initialSection);
   const [showBackground, setShowBackground] = useState(false);
 
   const sections: { id: Section; label: string }[] = [
     { id: 'tokens', label: 'Design Tokens' },
+    { id: 'typography', label: 'Typography' },
     { id: 'atoms', label: 'Atoms' },
     { id: 'molecules', label: 'Molecules' },
     { id: 'patterns', label: 'Global Patterns' },
@@ -41,10 +52,10 @@ export function StyleReviewPage({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-vercel-gray-600">
-                Style Review Surface
+                Design System
               </h1>
               <p className="text-sm text-vercel-gray-400">
-                Dev-only visual comparison of design system components
+                Components and style tokens reference
               </p>
             </div>
             <Button variant="secondary" onClick={onClose}>
@@ -74,6 +85,7 @@ export function StyleReviewPage({ onClose }: { onClose: () => void }) {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {activeSection === 'tokens' && <TokensSection />}
+        {activeSection === 'typography' && <TypographyPreview showAll />}
         {activeSection === 'atoms' && <AtomsSection />}
         {activeSection === 'molecules' && <MoleculesSection />}
         {activeSection === 'patterns' && (
@@ -115,6 +127,8 @@ function TokensSection() {
     'Brand Accent': [
       { name: 'Indigo', value: '#667eea', token: '--color-brand-indigo' },
       { name: 'Purple', value: '#764ba2', token: '--color-brand-purple' },
+      { name: 'The B Team', value: '#E50A73', token: '--color-bteam-brand' },
+      { name: 'The B Team Light', value: '#FDF2F6', token: '--color-bteam-brand-light' },
     ],
   };
 
@@ -198,31 +212,107 @@ function TokensSection() {
 // Atoms Section
 function AtomsSection() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [datePickerValue, setDatePickerValue] = useState('');
+
+  // Sample data for AccordionFlat demo
+  const sampleFlatColumns: AccordionFlatColumn[] = [
+    { key: 'project', label: 'Project', align: 'left' },
+    { key: 'hours', label: 'Hours', align: 'right' },
+    { key: 'rate', label: 'Rate', align: 'right' },
+    { key: 'revenue', label: 'Revenue', align: 'right' },
+  ];
+
+  const sampleFlatRows: AccordionFlatRow[] = [
+    {
+      id: 'fcs',
+      cells: {
+        project: <span className="text-vercel-gray-600">FoodCycleScience</span>,
+        hours: <span className="text-vercel-gray-400">64.5</span>,
+        rate: <span className="text-vercel-gray-600">$60.00</span>,
+        revenue: <span className="font-medium text-vercel-gray-600">$3,870.00</span>,
+      },
+    },
+    {
+      id: 'neo',
+      cells: {
+        project: <span className="text-vercel-gray-600">Neocurrency</span>,
+        hours: <span className="text-vercel-gray-400">43.8</span>,
+        rate: <span className="text-vercel-gray-600">$53.00</span>,
+        revenue: <span className="font-medium text-vercel-gray-600">$2,318.75</span>,
+      },
+    },
+  ];
+
+  const sampleFlatFooter: AccordionFlatFooterCell[] = [
+    { columnKey: 'project', content: 'Total' },
+    { columnKey: 'hours', content: '108.3' },
+    { columnKey: 'rate', content: null },
+    { columnKey: 'revenue', content: '$6,188.75' },
+  ];
+
+  // Sample data for AccordionNested demo
+  const sampleNestedItems: AccordionNestedLevel2Item[] = [
+    {
+      id: 'kalin',
+      label: 'Kalin Tomanov',
+      value: '40.0h',
+      children: [
+        {
+          id: 'kalin-task-1',
+          label: '(no description)',
+          value: '40.0h',
+          details: ['1/9: 8.5h', '1/8: 7.8h', '1/7: 8.3h', '1/6: 7.5h', '1/5: 8.0h'],
+        },
+      ],
+    },
+    {
+      id: 'milen',
+      label: 'Milen Manastasov',
+      value: '22.0h',
+      children: [
+        {
+          id: 'milen-task-1',
+          label: 'Development tasks',
+          value: '22.0h',
+          details: ['1/9: 5.5h', '1/8: 8.0h', '1/7: 8.5h'],
+        },
+      ],
+    },
+    {
+      id: 'matthew',
+      label: 'Matthew Maday',
+      value: '2.5h',
+      children: [
+        {
+          id: 'matthew-task-1',
+          label: 'Code review',
+          value: '2.5h',
+          details: ['1/9: 2.5h'],
+        },
+      ],
+    },
+  ];
+
+  // Sample holidays for the HolidayCalendar demo
+  const currentYear = new Date().getFullYear();
+  const now = new Date().toISOString();
+  const sampleHolidays = [
+    { id: '1', holiday_date: `${currentYear}-01-01`, holiday_name: 'New Year', is_system_generated: true, year: currentYear, created_at: now, updated_at: now },
+    { id: '2', holiday_date: `${currentYear}-03-03`, holiday_name: 'Liberation Day', is_system_generated: true, year: currentYear, created_at: now, updated_at: now },
+    { id: '3', holiday_date: `${currentYear}-12-25`, holiday_name: 'Christmas', is_system_generated: true, year: currentYear, created_at: now, updated_at: now },
+  ];
 
   return (
     <div className="space-y-12">
-      {/* Note about promoted atoms */}
-      <div className="bg-success-light border border-success-border rounded-lg p-4">
-        <p className="text-sm text-success-text font-medium">All High-Impact Components Promoted (Tasks 014-015)</p>
-        <p className="text-sm text-success-text mt-1">
-          Button, Spinner (Task 014) and Input, Card, Badge (Task 015) are now official design system atoms.
-        </p>
-      </div>
-
       {/* Official Atoms */}
       <div>
         <h2 className="text-lg font-semibold text-vercel-gray-600 mb-6">Official Atoms</h2>
 
-        {/* Button - PROMOTED */}
+        {/* Button */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-vercel-gray-600">Button</h3>
-              <p className="text-xs text-vercel-gray-400">Component: src/components/Button.tsx</p>
-            </div>
-            <span className="px-2 py-1 bg-success-light text-success-text text-[10px] font-medium rounded">
-              PROMOTED
-            </span>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Button</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Button.tsx</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button variant="primary">Primary</Button>
@@ -235,16 +325,11 @@ function AtomsSection() {
           </div>
         </div>
 
-        {/* Spinner - PROMOTED */}
+        {/* Spinner */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-vercel-gray-600">Spinner</h3>
-              <p className="text-xs text-vercel-gray-400">Component: src/components/Spinner.tsx</p>
-            </div>
-            <span className="px-2 py-1 bg-success-light text-success-text text-[10px] font-medium rounded">
-              PROMOTED
-            </span>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Spinner</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Spinner.tsx</p>
           </div>
           <div className="flex gap-6 items-center">
             <div className="text-center">
@@ -266,16 +351,11 @@ function AtomsSection() {
           </div>
         </div>
 
-        {/* Input - PROMOTED (Task 015) */}
+        {/* Input */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-vercel-gray-600">Input</h3>
-              <p className="text-xs text-vercel-gray-400">Component: src/components/Input.tsx</p>
-            </div>
-            <span className="px-2 py-1 bg-success-light text-success-text text-[10px] font-medium rounded">
-              PROMOTED
-            </span>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Input</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Input.tsx</p>
           </div>
           <div className="grid gap-4 max-w-md">
             <Input label="Default Input" placeholder="Enter text..." />
@@ -287,16 +367,11 @@ function AtomsSection() {
           </div>
         </div>
 
-        {/* Card - PROMOTED (Task 015) */}
+        {/* Card */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-vercel-gray-600">Card</h3>
-              <p className="text-xs text-vercel-gray-400">Component: src/components/Card.tsx</p>
-            </div>
-            <span className="px-2 py-1 bg-success-light text-success-text text-[10px] font-medium rounded">
-              PROMOTED
-            </span>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Card</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Card.tsx</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Card variant="default">
@@ -314,16 +389,11 @@ function AtomsSection() {
           </div>
         </div>
 
-        {/* Badge - PROMOTED (Task 015) */}
+        {/* Badge */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-vercel-gray-600">Badge</h3>
-              <p className="text-xs text-vercel-gray-400">Component: src/components/Badge.tsx</p>
-            </div>
-            <span className="px-2 py-1 bg-success-light text-success-text text-[10px] font-medium rounded">
-              PROMOTED
-            </span>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Badge</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Badge.tsx</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="default">Default</Badge>
@@ -333,8 +403,52 @@ function AtomsSection() {
             <Badge variant="info">Info</Badge>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            <Badge variant="default" size="sm">Small Default</Badge>
-            <Badge variant="success" size="sm">Small Success</Badge>
+            <Badge variant="default" size="md">Medium Default</Badge>
+            <Badge variant="success" size="md">Medium Success</Badge>
+          </div>
+        </div>
+
+        {/* DatePicker - Calendar Dropdown */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-medium text-vercel-gray-600">DatePicker (Dropdown Calendar)</h3>
+              <p className="text-xs text-vercel-gray-400">Component: src/components/DatePicker.tsx</p>
+            </div>
+          </div>
+          <div className="max-w-xs">
+            <DatePicker
+              value={datePickerValue}
+              onChange={setDatePickerValue}
+              placeholder="Select a date"
+            />
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Dropdown calendar with month navigation, today indicator (circle with 1px border), clear/today buttons.
+            </p>
+          </div>
+        </div>
+
+        {/* HolidayCalendar - Inline Calendar */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-medium text-vercel-gray-600">HolidayCalendar (Inline Calendar)</h3>
+              <p className="text-xs text-vercel-gray-400">Component: src/components/HolidayCalendar.tsx</p>
+            </div>
+          </div>
+          <div className="max-w-sm">
+            <HolidayCalendar
+              holidays={sampleHolidays}
+              year={new Date().getFullYear()}
+              onDateClick={() => {}}
+            />
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Inline month view with holiday highlighting, today indicator (circle with 1px border), legend, month navigation.
+            </p>
           </div>
         </div>
 
@@ -402,6 +516,69 @@ function AtomsSection() {
           </div>
         </div>
 
+        {/* MetricCard-Alert */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">MetricCard-Alert</h3>
+          <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/MetricCard.tsx (isAlert prop)</p>
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <MetricCard title="Resources Under Target" value="0" />
+            <MetricCard title="Resources Under Target" value="3" isAlert onClick={() => {}} actionLabel="View" />
+          </div>
+        </div>
+
+        {/* AccordionNested (3 levels with left line) */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">AccordionNested (Projects Pattern)</h3>
+          <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/AccordionNested.tsx — 3 levels: Project → Resource → Task breakdown. Left border line indicates hierarchy.</p>
+          <div className="max-w-xl">
+            <AccordionNested
+              header={
+                <>
+                  <h3 className="text-sm font-semibold text-vercel-gray-600">FoodCycleScience</h3>
+                  <p className="text-xs font-mono text-vercel-gray-400">3 resources</p>
+                </>
+              }
+              headerRight={
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-vercel-gray-600">64.5h</div>
+                  <div className="text-xs font-mono text-vercel-gray-400">total</div>
+                </div>
+              }
+              items={sampleNestedItems}
+              defaultExpanded
+            />
+          </div>
+        </div>
+
+        {/* AccordionFlat (2 levels, table content) */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">AccordionFlat (Billing Rates Pattern)</h3>
+          <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/AccordionFlat.tsx — 2 levels: Header → Table content with columns, rows, and optional footer.</p>
+          <div className="max-w-2xl">
+            <AccordionFlat
+              header={
+                <>
+                  <h3 className="text-sm font-semibold text-vercel-gray-600">Billing Rates & Revenue</h3>
+                  <p className="text-xs font-mono text-vercel-gray-400">Click to edit hourly rates per project</p>
+                </>
+              }
+              headerRight={
+                <div className="text-right">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-success" />
+                    <span className="text-lg font-semibold text-vercel-gray-600">$6,188.75</span>
+                  </div>
+                  <div className="text-xs font-mono text-vercel-gray-400">total revenue</div>
+                </div>
+              }
+              columns={sampleFlatColumns}
+              rows={sampleFlatRows}
+              footer={sampleFlatFooter}
+              defaultExpanded
+            />
+          </div>
+        </div>
+
         {/* DropdownMenu */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">DropdownMenu</h3>
@@ -430,13 +607,6 @@ function AtomsSection() {
 function MoleculesSection() {
   return (
     <div className="space-y-8">
-      <div className="bg-success-light border border-success-border rounded-lg p-4">
-        <p className="text-sm text-success-text">
-          Molecules are combinations of atoms. See individual page components for examples of forms,
-          tables, and composite UI elements.
-        </p>
-      </div>
-
       <div className="grid gap-6">
         <div className="p-6 border border-vercel-gray-100 rounded-lg">
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">DateRangeFilter</h3>

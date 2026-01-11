@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal } from './Modal';
 import { Select } from './Select';
 import type { Resource, ResourceFormData, EmploymentType } from '../types';
@@ -16,6 +16,16 @@ interface FormErrors {
   email?: string;
 }
 
+function getFormDataFromResource(resource: Resource | null): ResourceFormData {
+  return {
+    first_name: resource?.first_name || '',
+    last_name: resource?.last_name || '',
+    email: resource?.email || '',
+    teams_account: resource?.teams_account || '',
+    employment_type_id: resource?.employment_type_id || '',
+  };
+}
+
 export function EmployeeEditorModal({
   isOpen,
   onClose,
@@ -24,30 +34,19 @@ export function EmployeeEditorModal({
   isSaving,
   employmentTypes,
 }: EmployeeEditorModalProps) {
-  const [formData, setFormData] = useState<ResourceFormData>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    teams_account: '',
-    employment_type_id: '',
-  });
+  const [formData, setFormData] = useState<ResourceFormData>(() => getFormDataFromResource(resource));
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [lastResourceId, setLastResourceId] = useState<string | null>(resource?.id ?? null);
 
-  // Reset form when resource changes
-  useEffect(() => {
-    if (resource) {
-      setFormData({
-        first_name: resource.first_name || '',
-        last_name: resource.last_name || '',
-        email: resource.email || '',
-        teams_account: resource.teams_account || '',
-        employment_type_id: resource.employment_type_id || '',
-      });
-      setErrors({});
-      setTouched({});
-    }
-  }, [resource]);
+  // Reset form when resource changes (React-recommended pattern)
+  const currentResourceId = resource?.id ?? null;
+  if (currentResourceId !== lastResourceId) {
+    setLastResourceId(currentResourceId);
+    setFormData(getFormDataFromResource(resource));
+    setErrors({});
+    setTouched({});
+  }
 
   // Validate email format
   const validateEmail = (email: string): boolean => {

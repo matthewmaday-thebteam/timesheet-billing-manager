@@ -9,7 +9,7 @@
  *
  * Token Usage:
  * - Colors: vercel-gray-*, error, error-hover
- * - Shadows: Uses focus ring utilities
+ * - Active states: Slightly lighter shade on mouseDown
  * - Radius: rounded-md (--radius-md)
  */
 
@@ -24,32 +24,32 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', children, disabled, ...props }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed';
+    const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none disabled:cursor-not-allowed';
 
     const variantClasses = {
       primary: [
         'bg-vercel-gray-600 text-white',
         'hover:bg-vercel-gray-500',
-        'focus:ring-vercel-gray-600',
+        'active:bg-vercel-gray-400',
         'disabled:bg-vercel-gray-100 disabled:text-vercel-gray-200',
       ].join(' '),
       secondary: [
         'bg-white text-vercel-gray-600',
         'border border-vercel-gray-100',
         'hover:border-vercel-gray-200',
-        'focus:ring-vercel-gray-600',
+        'active:bg-vercel-gray-50',
         'disabled:bg-vercel-gray-50 disabled:text-vercel-gray-200',
       ].join(' '),
       ghost: [
         'bg-transparent text-vercel-gray-400',
         'hover:bg-vercel-gray-50 hover:text-vercel-gray-600',
-        'focus:ring-vercel-gray-600',
+        'active:bg-vercel-gray-100',
         'disabled:text-vercel-gray-200 disabled:hover:bg-transparent',
       ].join(' '),
       danger: [
         'bg-error text-white',
         'hover:bg-error-hover',
-        'focus:ring-error',
+        'active:bg-error-text',
         'disabled:bg-error-border disabled:text-vercel-gray-200',
       ].join(' '),
     };

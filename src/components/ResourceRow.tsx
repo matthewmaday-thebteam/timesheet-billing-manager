@@ -14,7 +14,7 @@ export function ResourceRow({ resource }: ResourceRowProps) {
     <div className="border-l-2 border-vercel-gray-100 ml-6">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between py-3 px-4 text-left hover:bg-vercel-gray-50 transition-colors focus:ring-1 focus:ring-black focus:outline-none"
+        className="w-full flex items-center justify-between py-3 px-4 text-left focus:ring-1 focus:ring-black focus:outline-none"
       >
         <div className="flex items-center gap-2">
           <svg

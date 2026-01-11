@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { format } from 'date-fns';
 import { minutesToHours } from '../utils/calculations';
-import { ResourceRow } from './ResourceRow';
+import { AccordionNested } from './AccordionNested';
+import type { AccordionNestedLevel2Item } from './AccordionNested';
 import type { ProjectSummary } from '../types';
 
 interface ProjectCardProps {
@@ -8,45 +9,43 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  // Transform project resources into AccordionNested format
+  const items: AccordionNestedLevel2Item[] = project.resources.map((resource) => ({
+    id: resource.userName,
+    label: resource.displayName,
+    value: `${minutesToHours(resource.totalMinutes)}h`,
+    children: resource.tasks.map((task, index) => ({
+      id: `${resource.userName}-${task.taskName}-${index}`,
+      label: task.taskName,
+      value: `${minutesToHours(task.totalMinutes)}h`,
+      details: [
+        ...task.entries.slice(0, 5).map(
+          (entry) => `${format(new Date(entry.date), 'M/d')}: ${minutesToHours(entry.minutes)}h`
+        ),
+        ...(task.entries.length > 5 ? [`+${task.entries.length - 5} more`] : []),
+      ],
+    })),
+  }));
 
   return (
-    <div className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-vercel-gray-50 transition-colors focus:ring-1 focus:ring-black focus:outline-none"
-      >
-        <div className="flex items-center gap-3">
-          <svg
-            className={`w-4 h-4 text-vercel-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <div>
-            <h3 className="text-sm font-semibold text-vercel-gray-600">{project.projectName}</h3>
-            <p className="text-xs text-vercel-gray-400">
-              {project.resources.length} resource{project.resources.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
+    <AccordionNested
+      header={
+        <>
+          <h3 className="text-sm font-semibold text-vercel-gray-600">{project.projectName}</h3>
+          <p className="text-xs font-mono text-vercel-gray-400">
+            {project.resources.length} resource{project.resources.length !== 1 ? 's' : ''}
+          </p>
+        </>
+      }
+      headerRight={
         <div className="text-right">
           <div className="text-lg font-semibold text-vercel-gray-600">
             {minutesToHours(project.totalMinutes)}h
           </div>
-          <div className="text-xs text-vercel-gray-400">total</div>
+          <div className="text-xs font-mono text-vercel-gray-400">total</div>
         </div>
-      </button>
-
-      {expanded && (
-        <div className="border-t border-vercel-gray-100 py-2">
-          {project.resources.map((resource) => (
-            <ResourceRow key={resource.userName} resource={resource} />
-          ))}
-        </div>
-      )}
-    </div>
+      }
+      items={items}
+    />
   );
 }

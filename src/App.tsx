@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { MainHeader } from './components/MainHeader';
 import { SubNavbar, type NavRoute } from './components/SubNavbar';
@@ -16,26 +16,37 @@ import { StyleReviewPage } from './design-system/style-review/StyleReviewPage';
 
 type AuthView = 'login' | 'forgot-password' | 'reset-password';
 
+type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
+
+// Compute initial style review state from URL params
+function getInitialStyleReviewState(): { show: boolean; section: DocsSection } {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('style-review') === 'true') {
+    const section = params.get('section') as DocsSection | null;
+    const validSections: DocsSection[] = ['tokens', 'typography', 'atoms', 'molecules', 'patterns'];
+    return {
+      show: true,
+      section: section && validSections.includes(section) ? section : 'tokens',
+    };
+  }
+  return { show: false, section: 'tokens' };
+}
+
 function AuthenticatedApp() {
   const [activeRoute, setActiveRoute] = useState<NavRoute>('home');
-  const [showStyleReview, setShowStyleReview] = useState(false);
+  const [styleReviewState, setStyleReviewState] = useState(getInitialStyleReviewState);
 
-  // Dev-only: Check for style-review URL parameter
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('style-review') === 'true') {
-        setShowStyleReview(true);
-      }
-    }
-  }, []);
+  const handleOpenDocs = (section: DocsSection) => {
+    setStyleReviewState({ show: true, section });
+  };
 
-  // Dev-only: Style Review Surface
-  if (showStyleReview && import.meta.env.DEV) {
+  // Style Review Surface (accessible in production)
+  if (styleReviewState.show) {
     return (
       <StyleReviewPage
+        initialSection={styleReviewState.section}
         onClose={() => {
-          setShowStyleReview(false);
+          setStyleReviewState({ show: false, section: 'tokens' });
           window.history.replaceState({}, '', window.location.pathname);
         }}
       />
@@ -63,30 +74,24 @@ function AuthenticatedApp() {
 
   return (
     <div className="min-h-screen bg-vercel-gray-50">
-      <MainHeader />
+      <MainHeader onOpenDocs={handleOpenDocs} />
       <SubNavbar activeRoute={activeRoute} onRouteChange={setActiveRoute} />
       {renderPage()}
     </div>
   );
 }
 
+// Compute initial auth view from URL path
+function getInitialAuthView(): AuthView {
+  if (window.location.pathname === '/reset-password') {
+    return 'reset-password';
+  }
+  return 'login';
+}
+
 function UnauthenticatedApp() {
   const { isRecoverySession } = useAuth();
-  const [authView, setAuthView] = useState<AuthView>('login');
-
-  // Detect recovery session from Supabase auth event
-  useEffect(() => {
-    if (isRecoverySession) {
-      setAuthView('reset-password');
-    }
-  }, [isRecoverySession]);
-
-  // Also check URL path on mount for direct navigation
-  useEffect(() => {
-    if (window.location.pathname === '/reset-password') {
-      setAuthView('reset-password');
-    }
-  }, []);
+  const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
 
   const handleResetComplete = () => {
     // Clear the URL path
@@ -94,11 +99,14 @@ function UnauthenticatedApp() {
     setAuthView('login');
   };
 
-  if (authView === 'reset-password') {
+  // Derive effective view - recovery session takes precedence
+  const effectiveView = isRecoverySession ? 'reset-password' : authView;
+
+  if (effectiveView === 'reset-password') {
     return <ResetPasswordPage onComplete={handleResetComplete} />;
   }
 
-  if (authView === 'forgot-password') {
+  if (effectiveView === 'forgot-password') {
     return <ForgotPasswordPage onBackToLogin={() => setAuthView('login')} />;
   }
 

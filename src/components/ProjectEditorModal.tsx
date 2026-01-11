@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
@@ -12,6 +12,13 @@ interface ProjectEditorModalProps {
   isSaving: boolean;
 }
 
+function getRateFromProject(project: Project | null): { rateValue: string; hasRate: boolean } {
+  if (project && project.rate !== null) {
+    return { rateValue: String(project.rate), hasRate: true };
+  }
+  return { rateValue: '', hasRate: false };
+}
+
 export function ProjectEditorModal({
   isOpen,
   onClose,
@@ -19,21 +26,19 @@ export function ProjectEditorModal({
   onSave,
   isSaving,
 }: ProjectEditorModalProps) {
-  const [rateValue, setRateValue] = useState<string>('');
-  const [hasRate, setHasRate] = useState(false);
+  const initialRate = getRateFromProject(project);
+  const [rateValue, setRateValue] = useState<string>(initialRate.rateValue);
+  const [hasRate, setHasRate] = useState(initialRate.hasRate);
+  const [lastResetKey, setLastResetKey] = useState<string>('');
 
-  // Reset form when project changes
-  useEffect(() => {
-    if (project) {
-      if (project.rate !== null) {
-        setRateValue(String(project.rate));
-        setHasRate(true);
-      } else {
-        setRateValue('');
-        setHasRate(false);
-      }
-    }
-  }, [project, isOpen]);
+  // Reset form when project/isOpen changes (React-recommended pattern)
+  const resetKey = `${project?.id ?? 'none'}-${isOpen}`;
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey);
+    const rate = getRateFromProject(project);
+    setRateValue(rate.rateValue);
+    setHasRate(rate.hasRate);
+  }
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

@@ -114,7 +114,7 @@ export function UnderHoursModal({
       ) : (
         <div className="space-y-2">
           {/* Sticky Table Header */}
-          <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 py-3 text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider border-b border-vercel-gray-100">
+          <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider border-b border-vercel-gray-100">
             <span>Resource</span>
             <span>Hours (Actual / Expected)</span>
           </div>
@@ -181,7 +181,7 @@ export function UnderHoursModal({
                         {/* Task Table */}
                         <table className="w-full table-auto">
                           <thead>
-                            <tr className="text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+                            <tr className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                               <th className="text-left pb-2 pr-4">Client</th>
                               <th className="text-left pb-2 pr-4">Date</th>
                               <th className="text-left pb-2 pr-4">Task</th>

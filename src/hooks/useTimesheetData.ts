@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { aggregateByProject, aggregateByResource } from '../utils/calculations';
@@ -25,21 +25,22 @@ export function useTimesheetData(dateRange: DateRange): UseTimesheetDataResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  // Derive stable string keys for the date range
+  const startDateStr = format(dateRange.start, 'yyyy-MM-dd');
+  const endDateStr = format(dateRange.end, 'yyyy-MM-dd');
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const startDate = format(dateRange.start, 'yyyy-MM-dd');
-      const endDate = format(dateRange.end, 'yyyy-MM-dd');
-
       // Fetch timesheet entries and resources in parallel
       const [entriesResult, resourcesResult] = await Promise.all([
         supabase
           .from('v_timesheet_entries')
           .select('*')
-          .gte('work_date', startDate)
-          .lte('work_date', endDate)
+          .gte('work_date', startDateStr)
+          .lte('work_date', endDateStr)
           .order('work_date', { ascending: false }),
         supabase
           .from('resources')
@@ -60,11 +61,11 @@ export function useTimesheetData(dateRange: DateRange): UseTimesheetDataResult {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDateStr, endDateStr]);
 
   useEffect(() => {
     fetchData();
-  }, [dateRange.start.getTime(), dateRange.end.getTime()]);
+  }, [fetchData]);
 
   // Build display name lookup: external_label -> "first_name last_name"
   const displayNameLookup = useMemo(() => {

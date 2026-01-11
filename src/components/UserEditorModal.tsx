@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal } from './Modal';
 import type { AppUser, CreateUserParams, UserRole } from '../types';
 
@@ -20,6 +20,25 @@ interface FormData {
   send_invite: boolean;
 }
 
+function getFormDataFromUser(user: AppUser | null): FormData {
+  if (user) {
+    return {
+      email: user.email,
+      password: '',
+      display_name: user.display_name || '',
+      role: user.role,
+      send_invite: false,
+    };
+  }
+  return {
+    email: '',
+    password: '',
+    display_name: '',
+    role: 'admin',
+    send_invite: true,
+  };
+}
+
 export function UserEditorModal({
   isOpen,
   onClose,
@@ -29,41 +48,22 @@ export function UserEditorModal({
   isSaving,
   adminCount,
 }: UserEditorModalProps) {
-  const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
-    display_name: '',
-    role: 'admin',
-    send_invite: true,
-  });
+  const [formData, setFormData] = useState<FormData>(() => getFormDataFromUser(user));
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [lastResetKey, setLastResetKey] = useState<string>('');
 
   const isEditing = !!user;
   const isLastAdmin = user?.role === 'admin' && adminCount === 1;
 
-  // Reset form when user changes
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        email: user.email,
-        password: '',
-        display_name: user.display_name || '',
-        role: user.role,
-        send_invite: false,
-      });
-    } else {
-      setFormData({
-        email: '',
-        password: '',
-        display_name: '',
-        role: 'admin',
-        send_invite: true,
-      });
-    }
+  // Reset form when user/isOpen changes (React-recommended pattern)
+  const resetKey = `${user?.id ?? 'new'}-${isOpen}`;
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey);
+    setFormData(getFormDataFromUser(user));
     setErrors({});
     setShowPassword(false);
-  }, [user, isOpen]);
+  }
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};

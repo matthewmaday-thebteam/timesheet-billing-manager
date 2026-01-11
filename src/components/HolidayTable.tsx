@@ -67,16 +67,16 @@ export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTab
         <table className="w-full">
           <thead>
             <tr className="bg-vercel-gray-50 border-b border-vercel-gray-100">
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Holiday Name
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Source
               </th>
-              <th className="px-4 py-3 text-right text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -102,9 +102,9 @@ export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTab
                 </td>
                 <td className="px-4 py-3">
                   {holiday.is_system_generated ? (
-                    <Badge variant="default" size="sm">Auto</Badge>
+                    <Badge variant="default">Auto</Badge>
                   ) : (
-                    <Badge variant="info" size="sm">Manual</Badge>
+                    <Badge variant="info">Manual</Badge>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">

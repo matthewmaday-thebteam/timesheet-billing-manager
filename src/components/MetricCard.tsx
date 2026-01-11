@@ -3,6 +3,7 @@ interface MetricCardProps {
   value: string | number;
   statusColor?: 'default' | 'green' | 'orange' | 'red';
   isWarning?: boolean;
+  isAlert?: boolean;
   onClick?: () => void;
   actionLabel?: string;
 }
@@ -12,21 +13,28 @@ export function MetricCard({
   value,
   statusColor = 'default',
   isWarning = false,
+  isAlert = false,
   onClick,
   actionLabel,
 }: MetricCardProps) {
-  // Determine card styling based on warning state
-  const cardClasses = isWarning
-    ? 'bg-warning-light border-warning'
-    : 'bg-white border-vercel-gray-100';
+  // Determine card styling based on alert/warning state
+  const cardClasses = isAlert
+    ? 'bg-bteam-brand border-bteam-brand'
+    : isWarning
+      ? 'bg-warning-light border-warning'
+      : 'bg-white border-vercel-gray-100';
 
-  const titleClasses = isWarning
-    ? 'text-warning-dark'
-    : 'text-vercel-gray-400';
+  const titleClasses = isAlert
+    ? 'text-white'
+    : isWarning
+      ? 'text-warning-dark'
+      : 'text-vercel-gray-400';
 
-  const valueClasses = isWarning
-    ? 'text-warning'
-    : 'text-vercel-gray-600';
+  const valueClasses = isAlert
+    ? 'text-white'
+    : isWarning
+      ? 'text-warning'
+      : 'text-vercel-gray-600';
 
   // Status dot color mapping
   const dotColors = {
@@ -36,12 +44,17 @@ export function MetricCard({
     red: 'bg-error',
   };
 
-  const showStatusDot = statusColor !== 'default' || isWarning;
+  const showStatusDot = !isAlert && (statusColor !== 'default' || isWarning);
   const dotColor = isWarning ? dotColors.orange : dotColors[statusColor];
+
+  // Button classes based on alert state
+  const buttonClasses = isAlert
+    ? 'bg-white border-white text-bteam-brand hover:bg-bteam-brand-light hover:border-bteam-brand-light'
+    : 'bg-vercel-gray-100 border-vercel-gray-100 text-vercel-gray-400 hover:bg-vercel-gray-200 hover:border-vercel-gray-200';
 
   return (
     <div className={`relative p-6 rounded-lg border ${cardClasses}`}>
-      <p className={`text-xs mb-1 ${titleClasses}`}>{title}</p>
+      <p className={`text-xs font-mono mb-1 ${titleClasses}`}>{title}</p>
 
       <div className="flex items-center gap-2 mt-1">
         {showStatusDot && (
@@ -56,7 +69,7 @@ export function MetricCard({
       {onClick && (
         <button
           onClick={onClick}
-          className="absolute bottom-3 right-3 flex items-center gap-1 px-3 py-1 bg-vercel-gray-100 border border-vercel-gray-100 rounded-md text-xs text-vercel-gray-400 hover:bg-vercel-gray-200 hover:border-vercel-gray-200 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+          className={`absolute bottom-3 right-3 flex items-center gap-1 px-3 py-1 rounded-md text-xs transition-colors duration-200 ease-out focus:outline-none ${buttonClasses}`}
         >
           <span>{actionLabel || 'View'}</span>
           <svg

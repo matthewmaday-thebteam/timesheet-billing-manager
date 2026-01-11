@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
@@ -16,6 +16,19 @@ interface HolidayEditorModalProps {
   defaultYear: number;
 }
 
+function getFormDataFromHoliday(holiday: BulgarianHoliday | null, defaultYear: number): HolidayFormData {
+  if (holiday) {
+    return {
+      holiday_name: holiday.holiday_name,
+      holiday_date: holiday.holiday_date,
+    };
+  }
+  return {
+    holiday_name: '',
+    holiday_date: `${defaultYear}-01-01`,
+  };
+}
+
 export function HolidayEditorModal({
   isOpen,
   onClose,
@@ -25,30 +38,19 @@ export function HolidayEditorModal({
   isSaving,
   defaultYear,
 }: HolidayEditorModalProps) {
-  const [formData, setFormData] = useState<HolidayFormData>({
-    holiday_name: '',
-    holiday_date: '',
-  });
+  const [formData, setFormData] = useState<HolidayFormData>(() => getFormDataFromHoliday(holiday, defaultYear));
   const [errors, setErrors] = useState<{ holiday_name?: string; holiday_date?: string }>({});
+  const [lastResetKey, setLastResetKey] = useState<string>('');
 
   const isEditing = !!holiday;
 
-  // Reset form when holiday changes
-  useEffect(() => {
-    if (holiday) {
-      setFormData({
-        holiday_name: holiday.holiday_name,
-        holiday_date: holiday.holiday_date,
-      });
-    } else {
-      // Default to January 1st of the selected year for new holidays
-      setFormData({
-        holiday_name: '',
-        holiday_date: `${defaultYear}-01-01`,
-      });
-    }
+  // Reset form when holiday/defaultYear/isOpen changes (React-recommended pattern)
+  const resetKey = `${holiday?.id ?? 'new'}-${defaultYear}-${isOpen}`;
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey);
+    setFormData(getFormDataFromHoliday(holiday, defaultYear));
     setErrors({});
-  }, [holiday, defaultYear, isOpen]);
+  }
 
   const validateForm = (): boolean => {
     const newErrors: { holiday_name?: string; holiday_date?: string } = {};

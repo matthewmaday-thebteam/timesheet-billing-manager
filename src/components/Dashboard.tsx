@@ -58,7 +58,7 @@ export function Dashboard() {
             <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">
               Timesheet Dashboard
             </h2>
-            <Button variant="secondary" size="sm" onClick={refetch}>
+            <Button variant="secondary" onClick={refetch}>
               Refresh
             </Button>
           </div>

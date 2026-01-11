@@ -95,22 +95,22 @@ export function UserTable({
         <table className="w-full">
           <thead>
             <tr className="bg-vercel-gray-50 border-b border-vercel-gray-100">
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Role
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Last Sign In
               </th>
-              <th className="px-4 py-3 text-right text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -136,21 +136,21 @@ export function UserTable({
                 </td>
                 <td className="px-4 py-3">
                   {user.role === 'admin' ? (
-                    <Badge variant="info" size="sm">Admin</Badge>
+                    <Badge variant="info">Admin</Badge>
                   ) : (
-                    <Badge variant="default" size="sm">User</Badge>
+                    <Badge variant="default">User</Badge>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   {user.is_verified ? (
-                    <Badge variant="success" size="sm">
+                    <Badge variant="success">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       Verified
                     </Badge>
                   ) : (
-                    <Badge variant="warning" size="sm">
+                    <Badge variant="warning">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>

@@ -32,6 +32,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
     return new Date();
   });
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [lastSyncedValue, setLastSyncedValue] = useState<string | null>(value || null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,12 +55,11 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
     return isValid(parsed) ? parsed : null;
   }, [value]);
 
-  // Update currentMonth when value changes
-  useEffect(() => {
-    if (selectedDate) {
-      setCurrentMonth(selectedDate);
-    }
-  }, [selectedDate]);
+  // Sync currentMonth when value changes (React-recommended pattern)
+  if (value !== lastSyncedValue && selectedDate) {
+    setLastSyncedValue(value);
+    setCurrentMonth(selectedDate);
+  }
 
   // Update position when opening and on scroll/resize
   useEffect(() => {
@@ -219,7 +219,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
                 ${!isCurrentMonth ? 'text-vercel-gray-200' : 'text-vercel-gray-600'}
                 ${isSelected ? 'bg-vercel-gray-600 text-white font-medium' : ''}
                 ${!isSelected && isCurrentMonth ? 'hover:bg-vercel-gray-50' : ''}
-                ${isToday && !isSelected ? 'font-semibold text-vercel-gray-600' : ''}
+                ${isToday && !isSelected ? 'border border-vercel-gray-100' : ''}
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600 focus-visible:ring-offset-1
               `}
             >

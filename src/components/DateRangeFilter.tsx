@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, parse } from 'date-fns';
+import { Button } from './Button';
+import { DatePicker } from './DatePicker';
 import type { DateRange, DateFilterMode } from '../types';
 
 interface DateRangeFilterProps {
@@ -34,7 +36,8 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
   };
 
   const handleCustomDateChange = (field: 'start' | 'end', value: string) => {
-    const date = new Date(value);
+    if (!value) return;
+    const date = parse(value, 'yyyy-MM-dd', new Date());
     onChange({
       ...dateRange,
       [field]: date,
@@ -44,77 +47,67 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
       <div className="flex gap-2">
-        <button
+        <Button
+          variant={mode === 'current' ? 'primary' : 'secondary'}
           onClick={() => handleModeChange('current')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
-            mode === 'current'
-              ? 'bg-vercel-gray-600 text-white'
-              : 'bg-vercel-gray-50 text-vercel-gray-600 border border-vercel-gray-100 hover:bg-vercel-gray-100'
-          }`}
         >
           Current Month
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={mode === 'month' ? 'primary' : 'secondary'}
           onClick={() => handleModeChange('month')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
-            mode === 'month'
-              ? 'bg-vercel-gray-600 text-white'
-              : 'bg-vercel-gray-50 text-vercel-gray-600 border border-vercel-gray-100 hover:bg-vercel-gray-100'
-          }`}
         >
           Select Month
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={mode === 'custom' ? 'primary' : 'secondary'}
           onClick={() => handleModeChange('custom')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:ring-1 focus:ring-black focus:outline-none ${
-            mode === 'custom'
-              ? 'bg-vercel-gray-600 text-white'
-              : 'bg-vercel-gray-50 text-vercel-gray-600 border border-vercel-gray-100 hover:bg-vercel-gray-100'
-          }`}
         >
           Custom Range
-        </button>
+        </Button>
       </div>
 
       {mode === 'month' && (
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => handleMonthChange('prev')}
-            className="p-1.5 rounded-md border border-vercel-gray-100 hover:bg-vercel-gray-50 transition-colors focus:ring-1 focus:ring-black focus:outline-none"
           >
-            <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-          </button>
+          </Button>
           <span className="text-sm font-medium text-vercel-gray-600 min-w-[120px] text-center">
             {format(selectedMonth, 'MMMM yyyy')}
           </span>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => handleMonthChange('next')}
-            className="p-1.5 rounded-md border border-vercel-gray-100 hover:bg-vercel-gray-50 transition-colors focus:ring-1 focus:ring-black focus:outline-none"
           >
-            <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </Button>
         </div>
       )}
 
       {mode === 'custom' && (
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={format(dateRange.start, 'yyyy-MM-dd')}
-            onChange={(e) => handleCustomDateChange('start', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-vercel-gray-100 rounded-md bg-white text-vercel-gray-600 focus:ring-1 focus:ring-black focus:outline-none"
-          />
+          <div className="w-40">
+            <DatePicker
+              value={format(dateRange.start, 'yyyy-MM-dd')}
+              onChange={(value) => handleCustomDateChange('start', value)}
+              placeholder="Start date"
+            />
+          </div>
           <span className="text-vercel-gray-400">/</span>
-          <input
-            type="date"
-            value={format(dateRange.end, 'yyyy-MM-dd')}
-            onChange={(e) => handleCustomDateChange('end', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-vercel-gray-100 rounded-md bg-white text-vercel-gray-600 focus:ring-1 focus:ring-black focus:outline-none"
-          />
+          <div className="w-40">
+            <DatePicker
+              value={format(dateRange.end, 'yyyy-MM-dd')}
+              onChange={(value) => handleCustomDateChange('end', value)}
+              placeholder="End date"
+            />
+          </div>
         </div>
       )}
 

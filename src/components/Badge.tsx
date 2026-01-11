@@ -8,6 +8,7 @@
  * @category Atom
  *
  * Token Usage:
+ * - Typography: mono-xs (text-xs font-mono)
  * - Colors: success-*, warning-*, error-*, info-*
  * - Background: vercel-gray-50
  * - Text: vercel-gray-400
@@ -24,7 +25,7 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className = '', variant = 'default', size = 'md', children, ...props }, ref) => {
+  ({ className = '', variant = 'default', size = 'sm', children, ...props }, ref) => {
     const variantClasses = {
       default: 'bg-vercel-gray-50 text-vercel-gray-400',
       success: 'bg-success-light text-success-text',
@@ -34,14 +35,14 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     };
 
     const sizeClasses = {
-      sm: 'px-1.5 py-0.5 text-2xs',
+      sm: 'px-1.5 py-0.5 text-xs',
       md: 'px-2 py-1 text-xs',
     };
 
     return (
       <span
         ref={ref}
-        className={`inline-flex items-center font-medium rounded ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={`inline-flex items-center font-mono font-medium rounded ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
         {...props}
       >
         {children}

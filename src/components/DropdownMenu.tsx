@@ -117,7 +117,7 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
             onClick={() => handleItemClick(item)}
             className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
               item.variant === 'danger'
-                ? 'text-error hover:bg-error-light'
+                ? 'text-bteam-brand hover:bg-bteam-brand-light'
                 : 'text-vercel-gray-600 hover:bg-vercel-gray-50'
             }`}
           >

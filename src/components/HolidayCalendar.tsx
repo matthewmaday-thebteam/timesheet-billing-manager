@@ -21,11 +21,13 @@ interface HolidayCalendarProps {
 
 export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date(year, 0, 1));
+  const [lastYear, setLastYear] = useState<number>(year);
 
-  // Update currentMonth when year changes
-  useMemo(() => {
+  // Update currentMonth when year changes (React-recommended pattern)
+  if (year !== lastYear) {
+    setLastYear(year);
     setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
-  }, [year]);
+  }
 
   const holidayMap = useMemo(() => {
     const map = new Map<string, BulgarianHoliday>();
@@ -83,7 +85,7 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider py-2"
+            className="text-center text-xs font-medium text-vercel-gray-400 uppercase tracking-wider py-2"
           >
             {day}
           </div>
@@ -104,36 +106,24 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
               key={dateKey}
               onClick={() => onDateClick?.(day, holiday)}
               className={`
-                relative aspect-square flex flex-col items-center justify-center rounded-md
+                relative aspect-square flex flex-col items-center justify-center rounded-full
                 text-sm transition-colors duration-200 ease-out
+                ${isToday && !holiday ? 'border border-vercel-gray-100' : ''}
                 ${!isCurrentMonth ? 'text-vercel-gray-200' : ''}
-                ${isCurrentMonth && !holiday && !isWeekend && !isToday ? 'text-vercel-gray-600' : ''}
-                ${isCurrentMonth && isWeekend && !holiday && !isToday ? 'text-vercel-gray-400' : ''}
-                ${holiday ? 'bg-info-light text-info' : ''}
-                ${isToday && !holiday ? 'bg-vercel-gray-100 text-vercel-gray-600' : ''}
+                ${isCurrentMonth && !holiday && !isWeekend ? 'text-vercel-gray-600' : ''}
+                ${isCurrentMonth && isWeekend && !holiday ? 'text-vercel-gray-400' : ''}
+                ${holiday ? 'bg-bteam-brand text-white' : ''}
                 ${!holiday && !isToday ? 'hover:bg-vercel-gray-50' : ''}
                 focus:outline-none
               `}
               title={holiday?.holiday_name}
             >
-              <span className={`${holiday ? 'font-semibold' : ''} ${isToday ? 'font-medium' : ''}`}>
+              <span className={`${holiday ? 'font-semibold' : ''}`}>
                 {format(day, 'd')}
               </span>
             </button>
           );
         })}
-      </div>
-
-      {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-vercel-gray-100 flex items-center gap-4 text-2xs text-vercel-gray-400">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-info-light border border-info" />
-          <span>Holiday</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-vercel-gray-100" />
-          <span>Today</span>
-        </div>
       </div>
     </div>
   );

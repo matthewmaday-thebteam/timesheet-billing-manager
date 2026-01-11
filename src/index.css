@@ -9,6 +9,12 @@
 
 @theme {
   /* ---------------------------------------------------------------------------
+     FONT FAMILY TOKENS
+     --------------------------------------------------------------------------- */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* ---------------------------------------------------------------------------
      COLOR TOKENS - Vercel Gray Scale
      --------------------------------------------------------------------------- */
   --color-vercel-gray-50: #fafafa;
@@ -60,6 +66,8 @@
      --------------------------------------------------------------------------- */
   --color-brand-indigo: #667eea;
   --color-brand-purple: #764ba2;
+  --color-bteam-brand: #E50A73;
+  --color-bteam-brand-light: #FDF2F6;
 
   /* ---------------------------------------------------------------------------
      COLOR TOKENS - Mesh Gradient (for MeshGradientBackground)

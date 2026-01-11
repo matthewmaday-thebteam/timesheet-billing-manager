@@ -23,44 +23,30 @@ export function StatsOverview({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-      {/* Total Hours */}
-      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <p className="text-xs text-vercel-gray-400 mb-1">Total Hours</p>
-        <p className="text-2xl font-semibold text-vercel-gray-600">
-          {minutesToHours(totalMinutes)}
-        </p>
-      </div>
+      <MetricCard
+        title="Total Hours"
+        value={minutesToHours(totalMinutes)}
+      />
 
-      {/* Total Revenue */}
-      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <p className="text-xs text-vercel-gray-400 mb-1">Total Revenue</p>
-        <p className="text-xl font-semibold text-vercel-gray-600">
-          {formatCurrency(totalRevenue)}
-        </p>
-      </div>
+      <MetricCard
+        title="Total Revenue"
+        value={formatCurrency(totalRevenue)}
+      />
 
-      {/* Projects */}
-      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <p className="text-xs text-vercel-gray-400 mb-1">Projects</p>
-        <p className="text-2xl font-semibold text-vercel-gray-600">
-          {projects.length}
-        </p>
-      </div>
+      <MetricCard
+        title="Projects"
+        value={projects.length}
+      />
 
-      {/* Resources */}
-      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <p className="text-xs text-vercel-gray-400 mb-1">Resources</p>
-        <p className="text-2xl font-semibold text-vercel-gray-600">
-          {resources.length}
-        </p>
-      </div>
+      <MetricCard
+        title="Resources"
+        value={resources.length}
+      />
 
-      {/* Resources Under Target - Using MetricCard */}
       <MetricCard
         title="Resources Under Target"
         value={underHoursCount}
-        statusColor={hasUnderHours ? 'orange' : 'default'}
-        isWarning={hasUnderHours}
+        isAlert={hasUnderHours}
         onClick={onUnderHoursClick}
         actionLabel="View"
       />

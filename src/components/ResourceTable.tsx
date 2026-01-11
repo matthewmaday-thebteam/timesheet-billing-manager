@@ -55,22 +55,22 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
         <table className="w-full">
           <thead>
             <tr className="bg-vercel-gray-50 border-b border-vercel-gray-100">
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 System ID
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Name
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Teams Account
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Type
               </th>
-              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Status
               </th>
             </tr>
@@ -100,20 +100,20 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                   <span className="text-sm text-vercel-gray-400">{resource.teams_account || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge variant="default" size="sm">
+                  <Badge variant="default">
                     {resource.employment_type?.name || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
                   {isIncomplete(resource) ? (
-                    <Badge variant="warning" size="sm">
+                    <Badge variant="warning">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                       Incomplete
                     </Badge>
                   ) : (
-                    <Badge variant="success" size="sm">Complete</Badge>
+                    <Badge variant="success">Complete</Badge>
                   )}
                 </td>
               </tr>
