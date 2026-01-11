@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Modal } from './Modal';
+import { Select } from './Select';
 import type { Resource, ResourceFormData, EmploymentType } from '../types';
 
 interface EmployeeEditorModalProps {
@@ -91,6 +92,11 @@ export function EmployeeEditorModal({
       onClose();
     }
   };
+
+  const employmentTypeOptions = useMemo(() =>
+    employmentTypes.map(et => ({ value: et.id, label: et.name })),
+    [employmentTypes]
+  );
 
   if (!resource) return null;
 
@@ -218,18 +224,13 @@ export function EmployeeEditorModal({
           <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
             Employment Type
           </label>
-          <select
+          <Select
             value={formData.employment_type_id}
-            onChange={(e) => handleInputChange('employment_type_id', e.target.value)}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
-          >
-            <option value="">Select employment type</option>
-            {employmentTypes.map((et) => (
-              <option key={et.id} value={et.id}>
-                {et.name}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => handleInputChange('employment_type_id', value)}
+            options={employmentTypeOptions}
+            placeholder="Select employment type"
+            className="w-full"
+          />
         </div>
       </form>
     </Modal>

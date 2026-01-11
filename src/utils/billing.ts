@@ -1,12 +1,15 @@
-import type { ProjectSummary } from '../types';
+import type { ProjectSummary, Project } from '../types';
 
 export interface ProjectRate {
   projectName: string;
   hourlyRate: number;
 }
 
-// Default billing rates per project
-const DEFAULT_RATES: Record<string, number> = {
+// Default fallback rate when no rate is specified
+export const DEFAULT_FALLBACK_RATE = 45.00;
+
+// Legacy default rates (for backwards compatibility with localStorage)
+const LEGACY_RATES: Record<string, number> = {
   'FoodCycleScience': 60.00,
   'Neocurrency': 52.36,
   'MPS 2.0': 45.00,
@@ -21,24 +24,78 @@ const DEFAULT_RATES: Record<string, number> = {
 const STORAGE_KEY = 'timesheet_billing_rates';
 
 /**
- * Get all billing rates from localStorage, merged with defaults
+ * Build a rate lookup from database projects
+ * Key is project_id (from n8n) for accurate matching
+ */
+export function buildDbRateLookup(projects: Project[]): Map<string, number> {
+  const lookup = new Map<string, number>();
+  projects.forEach(project => {
+    // Only add to lookup if rate is explicitly set (including 0)
+    if (project.rate !== null) {
+      lookup.set(project.project_id, project.rate);
+    }
+  });
+  return lookup;
+}
+
+/**
+ * Build a rate lookup by project name from database projects
+ * Key is project_name for display/report matching
+ */
+export function buildDbRateLookupByName(projects: Project[]): Map<string, number> {
+  const lookup = new Map<string, number>();
+  projects.forEach(project => {
+    if (project.rate !== null) {
+      lookup.set(project.project_name, project.rate);
+    }
+  });
+  return lookup;
+}
+
+/**
+ * Get rate for a project with proper fallback logic
+ * Priority: Database rate > Legacy localStorage rate > Default $45
+ */
+export function getEffectiveRate(
+  projectName: string,
+  dbRateLookup?: Map<string, number>,
+  legacyRates?: Record<string, number>
+): number {
+  // Check database lookup first
+  if (dbRateLookup?.has(projectName)) {
+    return dbRateLookup.get(projectName)!;
+  }
+
+  // Fall back to legacy localStorage rates
+  if (legacyRates && legacyRates[projectName] !== undefined) {
+    return legacyRates[projectName];
+  }
+
+  // Ultimate fallback
+  return DEFAULT_FALLBACK_RATE;
+}
+
+/**
+ * Get all billing rates from localStorage, merged with legacy defaults
+ * @deprecated Use database rates instead
  */
 export function getBillingRates(): Record<string, number> {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Merge with defaults (stored rates take precedence)
-      return { ...DEFAULT_RATES, ...parsed };
+      // Merge with legacy defaults (stored rates take precedence)
+      return { ...LEGACY_RATES, ...parsed };
     }
   } catch (e) {
     console.error('Error reading billing rates:', e);
   }
-  return { ...DEFAULT_RATES };
+  return { ...LEGACY_RATES };
 }
 
 /**
  * Save billing rates to localStorage
+ * @deprecated Use database rates instead
  */
 export function saveBillingRates(rates: Record<string, number>): void {
   try {
@@ -50,14 +107,16 @@ export function saveBillingRates(rates: Record<string, number>): void {
 
 /**
  * Get the hourly rate for a specific project
+ * @deprecated Use getEffectiveRate instead
  */
 export function getProjectRate(projectName: string): number {
   const rates = getBillingRates();
-  return rates[projectName] ?? 0;
+  return rates[projectName] ?? DEFAULT_FALLBACK_RATE;
 }
 
 /**
  * Set the hourly rate for a specific project
+ * @deprecated Use database rates instead
  */
 export function setProjectRate(projectName: string, rate: number): void {
   const rates = getBillingRates();
@@ -67,27 +126,41 @@ export function setProjectRate(projectName: string, rate: number): void {
 
 /**
  * Calculate revenue for a single project
+ * Uses database rates with $45 fallback, then legacy localStorage rates
  */
-export function calculateProjectRevenue(project: ProjectSummary, rates: Record<string, number>): number {
+export function calculateProjectRevenue(
+  project: ProjectSummary,
+  rates: Record<string, number>,
+  dbRateLookup?: Map<string, number>
+): number {
   const hours = project.totalMinutes / 60;
-  const rate = rates[project.projectName] ?? 0;
+  const rate = getEffectiveRate(project.projectName, dbRateLookup, rates);
   return hours * rate;
 }
 
 /**
  * Calculate total revenue across all projects
+ * Uses database rates with $45 fallback, then legacy localStorage rates
  */
-export function calculateTotalRevenue(projects: ProjectSummary[], rates: Record<string, number>): number {
+export function calculateTotalRevenue(
+  projects: ProjectSummary[],
+  rates: Record<string, number>,
+  dbRateLookup?: Map<string, number>
+): number {
   return projects.reduce((total, project) => {
-    return total + calculateProjectRevenue(project, rates);
+    return total + calculateProjectRevenue(project, rates, dbRateLookup);
   }, 0);
 }
 
 /**
  * Get project rates as an array (for table display)
  * Includes all projects from data + any stored rates
+ * Uses database rates with proper fallback
  */
-export function getProjectRatesArray(projects: ProjectSummary[]): ProjectRate[] {
+export function getProjectRatesArray(
+  projects: ProjectSummary[],
+  dbRateLookup?: Map<string, number>
+): ProjectRate[] {
   const rates = getBillingRates();
 
   // Get all unique project names (from data + stored rates)
@@ -99,7 +172,7 @@ export function getProjectRatesArray(projects: ProjectSummary[]): ProjectRate[] 
     .sort()
     .map(projectName => ({
       projectName,
-      hourlyRate: rates[projectName] ?? 0,
+      hourlyRate: getEffectiveRate(projectName, dbRateLookup, rates),
     }));
 }
 

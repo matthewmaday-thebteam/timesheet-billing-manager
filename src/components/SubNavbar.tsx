@@ -1,6 +1,6 @@
 import { NavItem } from './NavItem';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'eom-reports';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'rates' | 'eom-reports' | 'users';
 
 interface SubNavbarProps {
   activeRoute: NavRoute;
@@ -16,7 +16,9 @@ const navItems: NavItemConfig[] = [
   { id: 'home', label: 'Home' },
   { id: 'holidays', label: 'Holidays' },
   { id: 'employees', label: 'Employees' },
+  { id: 'rates', label: 'Rates' },
   { id: 'eom-reports', label: 'EOM Reports' },
+  { id: 'users', label: 'Users' },
 ];
 
 export function SubNavbar({ activeRoute, onRouteChange }: SubNavbarProps) {

@@ -107,16 +107,16 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
                 relative aspect-square flex flex-col items-center justify-center rounded-md
                 text-sm transition-colors duration-200 ease-out
                 ${!isCurrentMonth ? 'text-[#9CA3AF]' : ''}
-                ${isCurrentMonth && !holiday && !isWeekend ? 'text-[#111827]' : ''}
-                ${isCurrentMonth && isWeekend && !holiday ? 'text-[#6B7280]' : ''}
-                ${holiday ? 'bg-[#EEF2FF] text-[#4338CA]' : 'hover:bg-[#F9FAFB]'}
-                ${isToday && !holiday ? 'ring-1 ring-[#000000]' : ''}
-                ${isToday && holiday ? 'ring-1 ring-[#4338CA]' : ''}
+                ${isCurrentMonth && !holiday && !isWeekend && !isToday ? 'text-[#111827]' : ''}
+                ${isCurrentMonth && isWeekend && !holiday && !isToday ? 'text-[#6B7280]' : ''}
+                ${holiday ? 'bg-[#EEF2FF] text-[#4338CA]' : ''}
+                ${isToday && !holiday ? 'bg-[#F3F4F6] text-[#111827]' : ''}
+                ${!holiday && !isToday ? 'hover:bg-[#F9FAFB]' : ''}
                 focus:outline-none
               `}
               title={holiday?.holiday_name}
             >
-              <span className={`${holiday ? 'font-semibold' : ''}`}>
+              <span className={`${holiday ? 'font-semibold' : ''} ${isToday ? 'font-medium' : ''}`}>
                 {format(day, 'd')}
               </span>
             </button>
@@ -131,7 +131,7 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
           <span>Holiday</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded ring-1 ring-[#000000]" />
+          <span className="w-3 h-3 rounded bg-[#F3F4F6]" />
           <span>Today</span>
         </div>
       </div>

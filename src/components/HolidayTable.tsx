@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
+import { DropdownMenu } from './DropdownMenu';
 import type { BulgarianHoliday } from '../types';
 
 interface HolidayTableProps {
@@ -10,54 +10,6 @@ interface HolidayTableProps {
 }
 
 export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTableProps) {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null);
-      }
-    };
-
-    if (openMenuId) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openMenuId]);
-
-  // Close menu on escape
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpenMenuId(null);
-      }
-    };
-
-    if (openMenuId) {
-      document.addEventListener('keydown', handleEscape);
-    }
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [openMenuId]);
-
-  const handleMenuToggle = (id: string) => {
-    setOpenMenuId(openMenuId === id ? null : id);
-  };
-
-  const handleEdit = (holiday: BulgarianHoliday) => {
-    setOpenMenuId(null);
-    onEdit(holiday);
-  };
-
-  const handleDelete = (holiday: BulgarianHoliday) => {
-    setOpenMenuId(null);
-    onDelete(holiday);
-  };
   if (loading) {
     return (
       <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
@@ -87,6 +39,28 @@ export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTab
       </div>
     );
   }
+
+  const getMenuItems = (holiday: BulgarianHoliday) => [
+    {
+      label: 'Edit',
+      onClick: () => onEdit(holiday),
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Delete',
+      onClick: () => onDelete(holiday),
+      variant: 'danger' as const,
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+    },
+  ];
 
   return (
     <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] overflow-hidden">
@@ -137,46 +111,8 @@ export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTab
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <div className="relative" ref={openMenuId === holiday.id ? menuRef : null}>
-                    <button
-                      onClick={() => handleMenuToggle(holiday.id)}
-                      className="p-1.5 rounded-md hover:bg-[#EAEAEA] transition-colors focus:outline-none"
-                      title="More actions"
-                    >
-                      <svg className="w-4 h-4 text-[#666666]" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="5" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="12" cy="19" r="2" />
-                      </svg>
-                    </button>
-
-                    {openMenuId === holiday.id && (
-                      <div
-                        className="absolute right-0 mt-1 w-36 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] overflow-hidden z-50"
-                        style={{
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
-                        }}
-                      >
-                        <button
-                          onClick={() => handleEdit(holiday)}
-                          className="w-full px-3 py-2 text-left text-sm text-[#000000] hover:bg-[#FAFAFA] transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(holiday)}
-                          className="w-full px-3 py-2 text-left text-sm text-[#EE0000] hover:bg-[#FEF2F2] transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex justify-end">
+                    <DropdownMenu items={getMenuItems(holiday)} />
                   </div>
                 </td>
               </tr>

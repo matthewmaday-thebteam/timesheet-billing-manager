@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   getBillingRates,
   setProjectRate,
   calculateProjectRevenue,
   formatCurrency,
+  getEffectiveRate,
+  buildDbRateLookupByName,
 } from '../utils/billing';
 import { minutesToHours } from '../utils/calculations';
+import { useProjects } from '../hooks/useProjects';
 import type { ProjectSummary } from '../types';
 
 interface BillingRatesTableProps {
@@ -18,6 +21,10 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Get database rates
+  const { projects: dbProjects } = useProjects();
+  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
 
   useEffect(() => {
     setRates(getBillingRates());
@@ -51,13 +58,13 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
 
   // Sort projects by revenue (highest first)
   const sortedProjects = [...projects].sort((a, b) => {
-    const revenueA = calculateProjectRevenue(a, rates);
-    const revenueB = calculateProjectRevenue(b, rates);
+    const revenueA = calculateProjectRevenue(a, rates, dbRateLookup);
+    const revenueB = calculateProjectRevenue(b, rates, dbRateLookup);
     return revenueB - revenueA;
   });
 
   const totalRevenue = sortedProjects.reduce(
-    (sum, p) => sum + calculateProjectRevenue(p, rates),
+    (sum, p) => sum + calculateProjectRevenue(p, rates, dbRateLookup),
     0
   );
 
@@ -111,8 +118,9 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
             </thead>
             <tbody className="divide-y divide-[#EAEAEA]">
               {sortedProjects.map((project) => {
-                const rate = rates[project.projectName] ?? 0;
-                const revenue = calculateProjectRevenue(project, rates);
+                const effectiveRate = getEffectiveRate(project.projectName, dbRateLookup, rates);
+                const hasDbRate = dbRateLookup.has(project.projectName);
+                const revenue = calculateProjectRevenue(project, rates, dbRateLookup);
                 const isEditing = editingProject === project.projectName;
 
                 return (
@@ -124,7 +132,7 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
                       {minutesToHours(project.totalMinutes)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {isEditing ? (
+                      {isEditing && !hasDbRate ? (
                         <div className="flex items-center justify-end gap-1">
                           <span className="text-[#666666]">$</span>
                           <input
@@ -139,15 +147,19 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
                             autoFocus
                           />
                         </div>
+                      ) : hasDbRate ? (
+                        <span className="px-2 py-1 text-sm text-[#000000]" title="Rate set in Rates page">
+                          ${effectiveRate.toFixed(2)}
+                        </span>
                       ) : (
                         <button
                           onClick={() => handleEditStart(project.projectName)}
                           className={`px-2 py-1 text-sm rounded-md hover:bg-[#FAFAFA] border border-transparent hover:border-[#EAEAEA] transition-colors ${
-                            rate === 0 ? 'text-[#EE0000]' : 'text-[#000000]'
+                            effectiveRate === 0 ? 'text-[#EE0000]' : 'text-[#000000]'
                           }`}
-                          title="Click to edit"
+                          title="Click to edit (legacy)"
                         >
-                          {rate === 0 ? 'Set rate' : `$${rate.toFixed(2)}`}
+                          ${effectiveRate.toFixed(2)}
                         </button>
                       )}
                     </td>

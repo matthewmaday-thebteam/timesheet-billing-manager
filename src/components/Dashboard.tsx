@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
+import { useProjects } from '../hooks/useProjects';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
-import { getBillingRates, calculateTotalRevenue } from '../utils/billing';
+import { getBillingRates, calculateTotalRevenue, buildDbRateLookupByName } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
 import { StatsOverview } from './StatsOverview';
 import { ProjectCard } from './ProjectCard';
@@ -29,6 +30,7 @@ export function Dashboard() {
   }, []);
 
   const { entries, projects, resources, loading, error, refetch } = useTimesheetData(dateRange);
+  const { projects: dbProjects } = useProjects();
 
   // Use the earlier of: end of selected range or today
   const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
@@ -36,9 +38,12 @@ export function Dashboard() {
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
   const underHoursItems = getUnderHoursResources(resources, effectiveEndDate);
 
-  // Calculate revenue (re-calculates when ratesVersion changes)
+  // Build database rate lookup
+  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
+
+  // Calculate revenue (re-calculates when ratesVersion or dbProjects changes)
   const rates = getBillingRates();
-  const totalRevenue = calculateTotalRevenue(projects, rates);
+  const totalRevenue = calculateTotalRevenue(projects, rates, dbRateLookup);
   // Use ratesVersion to ensure React sees this as a dependency
   void ratesVersion;
 

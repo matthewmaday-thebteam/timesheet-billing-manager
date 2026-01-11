@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Vercel Design System Theme */
+@theme {
+  --color-vercel-gray-50: #fafafa;
+  --color-vercel-gray-100: #eaeaea;
+  --color-vercel-gray-200: #999999;
+  --shadow-vercel-dropdown: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
 /* Vercel-style thin scrollbar */
 .scrollbar-thin {
   scrollbar-width: thin;

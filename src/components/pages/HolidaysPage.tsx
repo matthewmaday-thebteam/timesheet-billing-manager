@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useHolidays } from '../../hooks/useHolidays';
 import { HolidayCalendar } from '../HolidayCalendar';
 import { HolidayTable } from '../HolidayTable';
 import { HolidayEditorModal } from '../HolidayEditorModal';
 import { Modal } from '../Modal';
+import { Select } from '../Select';
 import type { BulgarianHoliday } from '../../types';
 
 export function HolidaysPage() {
@@ -27,7 +28,12 @@ export function HolidaysPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
-  const yearOptions = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+  const yearOptions = useMemo(() => [
+    { value: String(currentYear - 1), label: String(currentYear - 1) },
+    { value: String(currentYear), label: String(currentYear) },
+    { value: String(currentYear + 1), label: String(currentYear + 1) },
+    { value: String(currentYear + 2), label: String(currentYear + 2) },
+  ], [currentYear]);
 
   const handleAddClick = () => {
     setSelectedHoliday(null);
@@ -88,17 +94,12 @@ export function HolidaysPage() {
         </div>
         <div className="flex items-center gap-3">
           {/* Year Selector */}
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none"
-          >
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={String(selectedYear)}
+            onChange={(value) => setSelectedYear(Number(value))}
+            options={yearOptions}
+            className="w-24"
+          />
 
           {/* Sync Year Button */}
           <button
