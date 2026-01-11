@@ -57,7 +57,7 @@ export function transformResourcesToPieData(
  * Shows cumulative values for the full year (Jan-Dec):
  * - Target: $150k/month compounding to annual target (budget * ratio) by December
  * - Budget: ~$83.3k/month compounding to annual budget by December
- * - Revenue: Cumulative earned revenue (persists once earned)
+ * - Revenue: Cumulative earned revenue that extends as flat line into future months
  *
  * @param monthlyAggregates - Array of monthly aggregate data
  * @param annualBudget - Annual budget in dollars (default: $1M)
@@ -97,14 +97,15 @@ export function transformToLineChartData(
     const cumulativeTarget = monthlyTarget * (index + 1);
     const cumulativeBudget = monthlyBudget * (index + 1);
 
-    // Add this month's revenue to cumulative total
+    // Add this month's revenue to cumulative total (only for months with data)
     if (revenueByMonth.has(index)) {
       cumulativeRevenue += revenueByMonth.get(index)!;
     }
 
-    // Show revenue for months up to and including the last month with data
-    // (revenue persists once earned)
-    const showRevenue = index <= lastMonthWithData;
+    // Revenue extends as flat line into future months once earned
+    // Show null only for months before any data exists
+    const hasAnyData = lastMonthWithData >= 0;
+    const showRevenue = hasAnyData && index >= 0;
 
     return {
       month: monthName,
@@ -162,11 +163,11 @@ export function aggregateEntriesByMonth(
 
 /**
  * Generate mock line chart data for preview/testing.
- * Shows cumulative values with revenue data only through specified month.
+ * Shows cumulative values with revenue extending as flat line into future months.
  *
  * @param annualBudget - Annual budget (default: $1M)
  * @param targetRatio - Target multiplier (default: 1.8x)
- * @param monthsWithData - Number of months with revenue data (default: current month)
+ * @param monthsWithData - Number of months with actual revenue data (default: current month)
  * @returns Array of 12 line graph data points with cumulative values
  */
 export function generateMockLineData(
@@ -192,19 +193,12 @@ export function generateMockLineData(
     const cumulativeTarget = Math.round(monthlyTarget * (index + 1));
     const cumulativeBudget = Math.round(monthlyBudget * (index + 1));
 
-    // Only generate revenue for months with data
-    if (index >= monthsWithData) {
-      return {
-        month,
-        target: cumulativeTarget,
-        budget: cumulativeBudget,
-        revenue: null,
-      };
+    // Generate monthly revenue with some variance for months with actual data
+    if (index < monthsWithData) {
+      const monthlyRevenue = monthlyBudget * (0.85 + seededRandom(index) * 0.15);
+      cumulativeRevenue += monthlyRevenue;
     }
-
-    // Generate monthly revenue with some variance (around 85-95% of monthly budget)
-    const monthlyRevenue = monthlyBudget * (0.85 + seededRandom(index) * 0.15);
-    cumulativeRevenue += monthlyRevenue;
+    // For future months, cumulativeRevenue stays at last earned value (flat line)
 
     return {
       month,
