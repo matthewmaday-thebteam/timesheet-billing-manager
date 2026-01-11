@@ -1,11 +1,101 @@
 @import "tailwindcss";
 
-/* Vercel Design System Theme */
+/* =============================================================================
+   Vercel Design System Theme
+
+   Token Reference: docs/STYLEGUIDE.md
+   Last Updated: 2026-01-11 (Task 014)
+   ============================================================================= */
+
 @theme {
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Vercel Gray Scale
+     --------------------------------------------------------------------------- */
   --color-vercel-gray-50: #fafafa;
   --color-vercel-gray-100: #eaeaea;
   --color-vercel-gray-200: #999999;
+  --color-vercel-gray-300: #888888;
+  --color-vercel-gray-400: #666666;
+  --color-vercel-gray-500: #333333;
+  --color-vercel-gray-600: #000000;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Semantic: Error/Danger
+     --------------------------------------------------------------------------- */
+  --color-error: #EE0000;
+  --color-error-hover: #CC0000;
+  --color-error-light: #FEF2F2;
+  --color-error-border: #FECACA;
+  --color-error-text: #DC2626;
+  --color-error-text-dark: #B91C1C;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Semantic: Success
+     --------------------------------------------------------------------------- */
+  --color-success: #50E3C2;
+  --color-success-light: #F0FDF4;
+  --color-success-border: #BBF7D0;
+  --color-success-text: #166534;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Semantic: Warning
+     --------------------------------------------------------------------------- */
+  --color-warning: #F5A623;
+  --color-warning-alt: #F97316;
+  --color-warning-light: #FFF7ED;
+  --color-warning-border: #FFEDD5;
+  --color-warning-text: #9A3412;
+  --color-warning-text-dark: #C2410C;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Semantic: Info
+     --------------------------------------------------------------------------- */
+  --color-info: #4338CA;
+  --color-info-light: #EEF2FF;
+  --color-info-border: #C7D2FE;
+  --color-info-text: #3730A3;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Brand
+     --------------------------------------------------------------------------- */
+  --color-brand-indigo: #667eea;
+  --color-brand-purple: #764ba2;
+
+  /* ---------------------------------------------------------------------------
+     COLOR TOKENS - Mesh Gradient (for MeshGradientBackground)
+     --------------------------------------------------------------------------- */
+  --color-mesh-1: #667eea;
+  --color-mesh-2: #764ba2;
+  --color-mesh-3: #50E3C2;
+  --color-mesh-4: #F5A623;
+
+  /* ---------------------------------------------------------------------------
+     TYPOGRAPHY TOKENS - Font Sizes
+     --------------------------------------------------------------------------- */
+  --font-size-2xs: 10px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* ---------------------------------------------------------------------------
+     SHADOW TOKENS
+     --------------------------------------------------------------------------- */
   --shadow-vercel-dropdown: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  /* ---------------------------------------------------------------------------
+     RADIUS TOKENS
+     --------------------------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
 }
 
 /* Vercel-style thin scrollbar */

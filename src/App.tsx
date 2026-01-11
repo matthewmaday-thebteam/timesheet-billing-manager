@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { MainHeader } from './components/MainHeader';
 import { SubNavbar, type NavRoute } from './components/SubNavbar';
 import { Dashboard } from './components/Dashboard';
+import { Spinner } from './components/Spinner';
 import { HolidaysPage } from './components/pages/HolidaysPage';
 import { EmployeesPage } from './components/pages/EmployeesPage';
 import { RatesPage } from './components/pages/RatesPage';
@@ -11,11 +12,35 @@ import { UsersPage } from './components/pages/UsersPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
+import { StyleReviewPage } from './design-system/style-review/StyleReviewPage';
 
 type AuthView = 'login' | 'forgot-password' | 'reset-password';
 
 function AuthenticatedApp() {
   const [activeRoute, setActiveRoute] = useState<NavRoute>('home');
+  const [showStyleReview, setShowStyleReview] = useState(false);
+
+  // Dev-only: Check for style-review URL parameter
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('style-review') === 'true') {
+        setShowStyleReview(true);
+      }
+    }
+  }, []);
+
+  // Dev-only: Style Review Surface
+  if (showStyleReview && import.meta.env.DEV) {
+    return (
+      <StyleReviewPage
+        onClose={() => {
+          setShowStyleReview(false);
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   const renderPage = () => {
     switch (activeRoute) {
@@ -85,10 +110,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-vercel-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-3">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#EAEAEA] border-t-[#000000]" />
-          <span className="text-sm text-[#666666]">Loading...</span>
+          <Spinner size="md" />
+          <span className="text-sm text-vercel-gray-400">Loading...</span>
         </div>
       </div>
     );

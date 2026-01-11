@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
+import { Button } from './Button';
+import { Spinner } from './Spinner';
+import { Input } from './Input';
 import { DatePicker } from './DatePicker';
 import type { BulgarianHoliday, HolidayFormData } from '../types';
 
@@ -88,24 +91,13 @@ export function HolidayEditorModal({
 
   const footerContent = (
     <>
-      <button
-        type="button"
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
-      >
+      <Button variant="secondary" onClick={onClose}>
         Cancel
-      </button>
-      <button
-        onClick={() => handleSubmit()}
-        disabled={isSaving}
-        className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
-      >
+      </Button>
+      <Button variant="primary" onClick={() => handleSubmit()} disabled={isSaving}>
         {isSaving ? (
           <span className="flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+            <Spinner size="sm" />
             Saving...
           </span>
         ) : isEditing ? (
@@ -113,7 +105,7 @@ export function HolidayEditorModal({
         ) : (
           'Add Holiday'
         )}
-      </button>
+      </Button>
     </>
   );
 
@@ -128,29 +120,17 @@ export function HolidayEditorModal({
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Holiday Name */}
-        <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
-            Holiday Name
-          </label>
-          <input
-            type="text"
-            value={formData.holiday_name}
-            onChange={(e) => handleInputChange('holiday_name', e.target.value)}
-            className={`w-full px-3 py-2 bg-[#FFFFFF] border rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
-              errors.holiday_name
-                ? 'border-[#EE0000] focus:border-[#EE0000]'
-                : 'border-[#EAEAEA] focus:border-[#000000]'
-            }`}
-            placeholder="e.g., Liberation Day"
-          />
-          {errors.holiday_name && (
-            <p className="mt-1 text-[12px] text-[#EE0000]">{errors.holiday_name}</p>
-          )}
-        </div>
+        <Input
+          label="Holiday Name"
+          value={formData.holiday_name}
+          onChange={(e) => handleInputChange('holiday_name', e.target.value)}
+          placeholder="e.g., Liberation Day"
+          error={errors.holiday_name}
+        />
 
         {/* Holiday Date */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
             Date
           </label>
           <DatePicker
@@ -160,14 +140,14 @@ export function HolidayEditorModal({
             error={!!errors.holiday_date}
           />
           {errors.holiday_date && (
-            <p className="mt-1 text-[12px] text-[#EE0000]">{errors.holiday_date}</p>
+            <p className="mt-1 text-xs text-error" role="alert">{errors.holiday_date}</p>
           )}
         </div>
 
         {/* System Generated Notice */}
         {isEditing && holiday?.is_system_generated && (
-          <div className="p-3 bg-[#FAFAFA] border border-[#EAEAEA] rounded-md">
-            <p className="text-[12px] text-[#666666]">
+          <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
+            <p className="text-xs text-vercel-gray-400">
               This holiday was auto-generated. Editing will mark it as manually modified.
             </p>
           </div>

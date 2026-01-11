@@ -150,36 +150,37 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
   const dropdownContent = (
     <div
       ref={containerRef}
-      className="bg-[#FFFFFF] rounded-xl border border-[#E5E7EB] overflow-hidden"
+      className="bg-white rounded-xl border border-vercel-gray-100 overflow-hidden shadow-elevated"
       style={{
         position: 'fixed',
         top: dropdownPosition.top - window.scrollY,
         left: dropdownPosition.left,
         width: dropdownPosition.width,
         zIndex: 9999,
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E7EB]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-vercel-gray-100">
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="p-1 rounded-md hover:bg-[#F3F4F6] transition-colors focus:outline-none"
+          aria-label="Previous month"
+          className="p-1 rounded-md hover:bg-vercel-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600"
         >
-          <svg className="w-4 h-4 text-[#6B7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <span className="text-sm font-medium text-[#111827]">
+        <span className="text-sm font-medium text-vercel-gray-600">
           {format(currentMonth, 'MMMM yyyy')}
         </span>
         <button
           type="button"
           onClick={handleNextMonth}
-          className="p-1 rounded-md hover:bg-[#F3F4F6] transition-colors focus:outline-none"
+          aria-label="Next month"
+          className="p-1 rounded-md hover:bg-vercel-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600"
         >
-          <svg className="w-4 h-4 text-[#6B7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -190,7 +191,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-[11px] font-medium text-[#9CA3AF] py-1"
+            className="text-center text-[11px] font-medium text-vercel-gray-300 py-1"
           >
             {day}
           </div>
@@ -210,14 +211,16 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
               key={dateKey}
               type="button"
               onClick={() => handleDateSelect(day)}
+              aria-label={format(day, 'MMMM d, yyyy')}
+              aria-pressed={isSelected ? 'true' : undefined}
               className={`
                 aspect-square flex items-center justify-center rounded-full
                 text-sm transition-all duration-150 ease-out
-                ${!isCurrentMonth ? 'text-[#D1D5DB]' : 'text-[#111827]'}
-                ${isSelected ? 'bg-[#000000] text-[#FFFFFF] font-medium' : ''}
-                ${!isSelected && isCurrentMonth ? 'hover:bg-[#F3F4F6]' : ''}
-                ${isToday && !isSelected ? 'font-semibold text-[#000000]' : ''}
-                focus:outline-none
+                ${!isCurrentMonth ? 'text-vercel-gray-200' : 'text-vercel-gray-600'}
+                ${isSelected ? 'bg-vercel-gray-600 text-white font-medium' : ''}
+                ${!isSelected && isCurrentMonth ? 'hover:bg-vercel-gray-50' : ''}
+                ${isToday && !isSelected ? 'font-semibold text-vercel-gray-600' : ''}
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600 focus-visible:ring-offset-1
               `}
             >
               {format(day, 'd')}
@@ -227,18 +230,18 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E7EB] bg-[#FAFAFA]">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-vercel-gray-100 bg-vercel-gray-50">
         <button
           type="button"
           onClick={handleClear}
-          className="text-sm text-[#6B7280] hover:text-[#111827] transition-colors focus:outline-none"
+          className="text-sm text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600 rounded px-1"
         >
           Clear
         </button>
         <button
           type="button"
           onClick={handleToday}
-          className="text-sm font-medium text-[#000000] hover:text-[#333333] transition-colors focus:outline-none"
+          className="text-sm font-medium text-vercel-gray-600 hover:text-vercel-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vercel-gray-600 rounded px-1"
         >
           Today
         </button>
@@ -253,17 +256,17 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3 py-2 bg-[#FFFFFF] border rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none ${
+        className={`w-full px-3 py-2 bg-white border rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out focus:ring-1 focus:ring-vercel-gray-600 focus:outline-none ${
           error
-            ? 'border-[#EE0000] focus:border-[#EE0000]'
-            : 'border-[#EAEAEA] focus:border-[#000000]'
+            ? 'border-error focus:border-error'
+            : 'border-vercel-gray-100 focus:border-vercel-gray-600'
         }`}
       >
-        <span className={displayValue ? 'text-[#000000]' : 'text-[#888888]'}>
+        <span className={displayValue ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
           {displayValue || placeholder}
         </span>
         <svg
-          className="w-4 h-4 text-[#666666]"
+          className="w-4 h-4 text-vercel-gray-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

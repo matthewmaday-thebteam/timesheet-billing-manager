@@ -3,6 +3,7 @@ import { useAdminUsers } from '../../hooks/useAdminUsers';
 import { UserTable } from '../UserTable';
 import { UserEditorModal } from '../UserEditorModal';
 import { Modal } from '../Modal';
+import { Button } from '../Button';
 import type { AppUser, CreateUserParams, UserRole } from '../../types';
 
 export function UsersPage() {
@@ -93,46 +94,44 @@ export function UsersPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#000000]">User Management</h1>
-          <p className="text-sm text-[#666666] mt-1">
+          <h1 className="text-xl font-semibold text-vercel-gray-600">User Management</h1>
+          <p className="text-sm text-vercel-gray-400 mt-1">
             Manage admin users with access to the application
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleAddClick}
-            className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] transition-colors focus:outline-none focus:ring-1 focus:ring-black"
-          >
+          <Button variant="primary" onClick={handleAddClick}>
             Add User
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className="p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
+        <div className="p-3 bg-success-light border border-success rounded-lg">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-[#166534]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span className="text-sm text-[#166534]">{successMessage}</span>
+            <span className="text-sm text-success">{successMessage}</span>
           </div>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg">
+        <div className="p-4 bg-error-light border border-error rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm text-[#DC2626]">{error}</span>
+              <span className="text-sm text-error">{error}</span>
             </div>
             <button
               onClick={clearError}
-              className="text-[#DC2626] hover:text-[#B91C1C] transition-colors"
+              aria-label="Dismiss error"
+              className="text-error hover:text-error-dark transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -144,23 +143,23 @@ export function UsersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-          <p className="text-[12px] text-[#666666] mb-1">Total Users</p>
-          <p className="text-2xl font-semibold text-[#000000]">{users.length}</p>
+        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
+          <p className="text-xs text-vercel-gray-400 mb-1">Total Users</p>
+          <p className="text-2xl font-semibold text-vercel-gray-600">{users.length}</p>
         </div>
-        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-          <p className="text-[12px] text-[#666666] mb-1">Admins</p>
-          <p className="text-2xl font-semibold text-[#000000]">{adminCount}</p>
+        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
+          <p className="text-xs text-vercel-gray-400 mb-1">Admins</p>
+          <p className="text-2xl font-semibold text-vercel-gray-600">{adminCount}</p>
         </div>
-        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-          <p className="text-[12px] text-[#666666] mb-1">Verified</p>
-          <p className="text-2xl font-semibold text-[#000000]">
+        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
+          <p className="text-xs text-vercel-gray-400 mb-1">Verified</p>
+          <p className="text-2xl font-semibold text-vercel-gray-600">
             {users.filter((u) => u.is_verified).length}
           </p>
         </div>
-        <div className="p-4 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-          <p className="text-[12px] text-[#666666] mb-1">Pending</p>
-          <p className="text-2xl font-semibold text-[#000000]">
+        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
+          <p className="text-xs text-vercel-gray-400 mb-1">Pending</p>
+          <p className="text-2xl font-semibold text-vercel-gray-600">
             {users.filter((u) => !u.is_verified).length}
           </p>
         </div>
@@ -196,31 +195,24 @@ export function UsersPage() {
         centerTitle
         footer={
           <>
-            <button
-              onClick={() => setIsDeleteConfirmOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors focus:outline-none focus:ring-1 focus:ring-black"
-            >
+            <Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>
               Cancel
-            </button>
-            <button
-              onClick={handleConfirmDelete}
-              disabled={isOperating}
-              className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#EE0000] border border-[#EE0000] rounded-md hover:bg-[#CC0000] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-1 focus:ring-[#EE0000]"
-            >
+            </Button>
+            <Button variant="danger" onClick={handleConfirmDelete} disabled={isOperating}>
               {isOperating ? 'Deleting...' : 'Delete'}
-            </button>
+            </Button>
           </>
         }
       >
         <div className="text-center py-4">
-          <svg className="mx-auto h-12 w-12 text-[#EE0000] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mx-auto h-12 w-12 text-error mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p className="text-sm text-[#000000]">
+          <p className="text-sm text-vercel-gray-600">
             Are you sure you want to delete{' '}
             <span className="font-semibold">{userToDelete?.email}</span>?
           </p>
-          <p className="text-[12px] text-[#666666] mt-2">
+          <p className="text-xs text-vercel-gray-400 mt-2">
             This will permanently remove the user and they will no longer be able to sign in.
           </p>
         </div>
@@ -235,31 +227,24 @@ export function UsersPage() {
         centerTitle
         footer={
           <>
-            <button
-              onClick={() => setIsResetPasswordConfirmOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors focus:outline-none focus:ring-1 focus:ring-black"
-            >
+            <Button variant="secondary" onClick={() => setIsResetPasswordConfirmOpen(false)}>
               Cancel
-            </button>
-            <button
-              onClick={handleConfirmResetPassword}
-              disabled={isOperating}
-              className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-1 focus:ring-black"
-            >
+            </Button>
+            <Button variant="primary" onClick={handleConfirmResetPassword} disabled={isOperating}>
               {isOperating ? 'Sending...' : 'Send Reset Email'}
-            </button>
+            </Button>
           </>
         }
       >
         <div className="text-center py-4">
-          <svg className="mx-auto h-12 w-12 text-[#666666] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mx-auto h-12 w-12 text-vercel-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
-          <p className="text-sm text-[#000000]">
+          <p className="text-sm text-vercel-gray-600">
             Send a password reset email to{' '}
             <span className="font-semibold">{userToResetPassword?.email}</span>?
           </p>
-          <p className="text-[12px] text-[#666666] mt-2">
+          <p className="text-xs text-vercel-gray-400 mt-2">
             The user will receive an email with a link to set a new password.
           </p>
         </div>

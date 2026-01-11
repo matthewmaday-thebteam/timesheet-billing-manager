@@ -125,14 +125,14 @@ export function UserEditorModal({
       <button
         type="button"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+        className="px-4 py-2 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         Cancel
       </button>
       <button
         onClick={() => handleSubmit()}
         disabled={isSaving}
-        className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+        className="px-4 py-2 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function UserEditorModal({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Email Address
           </label>
           <input
@@ -171,48 +171,48 @@ export function UserEditorModal({
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             disabled={isEditing}
-            className={`w-full px-3 py-2 bg-[#FFFFFF] border rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out disabled:bg-[#FAFAFA] disabled:text-[#888888] ${
+            className={`w-full px-3 py-2 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300 ${
               errors.email
-                ? 'border-[#EE0000] focus:border-[#EE0000]'
-                : 'border-[#EAEAEA] focus:border-[#000000]'
+                ? 'border-error focus:border-error'
+                : 'border-vercel-gray-100 focus:border-vercel-gray-600'
             }`}
             placeholder="user@example.com"
           />
-          {errors.email && <p className="mt-1 text-[12px] text-[#EE0000]">{errors.email}</p>}
+          {errors.email && <p className="mt-1 text-xs text-error">{errors.email}</p>}
         </div>
 
         {/* Display Name */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Display Name
-            <span className="ml-1 text-[#888888] normal-case tracking-normal">(optional)</span>
+            <span className="ml-1 text-vercel-gray-300 normal-case tracking-normal">(optional)</span>
           </label>
           <input
             type="text"
             value={formData.display_name}
             onChange={(e) => handleInputChange('display_name', e.target.value)}
             disabled={isEditing}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out disabled:bg-[#FAFAFA] disabled:text-[#888888]"
+            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300"
             placeholder="John Doe"
           />
         </div>
 
         {/* Role */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Role
           </label>
           <select
             value={formData.role}
             onChange={(e) => handleInputChange('role', e.target.value as UserRole)}
             disabled={isLastAdmin}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out disabled:bg-[#FAFAFA] disabled:text-[#888888]"
+            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300"
           >
             <option value="admin">Admin</option>
             <option value="user">User</option>
           </select>
           {isLastAdmin && (
-            <p className="mt-1 text-[12px] text-[#888888]">
+            <p className="mt-1 text-xs text-vercel-gray-300">
               Cannot change role of the last admin user
             </p>
           )}
@@ -222,10 +222,10 @@ export function UserEditorModal({
         {!isEditing && (
           <>
             <div>
-              <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
                 Password
                 {formData.send_invite && (
-                  <span className="ml-1 text-[#888888] normal-case tracking-normal">(optional)</span>
+                  <span className="ml-1 text-vercel-gray-300 normal-case tracking-normal">(optional)</span>
                 )}
               </label>
               <div className="relative">
@@ -233,17 +233,17 @@ export function UserEditorModal({
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full px-3 py-2 pr-10 bg-[#FFFFFF] border rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
+                  className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
                     errors.password
-                      ? 'border-[#EE0000] focus:border-[#EE0000]'
-                      : 'border-[#EAEAEA] focus:border-[#000000]'
+                      ? 'border-error focus:border-error'
+                      : 'border-vercel-gray-100 focus:border-vercel-gray-600'
                   }`}
                   placeholder="Minimum 8 characters"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#666666] hover:text-[#000000] transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,14 +257,14 @@ export function UserEditorModal({
                   )}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-[12px] text-[#EE0000]">{errors.password}</p>}
+              {errors.password && <p className="mt-1 text-xs text-error">{errors.password}</p>}
             </div>
 
             {/* Send Invite Toggle */}
-            <div className="flex items-center justify-between p-3 bg-[#FAFAFA] border border-[#EAEAEA] rounded-md">
+            <div className="flex items-center justify-between p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
               <div>
-                <p className="text-sm font-medium text-[#000000]">Send Invite Email</p>
-                <p className="text-[12px] text-[#666666]">
+                <p className="text-sm font-medium text-vercel-gray-600">Send Invite Email</p>
+                <p className="text-xs text-vercel-gray-400">
                   {formData.send_invite
                     ? 'User will receive an email to set their password'
                     : 'User will use the password you set above'}
@@ -274,7 +274,7 @@ export function UserEditorModal({
                 type="button"
                 onClick={() => handleInputChange('send_invite', !formData.send_invite)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black ${
-                  formData.send_invite ? 'bg-[#000000]' : 'bg-[#EAEAEA]'
+                  formData.send_invite ? 'bg-vercel-gray-600' : 'bg-vercel-gray-100'
                 }`}
               >
                 <span
@@ -289,8 +289,8 @@ export function UserEditorModal({
 
         {/* Edit Mode Notice */}
         {isEditing && (
-          <div className="p-3 bg-[#FAFAFA] border border-[#EAEAEA] rounded-md">
-            <p className="text-[12px] text-[#666666]">
+          <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
+            <p className="text-xs text-vercel-gray-400">
               To change the password, use the "Reset Password" option from the user's action menu.
             </p>
           </div>

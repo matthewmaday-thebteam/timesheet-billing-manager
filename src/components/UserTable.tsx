@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 import { DropdownMenu, type DropdownMenuItem } from './DropdownMenu';
+import { Spinner } from './Spinner';
+import { Badge } from './Badge';
 import type { AppUser } from '../types';
 
 interface UserTableProps {
@@ -21,13 +23,10 @@ export function UserTable({
 }: UserTableProps) {
   if (loading) {
     return (
-      <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
+      <div className="bg-white rounded-lg border border-vercel-gray-100">
         <div className="p-8 text-center">
-          <div className="inline-flex items-center gap-2 text-[#666666]">
-            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+          <div className="inline-flex items-center gap-2 text-vercel-gray-400">
+            <Spinner size="md" />
             <span className="text-sm">Loading users...</span>
           </div>
         </div>
@@ -37,13 +36,13 @@ export function UserTable({
 
   if (users.length === 0) {
     return (
-      <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
+      <div className="bg-white rounded-lg border border-vercel-gray-100">
         <div className="p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-[#EAEAEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mx-auto h-12 w-12 text-vercel-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <p className="mt-4 text-sm text-[#666666]">No users found</p>
-          <p className="mt-1 text-[12px] text-[#888888]">Click "Add User" to create an admin user</p>
+          <p className="mt-4 text-sm text-vercel-gray-400">No users found</p>
+          <p className="mt-1 text-xs text-vercel-gray-300">Click "Add User" to create an admin user</p>
         </div>
       </div>
     );
@@ -91,83 +90,81 @@ export function UserTable({
   };
 
   return (
-    <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] overflow-hidden">
+    <div className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-[#FAFAFA] border-b border-[#EAEAEA]">
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+            <tr className="bg-vercel-gray-50 border-b border-vercel-gray-100">
+              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 Role
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 Last Sign In
               </th>
-              <th className="px-4 py-3 text-right text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#EAEAEA]">
+          <tbody className="divide-y divide-vercel-gray-100">
             {users.map((user) => (
               <tr
                 key={user.id}
-                className="hover:bg-[#FAFAFA] transition-colors duration-200 ease-out"
+                className="hover:bg-vercel-gray-50 transition-colors duration-200 ease-out"
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center text-sm font-medium text-[#666666]">
+                    <div className="w-8 h-8 rounded-full bg-vercel-gray-50 flex items-center justify-center text-sm font-medium text-vercel-gray-400">
                       {user.display_name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-[#000000]">
+                      <div className="text-sm font-medium text-vercel-gray-600">
                         {user.display_name || user.email.split('@')[0]}
                       </div>
-                      <div className="text-[12px] text-[#666666]">{user.email}</div>
+                      <div className="text-xs text-vercel-gray-400">{user.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                    user.role === 'admin'
-                      ? 'bg-[#000000] text-[#FFFFFF]'
-                      : 'bg-[#F5F5F5] text-[#666666]'
-                  }`}>
-                    {user.role === 'admin' ? 'Admin' : 'User'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {user.is_verified ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[#F0FDF4] text-[#166534]">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Verified
-                    </span>
+                  {user.role === 'admin' ? (
+                    <Badge variant="info" size="sm">Admin</Badge>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[#FFF7ED] text-[#C2410C]">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Pending
-                    </span>
+                    <Badge variant="default" size="sm">User</Badge>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-[#666666]">
+                  {user.is_verified ? (
+                    <Badge variant="success" size="sm">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning" size="sm">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Pending
+                    </Badge>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-sm text-vercel-gray-400">
                     {format(new Date(user.created_at), 'MMM d, yyyy')}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-[#666666]">
+                  <span className="text-sm text-vercel-gray-400">
                     {user.last_sign_in_at
                       ? format(new Date(user.last_sign_in_at), 'MMM d, yyyy h:mm a')
                       : 'Never'}

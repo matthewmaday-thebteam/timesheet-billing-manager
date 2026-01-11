@@ -1,0 +1,133 @@
+/**
+ * MeshGradientBackground - Pure CSS Animation
+ *
+ * Token-driven implementation using design system colors.
+ * Colors reference @theme variables from src/index.css:
+ *   --color-mesh-1, --color-mesh-2, --color-mesh-3, --color-mesh-4
+ *
+ * Updated: 2026-01-11 (Task 014)
+ */
+
+.mesh-gradient-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: var(--mesh-opacity, 0.6);
+}
+
+.mesh-gradient-blob {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  border-radius: 50%;
+  filter: blur(var(--mesh-blur, 80px));
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+/* Blob 1 - Brand Indigo (token: --color-mesh-1) */
+.mesh-gradient-blob-1 {
+  top: -10%;
+  left: -10%;
+  background: var(--color-mesh-1);
+  animation-name: mesh-blob-1;
+  animation-duration: var(--mesh-duration, 20s);
+}
+
+/* Blob 2 - Brand Purple (token: --color-mesh-2) */
+.mesh-gradient-blob-2 {
+  top: -10%;
+  right: -10%;
+  background: var(--color-mesh-2);
+  animation-name: mesh-blob-2;
+  animation-duration: calc(var(--mesh-duration, 20s) * 1.1);
+}
+
+/* Blob 3 - Success/Teal (token: --color-mesh-3) */
+.mesh-gradient-blob-3 {
+  bottom: -10%;
+  left: -10%;
+  background: var(--color-mesh-3);
+  animation-name: mesh-blob-3;
+  animation-duration: calc(var(--mesh-duration, 20s) * 0.9);
+}
+
+/* Blob 4 - Warning/Amber (token: --color-mesh-4) */
+.mesh-gradient-blob-4 {
+  bottom: -10%;
+  right: -10%;
+  background: var(--color-mesh-4);
+  animation-name: mesh-blob-4;
+  animation-duration: calc(var(--mesh-duration, 20s) * 1.2);
+}
+
+/* Animation keyframes - organic movement */
+@keyframes mesh-blob-1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30%, 20%) scale(1.1);
+  }
+  66% {
+    transform: translate(10%, 40%) scale(0.95);
+  }
+  100% {
+    transform: translate(20%, 10%) scale(1.05);
+  }
+}
+
+@keyframes mesh-blob-2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-20%, 30%) scale(1.05);
+  }
+  66% {
+    transform: translate(-40%, 10%) scale(1.1);
+  }
+  100% {
+    transform: translate(-10%, 20%) scale(0.95);
+  }
+}
+
+@keyframes mesh-blob-3 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40%, -20%) scale(0.95);
+  }
+  66% {
+    transform: translate(20%, -30%) scale(1.1);
+  }
+  100% {
+    transform: translate(30%, -10%) scale(1);
+  }
+}
+
+@keyframes mesh-blob-4 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-30%, -30%) scale(1.1);
+  }
+  66% {
+    transform: translate(-10%, -20%) scale(0.95);
+  }
+  100% {
+    transform: translate(-20%, -40%) scale(1.05);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .mesh-gradient-blob {
+    animation: none;
+  }
+}
