@@ -480,17 +480,18 @@ Utils:
 |------|-------------|-------|
 | Target ($1.8M) | Cumulative monthly target ($150k/month) | Solid indigo |
 | Budget ($1M) | Cumulative monthly budget (~$83k/month) | Dashed purple |
-| Revenue | Cumulative earned revenue | Solid teal |
+| Revenue | Cumulative earned revenue | Solid B Team pink (#E50A73) |
 
 **Features**:
 - Full year display (Jan-Dec)
 - Cumulative/compounding values
-- Revenue line extends only through months with data
+- Revenue line extends as flat horizontal line into future months
 - Y-axis: Currency format ($XXk, $X.XM)
 - Horizontal grid lines only
 - Font-mono for all text elements
+- No black outline on clicked elements
 
 **Data Model**:
 - Target and Budget show for all 12 months
-- Revenue is `null` for future months (line stops)
+- Revenue shows cumulative earned total, extending flat into future
 - Values compound monthly (e.g., March target = $450k)

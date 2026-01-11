@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.5.0
-**Last Updated:** 2026-01-11 (Charts Feature)
+**Version:** 1.5.1
+**Last Updated:** 2026-01-11 (Charts Refinements)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -634,6 +634,12 @@ This displays:
 ---
 
 ## Changelog
+
+### v1.5.1 (2026-01-11) - Charts Refinements
+- Revenue line now uses The B Team brand color (#E50A73)
+- Revenue line extends as flat horizontal line into future months
+- Removed black outline on clicked chart elements (stroke: none)
+- Legend labels updated: "Target ($1.8M)", "Budget ($1M)"
 
 ### v1.5.0 (2026-01-11) - Charts Feature
 - Added PieChartAtom for donut/pie chart visualization
