@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.4.0
-**Last Updated:** 2026-01-11 (Task 018)
+**Version:** 1.5.0
+**Last Updated:** 2026-01-11 (Charts Feature)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -216,6 +216,8 @@ Use Tailwind's default spacing scale:
 | **DatePicker** | `src/components/DatePicker.tsx` | **Official** | Task 018 |
 | **AccordionNested** | `src/components/AccordionNested.tsx` | **Official** | Task 018 |
 | **AccordionFlat** | `src/components/AccordionFlat.tsx` | **Official** | Task 018 |
+| **PieChartAtom** | `src/components/atoms/charts/PieChartAtom.tsx` | **Official** | Charts |
+| **LineGraphAtom** | `src/components/atoms/charts/LineGraphAtom.tsx` | **Official** | Charts |
 
 ### Button Component
 
@@ -358,6 +360,68 @@ const rows: AccordionFlatRow[] = [
   defaultExpanded={true}
 />
 ```
+
+### PieChartAtom Component
+
+```tsx
+import { PieChartAtom } from '@/components/atoms/charts/PieChartAtom';
+import type { PieChartDataPoint } from '@/types/charts';
+
+// Donut chart showing data distribution
+// Data should be pre-processed (use transformResourcesToPieData)
+const data: PieChartDataPoint[] = [
+  { name: 'Resource A', value: 42.5 },
+  { name: 'Resource B', value: 38.0 },
+  { name: 'Other', value: 18.0, color: 'other' },
+];
+
+<PieChartAtom data={data} />
+<PieChartAtom data={data} innerRadius={0} outerRadius={80} /> // Pie style
+<PieChartAtom data={data} showLegend={false} />
+```
+
+### LineGraphAtom Component
+
+```tsx
+import { LineGraphAtom } from '@/components/atoms/charts/LineGraphAtom';
+import type { LineGraphDataPoint } from '@/types/charts';
+
+// Line chart with cumulative Target, Budget, and Revenue
+// - Target: $150k/month → $1.8M by December (brand-indigo, solid)
+// - Budget: ~$83.3k/month → $1M by December (brand-purple, dashed)
+// - Revenue: Cumulative earned (success, solid)
+const data: LineGraphDataPoint[] = [
+  { month: 'Jan', target: 150000, budget: 83333, revenue: 75000 },
+  { month: 'Feb', target: 300000, budget: 166667, revenue: 160000 },
+  // ... (null revenue for future months)
+  { month: 'Dec', target: 1800000, budget: 1000000, revenue: null },
+];
+
+<LineGraphAtom data={data} />
+<LineGraphAtom data={data} showGrid={false} />
+<LineGraphAtom data={data} height={300} />
+```
+
+### DashboardChartsRow Molecule
+
+```tsx
+import { DashboardChartsRow } from '@/components/DashboardChartsRow';
+
+// Two-column responsive grid with pie and line charts
+// Uses Card component with padding="lg"
+<DashboardChartsRow
+  resources={resources}
+  monthlyAggregates={monthlyAggregates}
+  loading={false}
+/>
+```
+
+### Chart Theme Adapter
+
+All chart styling is centralized in `src/components/atoms/charts/chartTheme.ts`:
+- Colors reference CSS custom properties (no hex codes)
+- Font-mono for all text elements
+- Consistent tooltip and legend styling
 
 ### Proposed Atoms (All Promoted)
 
@@ -570,6 +634,20 @@ This displays:
 ---
 
 ## Changelog
+
+### v1.5.0 (2026-01-11) - Charts Feature
+- Added PieChartAtom for donut/pie chart visualization
+- Added LineGraphAtom for cumulative time series (Target/Budget/Revenue)
+- Added DashboardChartsRow molecule with responsive 2-column layout
+- Added chartTheme.ts adapter mapping design tokens to Recharts
+- Added chartTransforms.ts for data transformation utilities
+- Extended useTimesheetData hook with 12-month historical data support
+- Charts show cumulative values:
+  - Target: $150k/month compounding to $1.8M annual
+  - Budget: ~$83.3k/month compounding to $1M annual
+  - Revenue: Cumulative earned revenue (persists once recorded)
+- All chart text uses font-mono token
+- All colors use CSS custom properties (no hex codes)
 
 ### v1.4.0 (2026-01-11) - Task 018
 - Added AccordionNested component for 3-level project hierarchy

@@ -30,6 +30,9 @@
 | F024 | Employees Page | Complete | P1 | EmployeesPage.tsx |
 | F025 | Project Rates Page | Complete | P1 | RatesPage.tsx |
 | F026 | Navigation System | Complete | P0 | SubNavbar.tsx, MainHeader.tsx |
+| F027 | Dashboard Charts | Complete | P1 | DashboardChartsRow.tsx |
+| F028 | Hours by Resource Chart | Complete | P1 | PieChartAtom.tsx |
+| F029 | Revenue Trend Chart | Complete | P1 | LineGraphAtom.tsx |
 
 ---
 
@@ -425,3 +428,69 @@ Utils:
 - App title
 - User avatar with initial
 - Sign out dropdown
+
+---
+
+### F027: Dashboard Charts
+**Component**: `src/components/DashboardChartsRow.tsx`
+**Description**: Responsive grid containing pie chart and line chart for dashboard visualization.
+
+| Feature | Details |
+|---------|---------|
+| Layout | 2-column grid on desktop, single column on mobile |
+| Position | Between DateRangeFilter and KPI stats cards |
+| Loading State | Shows Spinner in each card slot |
+| Empty State | Returns null when no data available |
+
+**Grid Configuration**:
+- Desktop (md+): `grid-cols-2`
+- Mobile: `grid-cols-1`
+- Gap: `gap-4` (16px)
+- Card padding: `lg` (24px)
+
+---
+
+### F028: Hours by Resource Chart
+**Component**: `src/components/atoms/charts/PieChartAtom.tsx`
+**Description**: Donut-style pie chart showing hours distribution by resource.
+
+| Feature | Details |
+|---------|---------|
+| Chart Type | Donut (inner radius: 60, outer radius: 80) |
+| Max Segments | 5 (groups remainder into "Other") |
+| Height | 250px |
+| Legend | Right side, vertical layout |
+| Tooltip | Shows resource name and hours |
+
+**Color Sequence**:
+1. Brand Indigo
+2. Brand Purple
+3. Success (teal)
+4. Warning (orange)
+5. Info (deep indigo)
+6. "Other" uses gray
+
+---
+
+### F029: Revenue Trend Chart
+**Component**: `src/components/atoms/charts/LineGraphAtom.tsx`
+**Description**: Line chart showing 12-month cumulative revenue trend against target and budget.
+
+| Line | Description | Style |
+|------|-------------|-------|
+| Target ($1.8M) | Cumulative monthly target ($150k/month) | Solid indigo |
+| Budget ($1M) | Cumulative monthly budget (~$83k/month) | Dashed purple |
+| Revenue | Cumulative earned revenue | Solid teal |
+
+**Features**:
+- Full year display (Jan-Dec)
+- Cumulative/compounding values
+- Revenue line extends only through months with data
+- Y-axis: Currency format ($XXk, $X.XM)
+- Horizontal grid lines only
+- Font-mono for all text elements
+
+**Data Model**:
+- Target and Budget show for all 12 months
+- Revenue is `null` for future months (line stops)
+- Values compound monthly (e.g., March target = $450k)

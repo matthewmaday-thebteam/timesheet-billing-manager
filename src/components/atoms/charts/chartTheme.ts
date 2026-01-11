@@ -59,14 +59,14 @@ export const pieChartColorSequence = [
 export const lineGraphLines = {
   target: {
     dataKey: 'target' as const,
-    name: 'Target (1.8x)',
+    name: 'Target ($1.8M)',
     color: chartColors.brandIndigo,
     strokeDasharray: undefined,
     strokeWidth: 2,
   },
   budget: {
     dataKey: 'budget' as const,
-    name: 'Budget',
+    name: 'Budget ($1M)',
     color: chartColors.brandPurple,
     strokeDasharray: '5 5',
     strokeWidth: 2,
