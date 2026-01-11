@@ -54,25 +54,25 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="bg-[#FFFFFF] rounded-lg border border-[#EAEAEA] p-4">
+    <div className="bg-white rounded-lg border border-vercel-gray-100 p-4">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={handlePrevMonth}
-          className="p-1.5 rounded-md hover:bg-[#FAFAFA] transition-colors focus:outline-none"
+          className="p-1.5 rounded-md hover:bg-vercel-gray-50 transition-colors focus:outline-none"
         >
-          <svg className="w-5 h-5 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h3 className="text-sm font-semibold text-[#000000]">
+        <h3 className="text-sm font-semibold text-vercel-gray-600">
           {format(currentMonth, 'MMMM yyyy')}
         </h3>
         <button
           onClick={handleNextMonth}
-          className="p-1.5 rounded-md hover:bg-[#FAFAFA] transition-colors focus:outline-none"
+          className="p-1.5 rounded-md hover:bg-vercel-gray-50 transition-colors focus:outline-none"
         >
-          <svg className="w-5 h-5 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -83,7 +83,7 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-[10px] font-bold text-[#888888] uppercase tracking-wider py-2"
+            className="text-center text-2xs font-bold text-vercel-gray-300 uppercase tracking-wider py-2"
           >
             {day}
           </div>
@@ -106,12 +106,12 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
               className={`
                 relative aspect-square flex flex-col items-center justify-center rounded-md
                 text-sm transition-colors duration-200 ease-out
-                ${!isCurrentMonth ? 'text-[#9CA3AF]' : ''}
-                ${isCurrentMonth && !holiday && !isWeekend && !isToday ? 'text-[#111827]' : ''}
-                ${isCurrentMonth && isWeekend && !holiday && !isToday ? 'text-[#6B7280]' : ''}
-                ${holiday ? 'bg-[#EEF2FF] text-[#4338CA]' : ''}
-                ${isToday && !holiday ? 'bg-[#F3F4F6] text-[#111827]' : ''}
-                ${!holiday && !isToday ? 'hover:bg-[#F9FAFB]' : ''}
+                ${!isCurrentMonth ? 'text-vercel-gray-200' : ''}
+                ${isCurrentMonth && !holiday && !isWeekend && !isToday ? 'text-vercel-gray-600' : ''}
+                ${isCurrentMonth && isWeekend && !holiday && !isToday ? 'text-vercel-gray-400' : ''}
+                ${holiday ? 'bg-info-light text-info' : ''}
+                ${isToday && !holiday ? 'bg-vercel-gray-100 text-vercel-gray-600' : ''}
+                ${!holiday && !isToday ? 'hover:bg-vercel-gray-50' : ''}
                 focus:outline-none
               `}
               title={holiday?.holiday_name}
@@ -125,13 +125,13 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
       </div>
 
       {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-[#EAEAEA] flex items-center gap-4 text-[11px] text-[#666666]">
+      <div className="mt-4 pt-4 border-t border-vercel-gray-100 flex items-center gap-4 text-2xs text-vercel-gray-400">
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-[#EEF2FF] border border-[#C7D2FE]" />
+          <span className="w-3 h-3 rounded bg-info-light border border-info" />
           <span>Holiday</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-[#F3F4F6]" />
+          <span className="w-3 h-3 rounded bg-vercel-gray-100" />
           <span>Today</span>
         </div>
       </div>

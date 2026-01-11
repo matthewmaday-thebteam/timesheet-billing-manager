@@ -60,21 +60,21 @@ export function Modal({
       {/* Modal container */}
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div
-          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-[#FFFFFF] rounded-xl flex flex-col overflow-hidden`}
+          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-white rounded-xl flex flex-col overflow-hidden`}
           style={{
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className={`flex-shrink-0 flex items-center ${centerTitle ? 'justify-center relative' : 'justify-between'} p-6 border-b border-[#EAEAEA] bg-[#FFFFFF]`}>
+          <div className={`flex-shrink-0 flex items-center ${centerTitle ? 'justify-center relative' : 'justify-between'} p-6 border-b border-vercel-gray-100 bg-white`}>
             {centerTitle && (
               <button
                 onClick={onClose}
-                className="absolute left-6 p-1 rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
+                className="absolute left-6 p-1 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
               >
                 <svg
-                  className="w-5 h-5 text-[#666666]"
+                  className="w-5 h-5 text-vercel-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -88,14 +88,14 @@ export function Modal({
                 </svg>
               </button>
             )}
-            <h2 className="text-lg font-semibold text-[#000000]">{title}</h2>
+            <h2 className="text-lg font-semibold text-vercel-gray-600">{title}</h2>
             {!centerTitle && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
+                className="p-1 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:outline-none"
               >
                 <svg
-                  className="w-5 h-5 text-[#666666]"
+                  className="w-5 h-5 text-vercel-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -113,7 +113,7 @@ export function Modal({
 
           {/* Optional Sticky Header Section (for summary cards, etc.) */}
           {stickyHeader && (
-            <div className="flex-shrink-0 p-6 pb-0 bg-[#FFFFFF] border-b border-[#EAEAEA]">
+            <div className="flex-shrink-0 p-6 pb-0 bg-white border-b border-vercel-gray-100">
               {stickyHeader}
             </div>
           )}
@@ -123,7 +123,7 @@ export function Modal({
 
           {/* Footer - Optional action buttons area */}
           {footer && (
-            <div className="flex-shrink-0 flex items-center justify-end gap-3 px-8 py-4 border-t border-[#EAEAEA] bg-[#FAFAFA]">
+            <div className="flex-shrink-0 flex items-center justify-end gap-3 px-8 py-4 border-t border-vercel-gray-100 bg-vercel-gray-50">
               {footer}
             </div>
           )}

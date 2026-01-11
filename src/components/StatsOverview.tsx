@@ -24,33 +24,33 @@ export function StatsOverview({
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
       {/* Total Hours */}
-      <div className="p-6 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-        <p className="text-[12px] text-[#666666] mb-1">Total Hours</p>
-        <p className="text-2xl font-semibold text-[#000000]">
+      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
+        <p className="text-xs text-vercel-gray-400 mb-1">Total Hours</p>
+        <p className="text-2xl font-semibold text-vercel-gray-600">
           {minutesToHours(totalMinutes)}
         </p>
       </div>
 
       {/* Total Revenue */}
-      <div className="p-6 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-        <p className="text-[12px] text-[#666666] mb-1">Total Revenue</p>
-        <p className="text-xl font-semibold text-[#000000]">
+      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
+        <p className="text-xs text-vercel-gray-400 mb-1">Total Revenue</p>
+        <p className="text-xl font-semibold text-vercel-gray-600">
           {formatCurrency(totalRevenue)}
         </p>
       </div>
 
       {/* Projects */}
-      <div className="p-6 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-        <p className="text-[12px] text-[#666666] mb-1">Projects</p>
-        <p className="text-2xl font-semibold text-[#000000]">
+      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
+        <p className="text-xs text-vercel-gray-400 mb-1">Projects</p>
+        <p className="text-2xl font-semibold text-vercel-gray-600">
           {projects.length}
         </p>
       </div>
 
       {/* Resources */}
-      <div className="p-6 bg-[#FFFFFF] rounded-lg border border-[#EAEAEA]">
-        <p className="text-[12px] text-[#666666] mb-1">Resources</p>
-        <p className="text-2xl font-semibold text-[#000000]">
+      <div className="p-6 bg-white rounded-lg border border-vercel-gray-100">
+        <p className="text-xs text-vercel-gray-400 mb-1">Resources</p>
+        <p className="text-2xl font-semibold text-vercel-gray-600">
           {resources.length}
         </p>
       </div>

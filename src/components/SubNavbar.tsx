@@ -23,7 +23,7 @@ const navItems: NavItemConfig[] = [
 
 export function SubNavbar({ activeRoute, onRouteChange }: SubNavbarProps) {
   return (
-    <nav className="h-12 bg-[#FFFFFF] border-b border-[#EAEAEA]">
+    <nav className="h-12 bg-white border-b border-vercel-gray-100">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center">
         <div className="flex items-center gap-1">
           {navItems.map((item) => (

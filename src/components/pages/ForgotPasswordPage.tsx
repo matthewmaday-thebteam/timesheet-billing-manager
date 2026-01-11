@@ -29,34 +29,34 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-vercel-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-[#000000]">Reset Password</h1>
-          <p className="text-sm text-[#666666] mt-2">
+          <h1 className="text-2xl font-semibold text-vercel-gray-600">Reset Password</h1>
+          <p className="text-sm text-vercel-gray-400 mt-2">
             Enter your email to receive a password reset link
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-[#FFFFFF] rounded-xl border border-[#EAEAEA] p-8 shadow-sm">
+        <div className="bg-white rounded-xl border border-vercel-gray-100 p-8 shadow-sm">
           {success ? (
             <div className="text-center space-y-4">
-              <div className="w-12 h-12 mx-auto bg-[#F0FDF4] rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#166534]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 mx-auto bg-success-light rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-[#000000]">Check your email</h3>
-                <p className="text-sm text-[#666666] mt-2">
+                <h3 className="text-sm font-semibold text-vercel-gray-600">Check your email</h3>
+                <p className="text-sm text-vercel-gray-400 mt-2">
                   We've sent a password reset link to <span className="font-medium">{email}</span>
                 </p>
               </div>
               <button
                 onClick={onBackToLogin}
-                className="w-full px-4 py-2.5 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full px-4 py-2.5 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
               >
                 Back to Sign In
               </button>
@@ -65,26 +65,26 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg">
+                <div className="p-3 bg-error-light border border-error rounded-lg">
                   <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-sm text-[#DC2626]">{error}</span>
+                    <span className="text-sm text-error">{error}</span>
                   </div>
                 </div>
               )}
 
               {/* Email Field */}
               <div>
-                <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+                  className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
                   placeholder="you@example.com"
                   required
                   autoComplete="email"
@@ -96,7 +96,7 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full px-4 py-2.5 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -115,7 +115,7 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               <button
                 type="button"
                 onClick={onBackToLogin}
-                className="w-full px-4 py-2.5 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full px-4 py-2.5 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
               >
                 Back to Sign In
               </button>

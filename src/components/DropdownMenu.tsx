@@ -89,7 +89,7 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
   };
 
   const defaultTrigger = (
-    <svg className="w-4 h-4 text-[#666666]" fill="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-vercel-gray-400" fill="currentColor" viewBox="0 0 24 24">
       <circle cx="12" cy="5" r="2" />
       <circle cx="12" cy="12" r="2" />
       <circle cx="12" cy="19" r="2" />
@@ -99,7 +99,7 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="bg-[#FFFFFF] rounded-lg overflow-hidden w-36"
+      className="bg-white rounded-lg overflow-hidden w-36"
       style={{
         position: 'fixed',
         top: dropdownPosition.top,
@@ -117,12 +117,12 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
             onClick={() => handleItemClick(item)}
             className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
               item.variant === 'danger'
-                ? 'text-[#EE0000] hover:bg-[#FEF2F2]'
-                : 'text-[#000000] hover:bg-[#FAFAFA]'
+                ? 'text-error hover:bg-error-light'
+                : 'text-vercel-gray-600 hover:bg-vercel-gray-50'
             }`}
           >
             {item.icon && (
-              <span className={item.variant === 'danger' ? '' : 'text-[#666666]'}>
+              <span className={item.variant === 'danger' ? '' : 'text-vercel-gray-400'}>
                 {item.icon}
               </span>
             )}
@@ -139,7 +139,7 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 rounded-md hover:bg-[#EAEAEA] transition-colors focus:outline-none"
+        className="p-1.5 rounded-md hover:bg-vercel-gray-100 transition-colors focus:outline-none"
         title="More actions"
       >
         {trigger || defaultTrigger}

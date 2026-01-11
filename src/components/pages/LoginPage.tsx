@@ -31,39 +31,39 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-vercel-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-[#000000]">Timesheet Manager</h1>
-          <p className="text-sm text-[#666666] mt-2">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold text-vercel-gray-600">Timesheet Manager</h1>
+          <p className="text-sm text-vercel-gray-400 mt-2">Sign in to your account</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-[#FFFFFF] rounded-xl border border-[#EAEAEA] p-8 shadow-sm">
+        <div className="bg-white rounded-xl border border-vercel-gray-100 p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg">
+              <div className="p-3 bg-error-light border border-error rounded-lg">
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="text-sm text-[#DC2626]">{error}</span>
+                  <span className="text-sm text-error">{error}</span>
                 </div>
               </div>
             )}
 
             {/* Email Field */}
             <div>
-              <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
                 Email Address
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
@@ -73,14 +73,14 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
 
             {/* Password Field */}
             <div>
-              <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
@@ -92,7 +92,7 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="text-sm text-[#666666] hover:text-[#000000] transition-colors"
+                className="text-sm text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors"
               >
                 Forgot password?
               </button>
@@ -102,7 +102,7 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+              className="w-full px-4 py-2.5 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -120,7 +120,7 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
         </div>
 
         {/* Footer Note */}
-        <p className="text-center text-[12px] text-[#888888] mt-6">
+        <p className="text-center text-xs text-vercel-gray-300 mt-6">
           Contact your administrator to create an account
         </p>
       </div>

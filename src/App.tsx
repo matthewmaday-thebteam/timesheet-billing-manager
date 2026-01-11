@@ -62,7 +62,7 @@ function AuthenticatedApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-vercel-gray-50">
       <MainHeader />
       <SubNavbar activeRoute={activeRoute} onRouteChange={setActiveRoute} />
       {renderPage()}

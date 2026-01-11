@@ -17,23 +17,23 @@ export function MetricCard({
 }: MetricCardProps) {
   // Determine card styling based on warning state
   const cardClasses = isWarning
-    ? 'bg-[#FFF7ED] border-[#FFEDD5]'
-    : 'bg-[#FFFFFF] border-[#EAEAEA]';
+    ? 'bg-warning-light border-warning'
+    : 'bg-white border-vercel-gray-100';
 
   const titleClasses = isWarning
-    ? 'text-[#9A3412]'
-    : 'text-[#666666]';
+    ? 'text-warning-dark'
+    : 'text-vercel-gray-400';
 
   const valueClasses = isWarning
-    ? 'text-[#C2410C]'
-    : 'text-[#000000]';
+    ? 'text-warning'
+    : 'text-vercel-gray-600';
 
   // Status dot color mapping
   const dotColors = {
-    default: 'bg-[#D4D4D4]',
-    green: 'bg-[#50E3C2]',
-    orange: 'bg-[#F97316]',
-    red: 'bg-[#EE0000]',
+    default: 'bg-vercel-gray-200',
+    green: 'bg-success',
+    orange: 'bg-warning',
+    red: 'bg-error',
   };
 
   const showStatusDot = statusColor !== 'default' || isWarning;
@@ -41,7 +41,7 @@ export function MetricCard({
 
   return (
     <div className={`relative p-6 rounded-lg border ${cardClasses}`}>
-      <p className={`text-[12px] mb-1 ${titleClasses}`}>{title}</p>
+      <p className={`text-xs mb-1 ${titleClasses}`}>{title}</p>
 
       <div className="flex items-center gap-2 mt-1">
         {showStatusDot && (
@@ -56,7 +56,7 @@ export function MetricCard({
       {onClick && (
         <button
           onClick={onClick}
-          className="absolute bottom-3 right-3 flex items-center gap-1 px-3 py-1 bg-[#F5F5F5] border border-[#EAEAEA] rounded-md text-[12px] text-[#666666] hover:bg-[#EBEBEB] hover:border-[#D4D4D4] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+          className="absolute bottom-3 right-3 flex items-center gap-1 px-3 py-1 bg-vercel-gray-100 border border-vercel-gray-100 rounded-md text-xs text-vercel-gray-400 hover:bg-vercel-gray-200 hover:border-vercel-gray-200 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
         >
           <span>{actionLabel || 'View'}</span>
           <svg

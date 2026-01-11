@@ -91,7 +91,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="bg-[#FFFFFF] rounded-lg overflow-hidden"
+      className="bg-white rounded-lg overflow-hidden"
       style={{
         position: 'fixed',
         top: dropdownPosition.top,
@@ -109,13 +109,13 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
             key={option.value}
             type="button"
             onClick={() => handleSelect(option.value)}
-            className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between transition-colors hover:bg-[#FAFAFA] ${
-              option.value === value ? 'text-[#000000] font-medium' : 'text-[#666666]'
+            className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between transition-colors hover:bg-vercel-gray-50 ${
+              option.value === value ? 'text-vercel-gray-600 font-medium' : 'text-vercel-gray-400'
             }`}
           >
             <span>{option.label}</span>
             {option.value === value && (
-              <svg className="w-4 h-4 text-[#000000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-vercel-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             )}
@@ -131,13 +131,13 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out hover:border-[#999999] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none ${className}`}
+        className={`px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out hover:border-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${className}`}
       >
-        <span className={selectedOption ? 'text-[#000000]' : 'text-[#888888]'}>
+        <span className={selectedOption ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
           {selectedOption?.label || placeholder}
         </span>
         <svg
-          className={`w-4 h-4 text-[#666666] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-vercel-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

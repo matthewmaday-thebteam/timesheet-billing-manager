@@ -105,14 +105,14 @@ export function EmployeeEditorModal({
       <button
         type="button"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-[#666666] bg-[#FFFFFF] border border-[#EAEAEA] rounded-md hover:bg-[#FAFAFA] transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+        className="px-4 py-2 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         Cancel
       </button>
       <button
         onClick={() => handleSubmit()}
         disabled={isSaving || Object.keys(errors).length > 0}
-        className="px-4 py-2 text-sm font-medium text-[#FFFFFF] bg-[#000000] border border-[#000000] rounded-md hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+        className="px-4 py-2 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
@@ -141,20 +141,20 @@ export function EmployeeEditorModal({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* System ID (Read-only) */}
         <div>
-          <label className="flex items-center gap-2 text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             System ID (Read-only)
           </label>
-          <div className="px-3 py-2 bg-[#FAFAFA] border border-[#EAEAEA] rounded-md text-sm text-[#666666]">
+          <div className="px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-400">
             {resource.external_label}
           </div>
         </div>
 
         {/* First Name */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             First Name
           </label>
           <input
@@ -162,14 +162,14 @@ export function EmployeeEditorModal({
             value={formData.first_name}
             onChange={(e) => handleInputChange('first_name', e.target.value)}
             onBlur={() => handleBlur('first_name')}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="Enter first name"
           />
         </div>
 
         {/* Last Name */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Last Name
           </label>
           <input
@@ -177,14 +177,14 @@ export function EmployeeEditorModal({
             value={formData.last_name}
             onChange={(e) => handleInputChange('last_name', e.target.value)}
             onBlur={() => handleBlur('last_name')}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="Enter last name"
           />
         </div>
 
         {/* Email */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Email
           </label>
           <input
@@ -192,21 +192,21 @@ export function EmployeeEditorModal({
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             onBlur={() => handleBlur('email')}
-            className={`w-full px-3 py-2 bg-[#FFFFFF] border rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
+            className={`w-full px-3 py-2 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
               errors.email && touched.email
-                ? 'border-[#EE0000] focus:border-[#EE0000]'
-                : 'border-[#EAEAEA] focus:border-[#000000]'
+                ? 'border-error focus:border-error'
+                : 'border-vercel-gray-100 focus:border-vercel-gray-600'
             }`}
             placeholder="email@example.com"
           />
           {errors.email && touched.email && (
-            <p className="mt-1 text-[12px] text-[#EE0000]">{errors.email}</p>
+            <p className="mt-1 text-xs text-error">{errors.email}</p>
           )}
         </div>
 
         {/* Teams Account */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Teams Account
           </label>
           <input
@@ -214,14 +214,14 @@ export function EmployeeEditorModal({
             value={formData.teams_account}
             onChange={(e) => handleInputChange('teams_account', e.target.value)}
             onBlur={() => handleBlur('teams_account')}
-            className="w-full px-3 py-2 bg-[#FFFFFF] border border-[#EAEAEA] rounded-md text-sm text-[#000000] placeholder-[#888888] focus:ring-1 focus:ring-black focus:border-[#000000] focus:outline-none transition-colors duration-200 ease-out"
+            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="teams@account.com"
           />
         </div>
 
         {/* Employment Type */}
         <div>
-          <label className="block text-[12px] font-medium text-[#666666] uppercase tracking-wider mb-2">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Employment Type
           </label>
           <Select
