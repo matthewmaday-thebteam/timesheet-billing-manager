@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { Button } from '../Button';
+import { Card } from '../Card';
+import { Spinner } from '../Spinner';
 
 interface ResetPasswordPageProps {
   onComplete: () => void;
@@ -60,7 +63,7 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-xl border border-vercel-gray-100 p-8 shadow-sm">
+        <Card variant="elevated" padding="lg">
           {success ? (
             <div className="text-center space-y-4">
               <div className="w-12 h-12 mx-auto bg-success-light rounded-full flex items-center justify-center">
@@ -140,35 +143,34 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
               </div>
 
               {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
+                    <Spinner size="sm" color="white" />
                     Updating...
                   </span>
                 ) : (
                   'Update Password'
                 )}
-              </button>
+              </Button>
 
               {/* Back to Login */}
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={onComplete}
-                className="w-full px-4 py-2.5 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full"
               >
                 Back to Sign In
-              </button>
+              </Button>
             </form>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Modal } from './Modal';
 import { Select } from './Select';
+import { Button } from './Button';
+import { Input } from './Input';
+import { Spinner } from './Spinner';
 import type { Resource, ResourceFormData, EmploymentType } from '../types';
 
 interface EmployeeEditorModalProps {
@@ -23,6 +26,7 @@ function getFormDataFromResource(resource: Resource | null): ResourceFormData {
     email: resource?.email || '',
     teams_account: resource?.teams_account || '',
     employment_type_id: resource?.employment_type_id || '',
+    monthly_cost: resource?.monthly_cost ?? null,
   };
 }
 
@@ -101,30 +105,28 @@ export function EmployeeEditorModal({
 
   const footerContent = (
     <>
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         Cancel
-      </button>
-      <button
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
         onClick={() => handleSubmit()}
         disabled={isSaving || Object.keys(errors).length > 0}
-        className="px-4 py-2 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+            <Spinner size="sm" color="white" />
             Saving...
           </span>
         ) : (
           'Save Changes'
         )}
-      </button>
+      </Button>
     </>
   );
 
@@ -156,12 +158,11 @@ export function EmployeeEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             First Name
           </label>
-          <input
+          <Input
             type="text"
             value={formData.first_name}
             onChange={(e) => handleInputChange('first_name', e.target.value)}
             onBlur={() => handleBlur('first_name')}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="Enter first name"
           />
         </div>
@@ -171,12 +172,11 @@ export function EmployeeEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Last Name
           </label>
-          <input
+          <Input
             type="text"
             value={formData.last_name}
             onChange={(e) => handleInputChange('last_name', e.target.value)}
             onBlur={() => handleBlur('last_name')}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="Enter last name"
           />
         </div>
@@ -186,21 +186,14 @@ export function EmployeeEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Email
           </label>
-          <input
+          <Input
             type="email"
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             onBlur={() => handleBlur('email')}
-            className={`w-full px-3 py-2 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
-              errors.email && touched.email
-                ? 'border-error focus:border-error'
-                : 'border-vercel-gray-100 focus:border-vercel-gray-600'
-            }`}
             placeholder="email@example.com"
+            error={errors.email && touched.email ? errors.email : undefined}
           />
-          {errors.email && touched.email && (
-            <p className="mt-1 text-xs text-error">{errors.email}</p>
-          )}
         </div>
 
         {/* Teams Account */}
@@ -208,12 +201,11 @@ export function EmployeeEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Teams Account
           </label>
-          <input
+          <Input
             type="text"
             value={formData.teams_account}
             onChange={(e) => handleInputChange('teams_account', e.target.value)}
             onBlur={() => handleBlur('teams_account')}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
             placeholder="teams@account.com"
           />
         </div>
@@ -230,6 +222,29 @@ export function EmployeeEditorModal({
             placeholder="Select employment type"
             className="w-full"
           />
+        </div>
+
+        {/* Monthly Cost */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            Monthly Cost
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vercel-gray-400 text-sm">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.monthly_cost ?? ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                setFormData(prev => ({ ...prev, monthly_cost: value }));
+              }}
+              onBlur={() => handleBlur('monthly_cost')}
+              className="w-full pl-7 pr-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
+              placeholder="0.00"
+            />
+          </div>
         </div>
       </form>
     </Modal>

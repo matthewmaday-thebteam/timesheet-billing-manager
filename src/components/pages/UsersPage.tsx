@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAdminUsers } from '../../hooks/useAdminUsers';
 import { UserTable } from '../UserTable';
 import { UserEditorModal } from '../UserEditorModal';
+import { MetricCard } from '../MetricCard';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
 import type { AppUser, CreateUserParams, UserRole } from '../../types';
@@ -131,7 +132,7 @@ export function UsersPage() {
             <button
               onClick={clearError}
               aria-label="Dismiss error"
-              className="text-error hover:text-error-dark transition-colors"
+              className="text-error hover:opacity-80 transition-opacity"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -143,26 +144,10 @@ export function UsersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Total Users</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">{users.length}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Admins</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">{adminCount}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Verified</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {users.filter((u) => u.is_verified).length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Pending</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {users.filter((u) => !u.is_verified).length}
-          </p>
-        </div>
+        <MetricCard title="Total Users" value={users.length} />
+        <MetricCard title="Admins" value={adminCount} />
+        <MetricCard title="Verified" value={users.filter((u) => u.is_verified).length} />
+        <MetricCard title="Pending" value={users.filter((u) => !u.is_verified).length} />
       </div>
 
       {/* Users Table */}

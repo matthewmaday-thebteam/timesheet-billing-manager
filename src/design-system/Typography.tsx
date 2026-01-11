@@ -59,6 +59,7 @@ export const textStyles = {
     size: '24px',
     weight: '700',
     color: '#000000',
+    usage: ['Hero headings (not currently used in app)'],
   },
   'heading-xl': {
     classes: 'text-xl font-semibold text-vercel-gray-600',
@@ -66,6 +67,7 @@ export const textStyles = {
     size: '20px',
     weight: '600',
     color: '#000000',
+    usage: ['EmployeesPage', 'HolidaysPage', 'RatesPage', 'UsersPage', 'StyleReviewPage'],
   },
   'heading-lg': {
     classes: 'text-lg font-semibold text-vercel-gray-600',
@@ -73,6 +75,7 @@ export const textStyles = {
     size: '18px',
     weight: '600',
     color: '#000000',
+    usage: ['ProjectCard', 'BillingRatesTable', 'DashboardChartsRow', 'Modal title', 'Dashboard sections', 'UnderHoursModal stats', 'EOMReportsPage'],
   },
 
   // Body text
@@ -82,6 +85,7 @@ export const textStyles = {
     size: '16px',
     weight: '400',
     color: '#000000',
+    usage: ['Button lg size', 'Input lg size'],
   },
   'body-sm': {
     classes: 'text-sm text-vercel-gray-600',
@@ -89,6 +93,7 @@ export const textStyles = {
     size: '14px',
     weight: '400',
     color: '#000000',
+    usage: ['ResourceTable cells', 'HolidayTable cells', 'UserTable cells', 'RatesPage table', 'Page descriptions', 'Form inputs', 'Dropdown menus'],
   },
   'body-xs': {
     classes: 'text-xs text-vercel-gray-400',
@@ -96,6 +101,7 @@ export const textStyles = {
     size: '12px',
     weight: '400',
     color: '#666666',
+    usage: ['Page subtitles', 'Helper text', 'Empty state messages', 'Badge text', 'Calendar day numbers'],
   },
 
   // Labels
@@ -105,6 +111,7 @@ export const textStyles = {
     size: '10px',
     weight: '700',
     color: '#888888',
+    usage: ['(Reserved for future use)'],
   },
   'label-form': {
     classes: 'text-xs font-medium text-vercel-gray-400 uppercase tracking-wider',
@@ -112,6 +119,7 @@ export const textStyles = {
     size: '12px',
     weight: '500',
     color: '#666666',
+    usage: ['EmployeeEditorModal', 'UserEditorModal', 'ProjectEditorModal', 'HolidayEditorModal', 'LoginPage', 'ForgotPasswordPage', 'ResetPasswordPage', 'ResourceTable headers', 'UserTable headers', 'HolidayTable headers', 'RatesPage headers', 'AccordionFlat headers', 'HolidayCalendar weekdays', 'UnderHoursModal headers'],
   },
 
   // Monospace
@@ -122,6 +130,7 @@ export const textStyles = {
     weight: '400',
     color: '#666666',
     fontFamily: 'monospace',
+    usage: ['ResourceTable (external_label, email, teams_account, monthly_cost)', 'RatesPage (project_id)'],
   },
   'mono-xs': {
     classes: 'text-xs font-mono text-vercel-gray-400',
@@ -130,6 +139,7 @@ export const textStyles = {
     weight: '400',
     color: '#666666',
     fontFamily: 'monospace',
+    usage: ['MetricCard labels', 'ProjectCard counts/totals', 'BillingRatesTable labels', 'AccordionNested task details', 'TaskList details'],
   },
   'mono-2xs': {
     classes: 'text-2xs font-mono text-vercel-gray-200',
@@ -138,6 +148,7 @@ export const textStyles = {
     weight: '400',
     color: '#999999',
     fontFamily: 'monospace',
+    usage: ['Typography font-family examples'],
   },
 
   // Interactive
@@ -146,18 +157,21 @@ export const textStyles = {
     description: 'Small button text',
     size: '12px',
     weight: '500',
+    usage: ['Button component (size="sm")'],
   },
   'button-md': {
     classes: 'text-sm font-medium',
     description: 'Medium button text (default)',
     size: '14px',
     weight: '500',
+    usage: ['Button component', 'NavItem', 'Modal footer buttons', 'Auth buttons', 'DateRangeFilter', 'DatePicker', 'Input labels', 'ResourceRow', 'AccordionNested'],
   },
   'button-lg': {
     classes: 'text-base font-medium',
     description: 'Large button text',
     size: '16px',
     weight: '500',
+    usage: ['Button component (size="lg")'],
   },
 
   // Links
@@ -167,6 +181,7 @@ export const textStyles = {
     size: '14px',
     weight: '400',
     color: '#666666',
+    usage: ['Forgot password link', 'Back to login link'],
   },
 
   // Metrics
@@ -176,6 +191,7 @@ export const textStyles = {
     size: '24px',
     weight: '600',
     color: '#000000',
+    usage: ['MetricCard values', 'LoginPage title', 'ForgotPasswordPage title', 'ResetPasswordPage title'],
   },
   'metric-label': {
     classes: 'text-xs text-vercel-gray-400',
@@ -183,6 +199,7 @@ export const textStyles = {
     size: '12px',
     weight: '400',
     color: '#666666',
+    usage: ['MetricCard labels (via mono-xs)', 'body-xs contexts'],
   },
 } as const;
 
@@ -273,6 +290,14 @@ export function TypographyPreview({ showAll = false }: TypographyPreviewProps) {
                 </div>
                 <p className={style.classes}>{sampleText}</p>
                 <code className="mt-2 block text-2xs font-mono text-vercel-gray-300">{style.classes}</code>
+                {'usage' in style && (
+                  <div className="mt-3 pt-3 border-t border-vercel-gray-100">
+                    <p className="text-2xs font-medium text-vercel-gray-400 mb-1">Used in:</p>
+                    <p className="text-2xs text-vercel-gray-300">
+                      {(style as { usage: readonly string[] }).usage.join(' • ')}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

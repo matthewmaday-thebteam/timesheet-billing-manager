@@ -65,6 +65,7 @@ export function useResources(): UseResourcesResult {
               teams_account: data.teams_account || null,
               employment_type_id: data.employment_type_id,
               employment_type: newEmploymentType || r.employment_type,
+              monthly_cost: data.monthly_cost,
               updated_at: new Date().toISOString(),
             }
           : r
@@ -80,6 +81,7 @@ export function useResources(): UseResourcesResult {
           email: data.email || null,
           teams_account: data.teams_account || null,
           employment_type_id: data.employment_type_id,
+          monthly_cost: data.monthly_cost,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id);

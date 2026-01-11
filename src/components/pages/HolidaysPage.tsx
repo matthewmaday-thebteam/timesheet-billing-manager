@@ -3,6 +3,7 @@ import { useHolidays } from '../../hooks/useHolidays';
 import { HolidayCalendar } from '../HolidayCalendar';
 import { HolidayTable } from '../HolidayTable';
 import { HolidayEditorModal } from '../HolidayEditorModal';
+import { MetricCard } from '../MetricCard';
 import { Modal } from '../Modal';
 import { Select } from '../Select';
 import { Button } from '../Button';
@@ -152,26 +153,16 @@ export function HolidaysPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Total Holidays</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">{holidays.length}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Auto-Generated</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {holidays.filter((h) => h.is_system_generated).length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Manual</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {holidays.filter((h) => !h.is_system_generated).length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Year</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">{selectedYear}</p>
-        </div>
+        <MetricCard title="Total Holidays" value={holidays.length} />
+        <MetricCard
+          title="Auto-Generated"
+          value={holidays.filter((h) => h.is_system_generated).length}
+        />
+        <MetricCard
+          title="Manual"
+          value={holidays.filter((h) => !h.is_system_generated).length}
+        />
+        <MetricCard title="Year" value={selectedYear} />
       </div>
 
       {/* Main Content Grid */}

@@ -70,6 +70,9 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
               <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Type
               </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Monthly Cost
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Status
               </th>
@@ -94,15 +97,22 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                   <span className="text-sm text-vercel-gray-600">{getDisplayName(resource)}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-vercel-gray-400">{resource.email || '—'}</span>
+                  <span className="text-sm font-mono text-vercel-gray-400">{resource.email || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-vercel-gray-400">{resource.teams_account || '—'}</span>
+                  <span className="text-sm font-mono text-vercel-gray-400">{resource.teams_account || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant="default">
                     {resource.employment_type?.name || 'Unknown'}
                   </Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className="text-sm text-vercel-gray-600 font-mono">
+                    {resource.monthly_cost != null
+                      ? `$${resource.monthly_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : '—'}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   {isIncomplete(resource) ? (

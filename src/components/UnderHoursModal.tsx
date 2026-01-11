@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Modal } from './Modal';
+import { MetricCard } from './MetricCard';
+import { Card } from './Card';
 import { minutesToHours } from '../utils/calculations';
 import type { UnderHoursResource } from '../utils/calculations';
 import type { TimesheetEntry } from '../types';
@@ -68,22 +70,12 @@ export function UnderHoursModal({
     <div className="space-y-4 pb-6">
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-vercel-gray-50 rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Prorated Target</p>
-          <p className="text-lg font-semibold text-vercel-gray-600">
-            {expectedHours.toFixed(1)} hrs
-          </p>
-        </div>
-        <div className="p-4 bg-vercel-gray-50 rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Working Days</p>
-          <p className="text-lg font-semibold text-vercel-gray-600">
-            {workingDaysElapsed} / {workingDaysTotal}
-          </p>
-        </div>
+        <MetricCard title="Prorated Target" value={`${expectedHours.toFixed(1)} hrs`} />
+        <MetricCard title="Working Days" value={`${workingDaysElapsed} / ${workingDaysTotal}`} />
       </div>
 
       {/* Info Banner */}
-      <div className="p-4 bg-vercel-gray-50 rounded-lg border border-vercel-gray-100">
+      <Card padding="md">
         <div className="flex items-start gap-3">
           <div className="w-2 h-2 rounded-full bg-warning mt-1.5 flex-shrink-0" />
           <div>
@@ -93,7 +85,7 @@ export function UnderHoursModal({
             </p>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 
@@ -112,29 +104,23 @@ export function UnderHoursModal({
           <p className="text-sm text-vercel-gray-400">All resources are on target</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {/* Sticky Table Header */}
-          <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider border-b border-vercel-gray-100">
-            <span>Resource</span>
-            <span>Hours (Actual / Expected)</span>
-          </div>
-
+        <div className="space-y-3">
           {/* Resource Rows */}
           {items.map((item) => {
             const isExpanded = expandedResourceId === item.userName;
             const tasks = isExpanded ? getTasksForUser(item.userName) : [];
 
             return (
-              <div key={item.userName} className="rounded-lg border border-vercel-gray-100 overflow-hidden">
-                {/* Resource Row - Clickable */}
+              <div key={item.userName} className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
+                {/* Resource Row - Clickable (matching AccordionFlat header style) */}
                 <button
                   onClick={() => handleResourceClick(item.userName)}
-                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-vercel-gray-50 transition-colors duration-200 ease-out text-left focus:outline-none focus:ring-1 focus:ring-black"
+                  className="w-full flex items-center justify-between p-6 bg-white hover:bg-vercel-gray-50 transition-colors text-left focus:outline-none"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Chevron Indicator with smooth rotation */}
+                    {/* Chevron Indicator */}
                     <svg
-                      className={`w-4 h-4 text-vercel-gray-400 transition-transform duration-200 ease-out ${
+                      className={`w-4 h-4 text-vercel-gray-400 transition-transform ${
                         isExpanded ? 'rotate-90' : ''
                       }`}
                       fill="none"
@@ -165,55 +151,56 @@ export function UnderHoursModal({
                   </div>
                 </button>
 
-                {/* Expanded Task List with CSS Transition */}
-                <div
-                  className={`bg-vercel-gray-50 border-t border-vercel-gray-100 overflow-hidden transition-all duration-200 ease-out ${
-                    isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="border-l-2 border-vercel-gray-100 ml-4">
+                {/* Expanded Task List (matching AccordionFlat table style) */}
+                {isExpanded && (
+                  <div className="border-t border-vercel-gray-100">
                     {tasks.length === 0 ? (
-                      <div className="p-4 text-center">
-                        <p className="text-xs text-vercel-gray-300">No tasks recorded for this period</p>
+                      <div className="p-6 text-center">
+                        <p className="text-sm text-vercel-gray-300">No tasks recorded for this period</p>
                       </div>
                     ) : (
-                      <div className="p-4">
-                        {/* Task Table */}
-                        <table className="w-full table-auto">
-                          <thead>
-                            <tr className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                              <th className="text-left pb-2 pr-4">Client</th>
-                              <th className="text-left pb-2 pr-4">Date</th>
-                              <th className="text-left pb-2 pr-4">Task</th>
-                              <th className="text-right pb-2">Time</th>
+                      <table className="w-full">
+                        <thead className="bg-vercel-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                              Client
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                              Task
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                              Time
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-vercel-gray-100">
+                          {tasks.map((task, index) => (
+                            <tr
+                              key={`${task.client}-${task.date}-${task.task}-${index}`}
+                              className="hover:bg-vercel-gray-50 transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm text-vercel-gray-600 font-medium">
+                                {task.client}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-vercel-gray-400">
+                                {format(new Date(task.date), 'MMM d')}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-vercel-gray-400 max-w-[200px] truncate">
+                                {task.task}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-right text-vercel-gray-600 font-medium">
+                                {minutesToHours(task.minutes)}h
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="text-xs">
-                            {tasks.map((task, index) => (
-                              <tr
-                                key={`${task.client}-${task.date}-${task.task}-${index}`}
-                                className="border-t border-vercel-gray-100"
-                              >
-                                <td className="py-2 pr-4 text-vercel-gray-600 font-medium">
-                                  {task.client}
-                                </td>
-                                <td className="py-2 pr-4 text-vercel-gray-400">
-                                  {format(new Date(task.date), 'MMM d')}
-                                </td>
-                                <td className="py-2 pr-4 text-vercel-gray-400 max-w-[200px] truncate">
-                                  {task.task}
-                                </td>
-                                <td className="py-2 text-right text-vercel-gray-600 font-medium">
-                                  {minutesToHours(task.minutes)}h
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                          ))}
+                        </tbody>
+                      </table>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

@@ -12,9 +12,10 @@ interface SelectProps {
   options: SelectOption[];
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-export function Select({ value, onChange, options, placeholder = 'Select...', className = '' }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = 'Select...', className = '', disabled = false }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -125,19 +126,30 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
     </div>
   );
 
+  const handleClick = () => {
+    if (!disabled) {
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out hover:border-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${className}`}
+        onClick={handleClick}
+        disabled={disabled}
+        className={`px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${
+          disabled
+            ? 'bg-vercel-gray-50 cursor-not-allowed'
+            : 'hover:border-vercel-gray-300'
+        } ${className}`}
       >
-        <span className={selectedOption ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
+        <span className={disabled ? 'text-vercel-gray-300' : selectedOption ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
           {selectedOption?.label || placeholder}
         </span>
         <svg
-          className={`w-4 h-4 text-vercel-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${disabled ? 'text-vercel-gray-200' : 'text-vercel-gray-400'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -146,7 +158,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
         </svg>
       </button>
 
-      {isOpen && createPortal(dropdownContent, document.body)}
+      {isOpen && !disabled && createPortal(dropdownContent, document.body)}
     </>
   );
 }

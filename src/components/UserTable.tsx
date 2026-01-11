@@ -130,7 +130,7 @@ export function UserTable({
                       <div className="text-sm font-medium text-vercel-gray-600">
                         {user.display_name || user.email.split('@')[0]}
                       </div>
-                      <div className="text-xs text-vercel-gray-400">{user.email}</div>
+                      <div className="text-xs text-vercel-gray-400 font-mono">{user.email}</div>
                     </div>
                   </div>
                 </td>

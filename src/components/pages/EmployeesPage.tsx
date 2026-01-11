@@ -3,6 +3,7 @@ import { useResources } from '../../hooks/useResources';
 import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorModal } from '../EmployeeEditorModal';
+import { MetricCard } from '../MetricCard';
 import type { Resource } from '../../types';
 
 export function EmployeesPage() {
@@ -51,46 +52,28 @@ export function EmployeesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Total</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">{resources.length}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Full-time</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {resources.filter(r => r.employment_type?.name === 'Full-time').length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Part-time</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {resources.filter(r => r.employment_type?.name === 'Part-time').length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Contractor</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {resources.filter(r => r.employment_type?.name === 'Contractor').length}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-          <p className="text-xs text-vercel-gray-400 mb-1">Vendor</p>
-          <p className="text-2xl font-semibold text-vercel-gray-600">
-            {resources.filter(r => r.employment_type?.name === 'Vendor').length}
-          </p>
-        </div>
-        <div className={`p-4 rounded-lg border ${
-          incompleteCount > 0
-            ? 'bg-warning-light border-warning'
-            : 'bg-white border-vercel-gray-100'
-        }`}>
-          <p className="text-xs text-vercel-gray-400 mb-1">Incomplete</p>
-          <p className={`text-2xl font-semibold ${
-            incompleteCount > 0 ? 'text-warning' : 'text-vercel-gray-600'
-          }`}>
-            {incompleteCount}
-          </p>
-        </div>
+        <MetricCard title="Total" value={resources.length} />
+        <MetricCard
+          title="Full-time"
+          value={resources.filter(r => r.employment_type?.name === 'Full-time').length}
+        />
+        <MetricCard
+          title="Part-time"
+          value={resources.filter(r => r.employment_type?.name === 'Part-time').length}
+        />
+        <MetricCard
+          title="Contractor"
+          value={resources.filter(r => r.employment_type?.name === 'Contractor').length}
+        />
+        <MetricCard
+          title="Vendor"
+          value={resources.filter(r => r.employment_type?.name === 'Vendor').length}
+        />
+        <MetricCard
+          title="Incomplete"
+          value={incompleteCount}
+          isWarning={incompleteCount > 0}
+        />
       </div>
 
       {/* Error State */}

@@ -59,6 +59,7 @@ export interface Resource {
   teams_account: string | null;
   employment_type_id: string;
   employment_type?: EmploymentType;
+  monthly_cost: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -69,6 +70,7 @@ export interface ResourceFormData {
   email: string;
   teams_account: string;
   employment_type_id: string;
+  monthly_cost: number | null;
 }
 
 // Bulgarian Holidays Types

@@ -146,7 +146,7 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
     <AccordionFlat
       header={
         <>
-          <h3 className="text-sm font-semibold text-vercel-gray-600">Billing Rates & Revenue</h3>
+          <h3 className="text-lg font-semibold text-vercel-gray-600">Billing Rates & Revenue</h3>
           <p className="text-xs font-mono text-vercel-gray-400">Click to edit hourly rates per project</p>
         </>
       }

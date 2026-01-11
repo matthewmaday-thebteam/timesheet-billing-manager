@@ -170,6 +170,55 @@ Always use token-based classes instead of arbitrary values:
 3. **DON'T** use arbitrary font sizes outside the scale
 4. **DON'T** mix text sizes inconsistently in the same context
 
+### Predefined Text Styles
+
+Reference: `src/design-system/Typography.tsx`
+
+#### Headings
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **heading-2xl** | `text-2xl font-bold text-vercel-gray-600` | Hero headings (not currently used in app) |
+| **heading-xl** | `text-xl font-semibold text-vercel-gray-600` | Page titles: EmployeesPage, HolidaysPage, RatesPage, UsersPage, StyleReviewPage |
+| **heading-lg** | `text-lg font-semibold text-vercel-gray-600` | Card titles: ProjectCard, BillingRatesTable, DashboardChartsRow, Modal title, Dashboard section headers, UnderHoursModal stats, EOMReportsPage |
+
+#### Body Text
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **body-base** | `text-base text-vercel-gray-600` | Default body (Button lg size, Input lg size) |
+| **body-sm** | `text-sm text-vercel-gray-600` | Standard body: ResourceTable cells, HolidayTable cells, UserTable cells, RatesPage table cells, page descriptions, form inputs, dropdown menus, loading states |
+| **body-xs** | `text-xs text-vercel-gray-400` | Small text: page subtitles, helper text, empty state messages, badge text, calendar day numbers |
+
+#### Labels
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **label-form** | `text-xs font-medium text-vercel-gray-400 uppercase tracking-wider` | Form labels: EmployeeEditorModal, UserEditorModal, ProjectEditorModal, HolidayEditorModal, LoginPage, ForgotPasswordPage, ResetPasswordPage; Table headers: ResourceTable, UserTable, HolidayTable, RatesPage, AccordionFlat; Calendar weekday headers: HolidayCalendar; Sticky headers: UnderHoursModal |
+
+#### Monospace
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **mono-sm** | `text-sm font-mono text-vercel-gray-400` | System IDs, emails, Teams accounts: ResourceTable (external_label, email, teams_account), RatesPage (project_id) |
+| **mono-xs** | `text-xs font-mono text-vercel-gray-400` | MetricCard labels, ProjectCard resource count/total label, BillingRatesTable subtitle/footer label, AccordionNested task details, TaskList task details, code examples in Typography preview |
+| **mono-2xs** | `text-2xs font-mono text-vercel-gray-200` | Fine print: Typography font-family examples |
+
+#### Interactive
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **button-sm** | `text-xs font-medium` | Small buttons (Button component size="sm") |
+| **button-md** | `text-sm font-medium` | Default buttons: Button component, NavItem, modal footer buttons, login/auth buttons, DateRangeFilter month label, DatePicker month/year display, Input labels, ResourceRow names, UserTable names, HolidayTable names, RatesPage project names, UnderHoursModal resource names, AccordionNested item labels/values, TaskList hours |
+| **button-lg** | `text-base font-medium` | Large buttons (Button component size="lg") |
+
+#### Metrics
+
+| Style | Classes | Usage Locations |
+|-------|---------|-----------------|
+| **metric-value** | `text-2xl font-semibold text-vercel-gray-600` | MetricCard values, LoginPage title, ForgotPasswordPage title, ResetPasswordPage title |
+| **metric-label** | `text-xs text-vercel-gray-400` | MetricCard labels (via mono-xs), body-xs contexts |
+
 ---
 
 ## Spacing

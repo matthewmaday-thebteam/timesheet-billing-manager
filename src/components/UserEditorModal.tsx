@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
+import { Button } from './Button';
+import { Input } from './Input';
+import { Select } from './Select';
+import { Spinner } from './Spinner';
 import type { AppUser, CreateUserParams, UserRole } from '../types';
+
+const roleOptions = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'user', label: 'User' },
+];
 
 interface UserEditorModalProps {
   isOpen: boolean;
@@ -122,24 +131,22 @@ export function UserEditorModal({
 
   const footerContent = (
     <>
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-vercel-gray-400 bg-white border border-vercel-gray-100 rounded-md hover:bg-vercel-gray-50 transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         Cancel
-      </button>
-      <button
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
         onClick={() => handleSubmit()}
         disabled={isSaving}
-        className="px-4 py-2 text-sm font-medium text-white bg-vercel-gray-600 border border-vercel-gray-600 rounded-md hover:bg-vercel-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black"
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+            <Spinner size="sm" color="white" />
             Saving...
           </span>
         ) : isEditing ? (
@@ -147,7 +154,7 @@ export function UserEditorModal({
         ) : (
           'Create User'
         )}
-      </button>
+      </Button>
     </>
   );
 
@@ -166,19 +173,14 @@ export function UserEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Email Address
           </label>
-          <input
+          <Input
             type="email"
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             disabled={isEditing}
-            className={`w-full px-3 py-2 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300 ${
-              errors.email
-                ? 'border-error focus:border-error'
-                : 'border-vercel-gray-100 focus:border-vercel-gray-600'
-            }`}
             placeholder="user@example.com"
+            error={errors.email}
           />
-          {errors.email && <p className="mt-1 text-xs text-error">{errors.email}</p>}
         </div>
 
         {/* Display Name */}
@@ -187,12 +189,11 @@ export function UserEditorModal({
             Display Name
             <span className="ml-1 text-vercel-gray-300 normal-case tracking-normal">(optional)</span>
           </label>
-          <input
+          <Input
             type="text"
             value={formData.display_name}
             onChange={(e) => handleInputChange('display_name', e.target.value)}
             disabled={isEditing}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300"
             placeholder="John Doe"
           />
         </div>
@@ -202,15 +203,13 @@ export function UserEditorModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Role
           </label>
-          <select
+          <Select
             value={formData.role}
-            onChange={(e) => handleInputChange('role', e.target.value as UserRole)}
+            onChange={(value) => handleInputChange('role', value as UserRole)}
+            options={roleOptions}
             disabled={isLastAdmin}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out disabled:bg-vercel-gray-50 disabled:text-vercel-gray-300"
-          >
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-          </select>
+            className="w-full"
+          />
           {isLastAdmin && (
             <p className="mt-1 text-xs text-vercel-gray-300">
               Cannot change role of the last admin user
