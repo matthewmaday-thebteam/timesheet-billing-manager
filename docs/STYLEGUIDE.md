@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.2.0
-**Last Updated:** 2026-01-11 (Task 015)
+**Version:** 1.3.0
+**Last Updated:** 2026-01-11 (Task 017)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -340,6 +340,20 @@ function Layout({ children }) {
 
 ## Enforcement Rules
 
+### Automated Enforcement (Task 017)
+
+ESLint rules automatically enforce design token compliance:
+
+```bash
+# Check for design token violations
+npm run lint:tokens
+
+# Full CI check (TypeScript + token linting)
+npm run ci:check
+```
+
+**CI Pipeline:** Vercel builds automatically run `npm run ci:check` before build. Deployments will **fail** if arbitrary hex colors are detected.
+
 ### Mandatory Before UI Work
 
 Claude Code MUST:
@@ -375,8 +389,41 @@ The following are NOT allowed without explicit approval:
 | `bottom-[9px]` | NavItem indicator positioning | NavItem.tsx |
 | `h-[2px]` | NavItem indicator height | NavItem.tsx |
 | `max-h-[90vh]` | Modal height constraint | Modal.tsx |
+| `max-h-[500px]` | UnderHoursModal list height | UnderHoursModal.tsx |
+| `max-w-[200px]` | Task name truncation | UnderHoursModal.tsx |
+| `min-w-[120px]` | Month label width | DateRangeFilter.tsx |
+| `z-[1000]` | Modal z-index stacking | Modal.tsx |
+| `border-[3px]` | Spinner border width | Spinner.tsx |
+| `text-[10px]`, `text-[11px]` | Fine print text | Various (should use text-2xs) |
 | `style={{ position, top, left }}` | Dynamic dropdown positioning | DropdownMenu.tsx, Select.tsx |
 | `style={{ boxShadow }}` | Complex shadow values | Modal.tsx, DropdownMenu.tsx |
+
+### Adding New Exceptions
+
+To add a new approved exception:
+
+1. **Justify the need** - Document why a design token cannot be used
+2. **Add to ESLint allowlist** - Update `eslint.config.js` header comment
+3. **Add to this table** - Document in Approved Exceptions above
+4. **Add inline comment** - Explain the exception at the code location:
+
+```tsx
+{/* eslint-disable-next-line no-restricted-syntax -- NavItem indicator requires precise positioning */}
+<div className="-bottom-[9px]" />
+```
+
+### Exception Process for Hex Colors
+
+If you absolutely need an arbitrary hex color (should be rare):
+
+```tsx
+// eslint-disable-next-line no-restricted-syntax -- [Your justification here]
+<div className="bg-[#SPECIAL_COLOR]" />
+```
+
+**Note:** Hex color exceptions require strong justification. In most cases, you should:
+1. Add the color to `@theme` in `src/index.css`
+2. Use the new token class instead
 
 ---
 
@@ -443,6 +490,13 @@ This displays:
 ---
 
 ## Changelog
+
+### v1.3.0 (2026-01-11) - Task 017
+- Added ESLint rules for design token enforcement
+- CI pipeline now fails on arbitrary hex colors
+- Added `npm run lint:tokens` and `npm run ci:check` scripts
+- Vercel builds enforce token compliance before deployment
+- Documented exception process for approved overrides
 
 ### v1.2.0 (2026-01-11) - Task 015
 - Promoted Input component with label, error, helperText support
