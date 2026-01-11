@@ -23,6 +23,7 @@ export const chartColors = {
   // Primary series colors
   brandIndigo: 'var(--color-brand-indigo)',      // #667eea
   brandPurple: 'var(--color-brand-purple)',      // #764ba2
+  bteamBrand: 'var(--color-bteam-brand)',        // #E50A73 (The B Team pink)
   success: 'var(--color-success)',               // #50E3C2 (mesh-3)
   warning: 'var(--color-warning)',               // #F5A623 (mesh-4)
 
@@ -74,7 +75,7 @@ export const lineGraphLines = {
   revenue: {
     dataKey: 'revenue' as const,
     name: 'Revenue',
-    color: chartColors.success,
+    color: chartColors.bteamBrand,
     strokeDasharray: undefined,
     strokeWidth: 2,
   },
@@ -144,6 +145,7 @@ export function getColorToken(tokenName: string): string {
   const tokenMap: Record<string, string> = {
     'brand-indigo': chartColors.brandIndigo,
     'brand-purple': chartColors.brandPurple,
+    'bteam-brand': chartColors.bteamBrand,
     'success': chartColors.success,
     'warning': chartColors.warning,
     'mesh-3': chartColors.success,
