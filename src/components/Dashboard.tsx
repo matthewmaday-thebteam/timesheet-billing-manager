@@ -5,6 +5,7 @@ import { useProjects } from '../hooks/useProjects';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { getBillingRates, calculateTotalRevenue, buildDbRateLookupByName } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
+import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { ProjectCard } from './ProjectCard';
 import { BillingRatesTable } from './BillingRatesTable';
@@ -12,6 +13,7 @@ import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
 import type { DateRange } from '../types';
+import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
 export function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -31,7 +33,10 @@ export function Dashboard() {
     setRatesVersion(v => v + 1);
   }, []);
 
-  const { entries, projects, resources, loading, error, refetch } = useTimesheetData(dateRange);
+  const { entries, projects, resources, monthlyAggregates, loading, error, refetch } = useTimesheetData(
+    dateRange,
+    { extendedMonths: HISTORICAL_MONTHS }
+  );
   const { projects: dbProjects } = useProjects();
 
   // Use the earlier of: end of selected range or today
@@ -65,6 +70,13 @@ export function Dashboard() {
         </section>
 
         <DateRangeFilter dateRange={dateRange} onChange={setDateRange} />
+
+        {/* Charts Row - Hours by Resource & 12-Month Revenue Trend */}
+        <DashboardChartsRow
+          resources={resources}
+          monthlyAggregates={monthlyAggregates}
+          loading={loading}
+        />
 
         {error && (
           <div className="p-4 bg-white border border-error rounded-lg">

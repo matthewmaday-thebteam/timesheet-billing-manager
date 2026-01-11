@@ -24,6 +24,9 @@ import { AccordionNested } from '../../components/AccordionNested';
 import type { AccordionNestedLevel2Item } from '../../components/AccordionNested';
 import { AccordionFlat } from '../../components/AccordionFlat';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatFooterCell } from '../../components/AccordionFlat';
+import { PieChartAtom } from '../../components/atoms/charts/PieChartAtom';
+import { LineGraphAtom } from '../../components/atoms/charts/LineGraphAtom';
+import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
 
 type Section = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
@@ -45,9 +48,12 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className={`min-h-screen ${showBackground ? 'bg-transparent' : 'bg-white'}`}>
+      {/* Background preview overlay - rendered first so it's behind content */}
+      {showBackground && <MeshGradientBackground />}
+
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-vercel-gray-100">
+      <div className={`sticky top-0 z-50 border-b border-vercel-gray-100 ${showBackground ? 'bg-white/90 backdrop-blur-sm' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -83,7 +89,7 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className={`max-w-7xl mx-auto px-6 py-8 ${showBackground ? 'relative z-10' : ''}`}>
         {activeSection === 'tokens' && <TokensSection />}
         {activeSection === 'typography' && <TypographyPreview showAll />}
         {activeSection === 'atoms' && <AtomsSection />}
@@ -92,9 +98,6 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
           <PatternsSection showBackground={showBackground} setShowBackground={setShowBackground} />
         )}
       </div>
-
-      {/* Background preview overlay */}
-      {showBackground && <MeshGradientBackground />}
     </div>
   );
 }
@@ -598,6 +601,53 @@ function AtomsSection() {
             />
           </div>
         </div>
+
+        {/* PieChartAtom */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">PieChartAtom</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/atoms/charts/PieChartAtom.tsx</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Default (donut style)</p>
+              <PieChartAtom data={generateMockPieData()} />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Pie style (innerRadius=0)</p>
+              <PieChartAtom data={generateMockPieData()} innerRadius={0} outerRadius={80} />
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Donut/pie chart with auto-grouping of segments beyond maxSegments into "Other". Uses font-mono for all text. Colors from design tokens.
+            </p>
+          </div>
+        </div>
+
+        {/* LineGraphAtom */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">LineGraphAtom</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/atoms/charts/LineGraphAtom.tsx</p>
+          </div>
+          <div>
+            <LineGraphAtom data={generateMockLineData()} />
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> 12-month time series with Target (solid indigo), Budget (dashed purple), and Revenue (solid green) lines. Font-mono for axes, legend, tooltip. Currency formatting on Y-axis.
+            </p>
+          </div>
+          <div className="mt-2 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs font-medium text-vercel-gray-600 mb-2">Line Colors:</p>
+            <ul className="text-xs text-vercel-gray-400 space-y-1">
+              <li><span className="inline-block w-3 h-3 rounded bg-brand-indigo mr-2"></span>Target (1.8x) - brand-indigo (solid)</li>
+              <li><span className="inline-block w-3 h-3 rounded bg-brand-purple mr-2"></span>Budget - brand-purple (dashed)</li>
+              <li><span className="inline-block w-3 h-3 rounded bg-success mr-2"></span>Revenue - success (solid)</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -646,6 +696,19 @@ function MoleculesSection() {
             HolidayEditorModal, UserEditorModal, EmployeeEditorModal, ProjectEditorModal - Form modals for CRUD operations.
           </p>
           <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*EditorModal.tsx</p>
+        </div>
+
+        <div className="p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">DashboardChartsRow</h3>
+          <p className="text-xs text-vercel-gray-400">
+            Two-column responsive grid with PieChartAtom (hours by resource) and LineGraphAtom (12-month revenue trend).
+          </p>
+          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/DashboardChartsRow.tsx</p>
+          <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Layout:</span> grid-cols-1 md:grid-cols-2 gap-4. Uses Card component with padding="lg".
+            </p>
+          </div>
         </div>
       </div>
     </div>
