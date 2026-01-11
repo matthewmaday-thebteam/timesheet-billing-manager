@@ -25,7 +25,6 @@ type Section = 'tokens' | 'atoms' | 'molecules' | 'patterns';
 export function StyleReviewPage({ onClose }: { onClose: () => void }) {
   const [activeSection, setActiveSection] = useState<Section>('tokens');
   const [showBackground, setShowBackground] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const sections: { id: Section; label: string }[] = [
     { id: 'tokens', label: 'Design Tokens' },
@@ -75,7 +74,7 @@ export function StyleReviewPage({ onClose }: { onClose: () => void }) {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {activeSection === 'tokens' && <TokensSection />}
-        {activeSection === 'atoms' && <AtomsSection dropdownOpen={dropdownOpen} setDropdownOpen={setDropdownOpen} />}
+        {activeSection === 'atoms' && <AtomsSection />}
         {activeSection === 'molecules' && <MoleculesSection />}
         {activeSection === 'patterns' && (
           <PatternsSection showBackground={showBackground} setShowBackground={setShowBackground} />
@@ -197,7 +196,7 @@ function TokensSection() {
 }
 
 // Atoms Section
-function AtomsSection({ dropdownOpen, setDropdownOpen }: { dropdownOpen: boolean; setDropdownOpen: (open: boolean) => void }) {
+function AtomsSection() {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -397,9 +396,9 @@ function AtomsSection({ dropdownOpen, setDropdownOpen }: { dropdownOpen: boolean
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">MetricCard</h3>
           <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/MetricCard.tsx</p>
           <div className="grid grid-cols-3 gap-4 max-w-xl">
-            <MetricCard label="Total Hours" value="168.5" />
-            <MetricCard label="Projects" value="12" />
-            <MetricCard label="Revenue" value="$45,230" />
+            <MetricCard title="Total Hours" value="168.5" />
+            <MetricCard title="Projects" value="12" />
+            <MetricCard title="Revenue" value="$45,230" />
           </div>
         </div>
 
@@ -408,18 +407,17 @@ function AtomsSection({ dropdownOpen, setDropdownOpen }: { dropdownOpen: boolean
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">DropdownMenu</h3>
           <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/DropdownMenu.tsx</p>
           <div className="relative inline-block">
-            <Button variant="primary" onClick={() => setDropdownOpen(!dropdownOpen)}>
-              Open Dropdown
-            </Button>
             <DropdownMenu
-              isOpen={dropdownOpen}
-              onClose={() => setDropdownOpen(false)}
               items={[
                 { label: 'Edit', onClick: () => {} },
                 { label: 'Duplicate', onClick: () => {} },
                 { label: 'Delete', onClick: () => {}, variant: 'danger' },
               ]}
-              triggerRef={{ current: null }}
+              trigger={
+                <span className="px-4 py-2 bg-vercel-gray-600 text-white rounded-md text-sm font-medium">
+                  Open Dropdown
+                </span>
+              }
             />
           </div>
         </div>

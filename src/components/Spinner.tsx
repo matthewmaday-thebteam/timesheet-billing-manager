@@ -12,7 +12,7 @@
  * - For white variant: white with opacity
  */
 
-import { HTMLAttributes, forwardRef } from 'react';
+import { forwardRef, type HTMLAttributes } from 'react';
 
 export interface SpinnerProps extends HTMLAttributes<HTMLDivElement> {
   /** Spinner size */

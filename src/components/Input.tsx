@@ -18,7 +18,7 @@
  * - Error state indicated via aria-invalid
  */
 
-import { InputHTMLAttributes, forwardRef, useId } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Label text displayed above the input */
