@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.3.0
-**Last Updated:** 2026-01-11 (Task 017)
+**Version:** 1.4.0
+**Last Updated:** 2026-01-11 (Task 018)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -213,6 +213,9 @@ Use Tailwind's default spacing scale:
 | **Input** | `src/components/Input.tsx` | **Official** | Task 015 |
 | **Card** | `src/components/Card.tsx` | **Official** | Task 015 |
 | **Badge** | `src/components/Badge.tsx` | **Official** | Task 015 |
+| **DatePicker** | `src/components/DatePicker.tsx` | **Official** | Task 018 |
+| **AccordionNested** | `src/components/AccordionNested.tsx` | **Official** | Task 018 |
+| **AccordionFlat** | `src/components/AccordionFlat.tsx` | **Official** | Task 018 |
 
 ### Button Component
 
@@ -277,6 +280,83 @@ import { Badge } from '@/components/Badge';
 <Badge variant="error">Failed</Badge>
 <Badge variant="warning" size="sm">Pending</Badge>
 <Badge variant="info">Holiday</Badge>
+```
+
+### DatePicker Component
+
+```tsx
+import { DatePicker } from '@/components/DatePicker';
+
+// Standard date input with calendar icon
+<DatePicker
+  value="2026-01-11"
+  onChange={(value) => console.log(value)}
+  placeholder="Select date"
+/>
+```
+
+### AccordionNested Component
+
+```tsx
+import { AccordionNested } from '@/components/AccordionNested';
+import type { AccordionNestedLevel2Item } from '@/components/AccordionNested';
+
+// 3-level hierarchy: Project → Resource → Task
+// Left border line indicates hierarchy depth
+const items: AccordionNestedLevel2Item[] = [
+  {
+    id: 'resource-1',
+    label: 'Resource Name',
+    value: '40.0h',
+    children: [
+      {
+        id: 'task-1',
+        label: 'Task Name',
+        value: '8.5h',
+        details: ['1/9: 8.5h', '1/8: 7.8h'],
+      },
+    ],
+  },
+];
+
+<AccordionNested
+  header={<h3>Project Name</h3>}
+  headerRight={<span>64.5h total</span>}
+  items={items}
+  defaultExpanded={false}
+/>
+```
+
+### AccordionFlat Component
+
+```tsx
+import { AccordionFlat } from '@/components/AccordionFlat';
+import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatFooterCell } from '@/components/AccordionFlat';
+
+// 2-level accordion with table content
+// Used for billing rates pattern
+const columns: AccordionFlatColumn[] = [
+  { key: 'project', label: 'Project', width: 'flex-1' },
+  { key: 'rate', label: 'Rate', width: 'w-24', align: 'right' },
+];
+
+const rows: AccordionFlatRow[] = [
+  {
+    key: 'row-1',
+    cells: [
+      { columnKey: 'project', content: 'Project A' },
+      { columnKey: 'rate', content: '$125.00' },
+    ],
+  },
+];
+
+<AccordionFlat
+  title="Billing Rates"
+  columns={columns}
+  rows={rows}
+  footer={footerCells}
+  defaultExpanded={true}
+/>
 ```
 
 ### Proposed Atoms (All Promoted)
@@ -490,6 +570,15 @@ This displays:
 ---
 
 ## Changelog
+
+### v1.4.0 (2026-01-11) - Task 018
+- Added AccordionNested component for 3-level project hierarchy
+- Added AccordionFlat component for billing rates table pattern
+- Dashboard now uses reusable components throughout
+- MetricCard updated with mono-xs label typography
+- StatsOverview refactored to use MetricCard component
+- DateRangeFilter refactored to use Button and DatePicker components
+- AccordionNested: border aligned with level 1 title, proper hour colors (black L2, gray-200 L3)
 
 ### v1.3.0 (2026-01-11) - Task 017
 - Added ESLint rules for design token enforcement

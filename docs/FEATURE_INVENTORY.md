@@ -250,12 +250,26 @@
 App.tsx
 └── Dashboard.tsx
     ├── DateRangeFilter.tsx
-    ├── UnderHoursAlert.tsx
+    │   ├── Button.tsx
+    │   └── DatePicker.tsx
     ├── StatsOverview.tsx
+    │   └── MetricCard.tsx (5 cards)
     ├── BillingRatesTable.tsx
-    └── ProjectCard.tsx
-        └── ResourceRow.tsx
-            └── TaskList.tsx
+    │   └── AccordionFlat.tsx
+    ├── ProjectCard.tsx
+    │   └── AccordionNested.tsx (3-level hierarchy)
+    └── UnderHoursModal.tsx
+
+Reusable Atoms:
+├── Button.tsx
+├── Input.tsx
+├── Card.tsx
+├── Badge.tsx
+├── Spinner.tsx
+├── DatePicker.tsx
+├── MetricCard.tsx
+├── AccordionNested.tsx
+└── AccordionFlat.tsx
 
 Hooks:
 └── useTimesheetData.ts
@@ -305,6 +319,15 @@ Utils:
 | `src/components/DropdownMenu.tsx` | Component | 150 | Reusable dropdown |
 | `src/components/Select.tsx` | Component | 80 | Reusable select input |
 | `src/components/Modal.tsx` | Component | 135 | Reusable modal |
+| `src/components/Button.tsx` | Component | 80 | Reusable button |
+| `src/components/Input.tsx` | Component | 90 | Reusable input field |
+| `src/components/Card.tsx` | Component | 50 | Reusable card container |
+| `src/components/Badge.tsx` | Component | 60 | Reusable status badge |
+| `src/components/Spinner.tsx` | Component | 40 | Reusable loading spinner |
+| `src/components/DatePicker.tsx` | Component | 50 | Reusable date picker |
+| `src/components/MetricCard.tsx` | Component | 90 | Reusable metric display |
+| `src/components/AccordionNested.tsx` | Component | 160 | 3-level collapsible accordion |
+| `src/components/AccordionFlat.tsx` | Component | 130 | 2-level accordion with table |
 
 ---
 
