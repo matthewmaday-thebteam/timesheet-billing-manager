@@ -19,6 +19,17 @@
 | F013 | Billing Rates Table | Complete | P1 | BillingRatesTable.tsx |
 | F014 | Revenue Calculation | Complete | P1 | billing.ts |
 | F015 | Revenue Stats Card | Complete | P1 | StatsOverview.tsx |
+| F016 | User Authentication | Complete | P0 | AuthContext.tsx |
+| F017 | Login Page | Complete | P0 | LoginPage.tsx |
+| F018 | Password Reset Flow | Complete | P0 | ForgotPasswordPage.tsx, ResetPasswordPage.tsx |
+| F019 | User Management Page | Complete | P0 | UsersPage.tsx |
+| F020 | User Table | Complete | P0 | UserTable.tsx |
+| F021 | User Editor Modal | Complete | P0 | UserEditorModal.tsx |
+| F022 | Admin User CRUD | Complete | P0 | useAdminUsers.ts |
+| F023 | Bulgarian Holidays Page | Complete | P1 | HolidaysPage.tsx |
+| F024 | Employees Page | Complete | P1 | EmployeesPage.tsx |
+| F025 | Project Rates Page | Complete | P1 | RatesPage.tsx |
+| F026 | Navigation System | Complete | P0 | SubNavbar.tsx, MainHeader.tsx |
 
 ---
 
@@ -277,4 +288,117 @@ Utils:
 | `src/utils/calculations.ts` | Utility | 215 | Aggregation logic |
 | `src/utils/holidays.ts` | Utility | 115 | Holiday logic |
 | `src/utils/billing.ts` | Utility | 55 | Billing rates & revenue |
-| `src/types/index.ts` | Types | 40 | TypeScript interfaces |
+| `src/types/index.ts` | Types | 146 | TypeScript interfaces |
+| `src/contexts/AuthContext.tsx` | Context | 100 | Auth state management |
+| `src/components/pages/LoginPage.tsx` | Component | 130 | Login form |
+| `src/components/pages/ForgotPasswordPage.tsx` | Component | 100 | Password reset request |
+| `src/components/pages/ResetPasswordPage.tsx` | Component | 175 | Set new password |
+| `src/components/pages/UsersPage.tsx` | Component | 230 | User management |
+| `src/components/UserTable.tsx` | Component | 190 | User list display |
+| `src/components/UserEditorModal.tsx` | Component | 250 | Create/edit user |
+| `src/hooks/useAdminUsers.ts` | Hook | 170 | Admin user operations |
+| `src/components/pages/HolidaysPage.tsx` | Component | 250 | Holiday management |
+| `src/components/pages/EmployeesPage.tsx` | Component | 200 | Employee management |
+| `src/components/pages/RatesPage.tsx` | Component | 200 | Project rates |
+| `src/components/SubNavbar.tsx` | Component | 45 | Navigation tabs |
+| `src/components/MainHeader.tsx` | Component | 85 | App header with user menu |
+| `src/components/DropdownMenu.tsx` | Component | 150 | Reusable dropdown |
+| `src/components/Select.tsx` | Component | 80 | Reusable select input |
+| `src/components/Modal.tsx` | Component | 135 | Reusable modal |
+
+---
+
+## Authentication & User Management Features
+
+### F016: User Authentication
+**Component**: `src/contexts/AuthContext.tsx`
+**Description**: React context providing authentication state and methods.
+
+| Method | Purpose |
+|--------|---------|
+| `signIn(email, password)` | Sign in with credentials |
+| `signOut()` | Sign out current user |
+| `resetPassword(email)` | Send password reset email |
+| `updatePassword(newPassword)` | Update user password |
+
+**State**:
+- `user`: Current authenticated user or null
+- `session`: Supabase session object
+- `loading`: Auth state loading indicator
+- `isRecoverySession`: True during password reset flow
+
+---
+
+### F017: Login Page
+**Component**: `src/components/pages/LoginPage.tsx`
+**Description**: Authentication form with email/password login.
+
+| Feature | Details |
+|---------|---------|
+| Email Input | Validated email field |
+| Password Input | Masked password field |
+| Error Display | Shows auth errors |
+| Forgot Password Link | Links to password reset |
+| Loading State | Shows spinner during auth |
+
+---
+
+### F018: Password Reset Flow
+**Components**: `ForgotPasswordPage.tsx`, `ResetPasswordPage.tsx`
+**Description**: Complete password reset workflow.
+
+| Step | Component | Action |
+|------|-----------|--------|
+| 1 | ForgotPasswordPage | User enters email, system sends reset link |
+| 2 | Email | User clicks link, redirected to /reset-password |
+| 3 | ResetPasswordPage | User enters new password, confirms |
+| 4 | Success | User redirected to login |
+
+---
+
+### F019-F021: User Management
+**Components**: `UsersPage.tsx`, `UserTable.tsx`, `UserEditorModal.tsx`
+**Description**: Admin interface for managing application users.
+
+| Feature | Description |
+|---------|-------------|
+| User List | Table showing all users with role, status, last login |
+| Create User | Modal form to add new admin (with/without email invite) |
+| Edit User | Update user role (admin/user) |
+| Delete User | Remove user (protected: cannot delete last admin) |
+| Reset Password | Send password reset email to any user |
+| Stats Cards | Total users, admins, verified, pending counts |
+
+---
+
+### F022: Admin User CRUD Hook
+**Component**: `src/hooks/useAdminUsers.ts`
+**Description**: React hook for admin user management operations.
+
+| Method | RPC Function | Purpose |
+|--------|--------------|---------|
+| `fetchUsers()` | `admin_list_users` | Get all users |
+| `createUser(params)` | `admin_create_user` | Create new user |
+| `updateUserRole(id, role)` | `admin_update_user_role` | Change user role |
+| `deleteUser(id)` | `admin_delete_user` | Remove user |
+| `sendPasswordResetEmail(email)` | Supabase Auth API | Trigger reset email |
+
+---
+
+### F026: Navigation System
+**Components**: `SubNavbar.tsx`, `MainHeader.tsx`
+**Description**: Application navigation and header.
+
+| Route | Page |
+|-------|------|
+| home | Dashboard |
+| holidays | Bulgarian Holidays |
+| employees | Employee Management |
+| rates | Project Rates |
+| eom-reports | EOM Reports |
+| users | User Management |
+
+**MainHeader Features**:
+- App title
+- User avatar with initial
+- Sign out dropdown

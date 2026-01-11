@@ -389,18 +389,97 @@ SELECT count_admins();
 2. **Email Templates:** Customize invite and reset emails if desired
 3. **Rate Limiting:** Configure auth rate limits appropriately
 
+## Setup & Troubleshooting
+
+### Environment Configuration
+
+**CRITICAL:** The frontend must use the **anon (public) key**, NOT the service role key.
+
+```env
+# .env file
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_KEY=eyJhbG...  # This must be the ANON key, not service_role
+```
+
+The anon key JWT payload contains `"role": "anon"`. The service_role key contains `"role": "service_role"`.
+
+### Supabase Dashboard Configuration
+
+1. **Authentication > URL Configuration:**
+   - Site URL: `https://your-production-domain.com`
+   - Redirect URLs:
+     - `https://your-production-domain.com/reset-password`
+     - `https://your-production-domain.com/**`
+     - `http://localhost:5173/reset-password` (for dev)
+
+### Common Issues
+
+#### "Access denied: admin privileges required"
+1. Verify the user has admin role: Check `auth.users.raw_app_meta_data->>'role'` equals `'admin'`
+2. Ensure using anon key (not service_role) in frontend
+3. User must log out and back in after being promoted to admin to get fresh JWT
+
+#### "structure of query does not match function result type"
+The `admin_list_users()` function return type doesn't match the query. Fix by running:
+```sql
+CREATE OR REPLACE FUNCTION admin_list_users()
+RETURNS TABLE (
+    id UUID,
+    email TEXT,
+    display_name TEXT,
+    role TEXT,
+    is_verified BOOLEAN,
+    created_at TIMESTAMPTZ,
+    last_sign_in_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, auth
+AS $$
+BEGIN
+    IF NOT is_admin() THEN
+        RAISE EXCEPTION 'Access denied: admin privileges required';
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        au.id,
+        au.email::TEXT,
+        COALESCE(up.display_name, au.raw_user_meta_data->>'display_name', split_part(au.email, '@', 1))::TEXT,
+        (au.raw_app_meta_data->>'role')::TEXT,
+        (au.email_confirmed_at IS NOT NULL),
+        au.created_at,
+        au.last_sign_in_at
+    FROM auth.users au
+    LEFT JOIN user_profiles up ON up.id = au.id
+    ORDER BY au.created_at DESC;
+END;
+$$;
+```
+
+### Vercel Deployment
+
+Environment variables in Vercel override `.env` files. Update via:
+1. Vercel Dashboard > Project > Settings > Environment Variables
+2. Or CLI: `vercel env add VITE_SUPABASE_KEY production`
+
+After changing environment variables, redeploy: `vercel --prod`
+
+---
+
 ## Testing Checklist
 
-- [ ] Create user with password (verified)
-- [ ] Create user without password (invite flow)
-- [ ] Update user role to admin
-- [ ] Attempt to demote last admin (should fail)
-- [ ] Attempt to delete last admin (should fail)
-- [ ] Self-deletion blocked
-- [ ] Password reset email sends
-- [ ] Password reset redirect works
-- [ ] Non-admin cannot access admin functions
-- [ ] User can update own display name
+- [x] Create user with password (verified)
+- [x] Create user without password (invite flow)
+- [x] Update user role to admin
+- [x] Attempt to demote last admin (should fail)
+- [x] Attempt to delete last admin (should fail)
+- [x] Self-deletion blocked
+- [x] Password reset email sends
+- [x] Password reset redirect works
+- [x] Non-admin cannot access admin functions
+- [x] User can update own display name
 
 ## Security Audit Checklist
 

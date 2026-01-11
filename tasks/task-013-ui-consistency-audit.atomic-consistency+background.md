@@ -18,6 +18,10 @@ We need an audit that:
 
 ## 2. QUESTIONS / OBJECTIVES
 
+0. Do we have (or want) an approved global background animation pattern?
+   - Define a reusable, full-screen background component (mesh gradient) that can be adopted later without duplicating one-off background code.
+   - Ensure it is token-driven (uses brand color variables) and documented as an **Approved Global Pattern**.
+
 1. What is the current “Source of Truth” for styles?
    - Where are tokens defined (Tailwind config, CSS variables, theme provider, component library theme, etc.)?
    - What is the styling strategy (Tailwind, CSS Modules, styled-components, MUI, Chakra, etc.)?
@@ -67,6 +71,12 @@ Organize findings for review:
 - Produce drift report + rogue element clusters
 - Create Proposed Variant definitions (code-only additions, no replacements)
 
+
+### Phase A.1 — Additive Global Pattern (No adoption yet)
+- Implement a reusable **Background Mesh Gradient** component (full-screen, responsive) as a candidate global pattern.
+- Do **not** apply it to production layouts yet; only render it in the Style Review Surface.
+- Drive all colors from the audited token system (CSS variables / Tailwind theme colors), not hardcoded hex.
+
 ### Phase B — Style Review Surface (Dev-only)
 Choose ONE approach:
 - **Option A: Storybook** (recommended for isolation), OR
@@ -111,6 +121,8 @@ After review decisions:
 
 - have **react-nextjs-reviewer**:
   - Build the reusable component inventory and usage counts
+  - Categorize each component using **Atomic Design** hierarchy: **Atoms → Molecules → Organisms → Templates → Pages**
+  - Perform an **Atomic Consistency** check: detect multiple atom components that serve the same purpose under different names (e.g., `PrimaryButton`, `BlueButton`, `ActionBtn`) and report them as consolidation candidates (do not refactor yet)
   - Detect rogue elements and cluster repeated patterns
   - Map each cluster to a “closest official component”
   - Implement Proposed Variants in an isolated folder
@@ -122,6 +134,22 @@ After review decisions:
 If an agent cannot be used in the environment, proceed without it and explicitly document what was skipped and why.
 
 ### Audit criteria (what “good” looks like)
+#### E) Approved Global Patterns (add + document)
+- Create a **Background Mesh Gradient** component as an approved global pattern candidate:
+  - Full-screen, responsive, behind foreground content
+  - Smooth, organic motion; infinite and subtle (15–20s loop)
+  - Uses **four primary brand colors** from tokens (no raw hex in component)
+  - High blur (Gaussian blur equivalent ~60–100px)
+  - Avoid sharp edges / hard transitions
+  - Include a performance note: prefer Pure CSS when possible; SVG/Canvas only if needed
+- Document this pattern in `/docs/STYLEGUIDE.md` under **Approved Global Patterns** with usage guidance and do/don’t rules.
+
+#### D) Atomic Consistency (must explicitly check)
+- Detect duplicated Atoms with different names but equivalent behavior/styling (e.g., multiple Button components)
+- Detect Atoms recreated inline (raw HTML + class strings) where a design-system Atom exists
+- Identify Molecules that compose raw HTML Atoms instead of design-system Atoms (high-priority consolidation)
+- Produce a “Duplicate Atom Map”: {intent → components → usage counts → locations}
+
 #### A) Style drift detection (must scan for)
 - Tailwind arbitrary values:
   - `text-[#...]`, `bg-[#...]`, `border-[#...]`
@@ -137,6 +165,7 @@ If an agent cannot be used in the environment, proceed without it and explicitly
   - ad-hoc `font-family`, inconsistent `font-weight`, unusual line heights
 
 #### B) Rogue element detection (must scan for)
+- Molecules (e.g., `SearchBar`, `FilterRow`, `Toolbar`) that are assembled using raw HTML atoms (` <button>`, `<input>`, `<select>`) instead of design-system Atoms (high-priority consolidation)
 - Raw `<button>` usage where `<Button />` exists
 - Raw `<input>`, `<select>`, `<textarea>` where form components exist
 - “Card-like” containers repeated via `<div>` + class strings
@@ -166,6 +195,7 @@ For each rogue cluster:
 **Investigation Date:** 2026-01-11
 
 ### Recommended output files
+- `src/design-system/patterns/MeshGradientBackground.tsx` (or equivalent) — reusable background component rendered only in Style Review Surface for this task
 - `/docs/STYLEGUIDE.md` (enforcement reference)
 - `/docs/UI_AUDIT_2026-01-11.md` (raw findings + clusters + metrics)
 - (Optional) `/docs/STYLE_REVIEW_DECISIONS.md` (your decisions after review)
@@ -185,6 +215,24 @@ For each rogue cluster:
 
 ---
 
+
+### Background Mesh Gradient Implementation Strategies
+Implement **one** of the following based on the existing stack (prefer the simplest/highest-performance approach that fits the repo):
+
+1) **Pure CSS (preferred for performance)**
+- Use a large `background-size` (e.g., `400% 400%`) and animate `background-position` over a slow loop.
+- Use a multi-stop gradient and apply high blur (e.g., `filter: blur(80px)`), optionally via pseudo-elements.
+
+2) **SVG Mesh Gradient (most organic)**
+- Use an SVG with multiple gradient stops and animate stop positions/values for liquid-like blending.
+- Ensure it remains responsive and does not cause layout thrash.
+
+3) **Framer Motion (if already in the project)**
+- Animate a `div` between a small set of gradient strings (15–20s loop) for smooth transitions.
+- Avoid expensive per-frame computations; keep animations GPU-friendly.
+
+**Integration rule for Task 013:** Do not apply globally yet. Render only on the Style Review Surface and document under Approved Global Patterns in `/docs/STYLEGUIDE.md`.
+
 ## Recommended Prompt for Claude Code (copy/paste)
 
 "Enter Plan Mode. I want to use the elite-code-architect and react-nextjs-reviewer agents for this task.
@@ -193,9 +241,13 @@ Audit Style Drift: Find every instance of fonts, colors, spacing/sizing, radius,
 
 Component Inventory: Create an inventory of all reusable UI components (especially Button/Input/Select/Card/Modal/etc.) and include usage counts across the repo.
 
+Atomic Categorization + Consistency: Categorize components as Atoms/Molecules/Organisms/Templates/Pages. Flag duplicate Atom implementations (e.g., PrimaryButton/BlueButton/ActionBtn) and identify Molecules built from raw HTML Atoms as high-priority consolidation areas (audit only; do not refactor yet).
+
 Find Rogue Elements: Identify repeated UI patterns built with raw HTML/classes that should be components.
 
-Visualize Variants: Do not replace production code yet. Instead, capture rogue patterns as Proposed Variants and build a dev-only Style Review Surface (Storybook or gated dev route) that renders official components next to proposed variants.
+Visualize Variants: Do not replace production code yet.
+
+Approved Global Pattern: Implement a full-screen Background Mesh Gradient component that slowly and subtly cycles between four brand colors (token-driven, blur 60–100px, ~15–20s loop, infinite). Render it only in the Style Review Surface for now and document it in STYLEGUIDE.md. Instead, capture rogue patterns as Proposed Variants and build a dev-only Style Review Surface (Storybook or gated dev route) that renders official components next to proposed variants.
 
 Report Metrics: Component Adoption %, Drift Rate counts, Duplication Clusters count.
 
