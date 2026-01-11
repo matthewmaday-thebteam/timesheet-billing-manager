@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Modal } from './Modal';
 import { MetricCard } from './MetricCard';
 import { Card } from './Card';
+import { AccordionListTable } from './AccordionListTable';
+import type { AccordionListTableColumn, AccordionListTableItem } from './AccordionListTable';
 import { minutesToHours } from '../utils/calculations';
 import type { UnderHoursResource } from '../utils/calculations';
 import type { TimesheetEntry } from '../types';
@@ -17,12 +19,13 @@ interface UnderHoursModalProps {
   workingDaysTotal: number;
 }
 
-interface TaskEntry {
-  client: string;
-  date: string;
-  task: string;
-  minutes: number;
-}
+// Table columns for task breakdown
+const taskColumns: AccordionListTableColumn[] = [
+  { key: 'client', label: 'Client', align: 'left' },
+  { key: 'date', label: 'Date', align: 'left' },
+  { key: 'task', label: 'Task', align: 'left' },
+  { key: 'time', label: 'Time', align: 'right' },
+];
 
 export function UnderHoursModal({
   isOpen,
@@ -33,37 +36,78 @@ export function UnderHoursModal({
   workingDaysElapsed,
   workingDaysTotal,
 }: UnderHoursModalProps) {
-  const [expandedResourceId, setExpandedResourceId] = useState<string | null>(null);
-
-  // Get task entries for a specific user
-  // Sorted by: Client (A-Z) -> Date (Desc) -> Task Name (A-Z)
-  const getTasksForUser = useMemo(() => {
-    return (userName: string): TaskEntry[] => {
-      const userEntries = entries.filter(e => e.user_name === userName);
-
-      return userEntries
-        .map(entry => ({
+  // Build accordion items from under-hours resources
+  const accordionItems: AccordionListTableItem[] = useMemo(() => {
+    return items.map((item) => {
+      // Get task entries for this user, sorted by Client -> Date (desc) -> Task
+      const userEntries = entries
+        .filter((e) => e.user_name === item.userName)
+        .map((entry) => ({
           client: entry.project_name,
           date: entry.work_date,
           task: entry.task_name,
           minutes: entry.total_minutes,
         }))
         .sort((a, b) => {
-          // 1. Sort by Client (A-Z)
           const clientCompare = a.client.localeCompare(b.client);
           if (clientCompare !== 0) return clientCompare;
-          // 2. Then by Date (Descending)
           const dateCompare = b.date.localeCompare(a.date);
           if (dateCompare !== 0) return dateCompare;
-          // 3. Then by Task Name (A-Z)
           return a.task.localeCompare(b.task);
         });
-    };
-  }, [entries]);
 
-  const handleResourceClick = (userName: string) => {
-    setExpandedResourceId(expandedResourceId === userName ? null : userName);
-  };
+      // Convert to table rows
+      const rows = userEntries.map((task, index) => ({
+        id: `${task.client}-${task.date}-${task.task}-${index}`,
+        cells: {
+          client: (
+            <span className="text-vercel-gray-600 font-medium">{task.client}</span>
+          ),
+          date: (
+            <span className="text-vercel-gray-400 font-mono">
+              {format(new Date(task.date), 'MMM d')}
+            </span>
+          ),
+          task: (
+            <span className="text-vercel-gray-400 font-mono max-w-[200px] truncate block">
+              {task.task}
+            </span>
+          ),
+          time: (
+            <span className="text-vercel-gray-600 font-medium">
+              {minutesToHours(task.minutes)}h
+            </span>
+          ),
+        },
+      }));
+
+      return {
+        id: item.userName,
+        statusColor: 'error' as const,
+        headerLeft: (
+          <span className="text-sm font-medium text-vercel-gray-600">
+            {item.displayName}
+          </span>
+        ),
+        headerRight: (
+          <div className="text-right">
+            <span className="text-sm font-medium text-vercel-gray-600">
+              {item.actualHours.toFixed(1)}h
+            </span>
+            <span className="text-sm text-vercel-gray-400 mx-1">/</span>
+            <span className="text-sm font-mono text-vercel-gray-400">
+              {item.expectedHours.toFixed(1)}h
+            </span>
+            <span className="text-sm font-mono text-bteam-brand ml-3">
+              -{item.deficit.toFixed(1)}h
+            </span>
+          </div>
+        ),
+        rows,
+        emptyMessage: 'No tasks recorded for this period',
+      };
+    });
+  }, [items, entries]);
 
   // Sticky header content (summary cards + info banner)
   const stickyHeaderContent = (
@@ -104,107 +148,7 @@ export function UnderHoursModal({
           <p className="text-sm text-vercel-gray-400">All resources are on target</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {/* Resource Rows */}
-          {items.map((item) => {
-            const isExpanded = expandedResourceId === item.userName;
-            const tasks = isExpanded ? getTasksForUser(item.userName) : [];
-
-            return (
-              <div key={item.userName} className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
-                {/* Resource Row - Clickable (matching AccordionFlat header style) */}
-                <button
-                  onClick={() => handleResourceClick(item.userName)}
-                  className="w-full flex items-center justify-between p-6 bg-white hover:bg-vercel-gray-50 transition-colors text-left focus:outline-none"
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Chevron Indicator */}
-                    <svg
-                      className={`w-4 h-4 text-vercel-gray-400 transition-transform ${
-                        isExpanded ? 'rotate-90' : ''
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                    <div className="w-2 h-2 rounded-full bg-error" />
-                    <span className="text-sm font-medium text-vercel-gray-600">{item.displayName}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium text-vercel-gray-600">
-                      {item.actualHours.toFixed(1)}h
-                    </span>
-                    <span className="text-sm text-vercel-gray-400 mx-1">/</span>
-                    <span className="text-sm text-vercel-gray-400">
-                      {item.expectedHours.toFixed(1)}h
-                    </span>
-                    <span className="text-sm text-error ml-3">
-                      -{item.deficit.toFixed(1)}h
-                    </span>
-                  </div>
-                </button>
-
-                {/* Expanded Task List (matching AccordionFlat table style) */}
-                {isExpanded && (
-                  <div className="border-t border-vercel-gray-100">
-                    {tasks.length === 0 ? (
-                      <div className="p-6 text-center">
-                        <p className="text-sm text-vercel-gray-300">No tasks recorded for this period</p>
-                      </div>
-                    ) : (
-                      <table className="w-full">
-                        <thead className="bg-vercel-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                              Client
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                              Task
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                              Time
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-vercel-gray-100">
-                          {tasks.map((task, index) => (
-                            <tr
-                              key={`${task.client}-${task.date}-${task.task}-${index}`}
-                              className="hover:bg-vercel-gray-50 transition-colors"
-                            >
-                              <td className="px-6 py-4 text-sm text-vercel-gray-600 font-medium">
-                                {task.client}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-vercel-gray-400">
-                                {format(new Date(task.date), 'MMM d')}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-vercel-gray-400 max-w-[200px] truncate">
-                                {task.task}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-right text-vercel-gray-600 font-medium">
-                                {minutesToHours(task.minutes)}h
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <AccordionListTable items={accordionItems} columns={taskColumns} />
       )}
     </Modal>
   );

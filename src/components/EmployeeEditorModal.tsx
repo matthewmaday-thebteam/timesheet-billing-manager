@@ -136,7 +136,6 @@ export function EmployeeEditorModal({
       onClose={onClose}
       title="Edit Employee"
       maxWidth="md"
-      centerTitle
       footer={footerContent}
     >
       <form onSubmit={handleSubmit} className="space-y-6">

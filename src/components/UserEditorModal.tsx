@@ -164,7 +164,6 @@ export function UserEditorModal({
       onClose={onClose}
       title={isEditing ? 'Edit User' : 'Create User'}
       maxWidth="sm"
-      centerTitle
       footer={footerContent}
     >
       <form onSubmit={handleSubmit} className="space-y-6">

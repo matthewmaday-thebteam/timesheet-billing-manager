@@ -1,17 +1,38 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from './Avatar';
+import { ProfileEditorModal } from './ProfileEditorModal';
+import { NavItem } from './NavItem';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'rates' | 'eom-reports' | 'users';
+
+interface NavItemConfig {
+  id: NavRoute;
+  label: string;
+}
+
+const navItems: NavItemConfig[] = [
+  { id: 'home', label: 'Home' },
+  { id: 'holidays', label: 'Holidays' },
+  { id: 'employees', label: 'Employees' },
+  { id: 'rates', label: 'Rates' },
+  { id: 'eom-reports', label: 'EOM Reports' },
+  { id: 'users', label: 'Users' },
+];
+
 interface MainHeaderProps {
+  activeRoute: NavRoute;
+  onRouteChange: (route: NavRoute) => void;
   onOpenDocs?: (section: DocsSection) => void;
 }
 
-export function MainHeader({ onOpenDocs }: MainHeaderProps) {
+export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeaderProps) {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDocsMenuOpen, setIsDocsMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const docsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -44,22 +65,42 @@ export function MainHeader({ onOpenDocs }: MainHeaderProps) {
     await signOut();
   };
 
-  // Get display name from email
-  const displayName = user?.email?.split('@')[0] || 'User';
-  const formattedName = displayName
-    .split(/[._-]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  const handleOpenProfile = () => {
+    setIsMenuOpen(false);
+    setIsProfileModalOpen(true);
+  };
+
+  // Get display name from user metadata or email
+  const firstName = user?.user_metadata?.first_name || '';
+  const lastName = user?.user_metadata?.last_name || '';
+  const avatarUrl = user?.user_metadata?.avatar_url || null;
+
+  let formattedName: string;
+  if (firstName || lastName) {
+    formattedName = [firstName, lastName].filter(Boolean).join(' ');
+  } else {
+    // Fallback to email-based name
+    const displayName = user?.email?.split('@')[0] || 'User';
+    formattedName = displayName
+      .split(/[._-]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 
   return (
     <header className="h-14 bg-white border-b border-vercel-gray-100">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-        {/* Left: Breadcrumb / Project Switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-vercel-gray-400">{formattedName}'s projects</span>
-          <span className="text-vercel-gray-100">/</span>
-          <span className="text-sm font-semibold text-vercel-gray-600">timesheet-billing-manager</span>
-        </div>
+        {/* Left: Navigation Items */}
+        <nav className="flex items-center gap-1">
+          {navItems.map((item) => (
+            <NavItem
+              key={item.id}
+              label={item.label}
+              isActive={activeRoute === item.id}
+              onClick={() => onRouteChange(item.id)}
+            />
+          ))}
+        </nav>
 
         {/* Right: Links and Avatar */}
         <div className="flex items-center gap-4">
@@ -125,7 +166,7 @@ export function MainHeader({ onOpenDocs }: MainHeaderProps) {
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="focus:outline-none focus:ring-1 focus:ring-black rounded-full"
             >
-              <Avatar name={formattedName} size={32} />
+              <Avatar name={formattedName} size={32} src={avatarUrl} />
             </button>
 
             {isMenuOpen && (
@@ -144,6 +185,15 @@ export function MainHeader({ onOpenDocs }: MainHeaderProps) {
                 {/* Menu Items */}
                 <div className="py-1">
                   <button
+                    onClick={handleOpenProfile}
+                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Profile
+                  </button>
+                  <button
                     onClick={handleSignOut}
                     className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
                   >
@@ -158,6 +208,12 @@ export function MainHeader({ onOpenDocs }: MainHeaderProps) {
           </div>
         </div>
       </div>
+
+      {/* Profile Editor Modal */}
+      <ProfileEditorModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </header>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
+import { useAuth } from '../contexts/AuthContext';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { getBillingRates, calculateTotalRevenue, buildDbRateLookupByName } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
@@ -15,7 +16,15 @@ import { Button } from './Button';
 import type { DateRange } from '../types';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
 export function Dashboard() {
+  const { user } = useAuth();
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const now = new Date();
     return {
@@ -26,6 +35,11 @@ export function Dashboard() {
 
   // Modal state for under hours
   const [isUnderHoursModalOpen, setIsUnderHoursModalOpen] = useState(false);
+
+  // Get user's name for greeting
+  const firstName = user?.user_metadata?.first_name || '';
+  const lastName = user?.user_metadata?.last_name || '';
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
   // Force re-render when billing rates change
   const [ratesVersion, setRatesVersion] = useState(0);
@@ -57,12 +71,17 @@ export function Dashboard() {
   return (
     <>
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Page Header */}
+        {/* Greeting Section */}
         <section>
-          <div className="flex justify-between items-end mb-4">
-            <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">
-              Timesheet Dashboard
-            </h2>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-vercel-gray-600">
+                {getGreeting()}, {displayName}
+              </h1>
+              <p className="text-base text-vercel-gray-600 mt-1">
+                This is what is going on with <span className="text-bteam-brand font-medium">The B Team</span> today
+              </p>
+            </div>
             <Button variant="secondary" onClick={refetch}>
               Refresh
             </Button>

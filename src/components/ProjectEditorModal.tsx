@@ -93,7 +93,6 @@ export function ProjectEditorModal({
       onClose={onClose}
       title="Edit Project Rate"
       maxWidth="sm"
-      centerTitle
       footer={footerContent}
     >
       <form onSubmit={handleSubmit} className="space-y-6">

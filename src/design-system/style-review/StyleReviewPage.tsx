@@ -11,6 +11,7 @@ import { TypographyPreview } from '../Typography';
 import { Modal } from '../../components/Modal';
 import { Select } from '../../components/Select';
 import { Avatar } from '../../components/Avatar';
+import { AvatarUpload } from '../../components/AvatarUpload';
 import { MetricCard } from '../../components/MetricCard';
 import { DropdownMenu } from '../../components/DropdownMenu';
 import { Button } from '../../components/Button';
@@ -24,6 +25,8 @@ import { AccordionNested } from '../../components/AccordionNested';
 import type { AccordionNestedLevel2Item } from '../../components/AccordionNested';
 import { AccordionFlat } from '../../components/AccordionFlat';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatFooterCell } from '../../components/AccordionFlat';
+import { AccordionListTable } from '../../components/AccordionListTable';
+import type { AccordionListTableColumn, AccordionListTableItem } from '../../components/AccordionListTable';
 import { PieChartAtom } from '../../components/atoms/charts/PieChartAtom';
 import { LineGraphAtom } from '../../components/atoms/charts/LineGraphAtom';
 import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
@@ -70,18 +73,25 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-1 mt-4 border-b border-vercel-gray-100 -mb-px">
+          <div className="flex gap-1 mt-4">
             {sections.map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                className={`relative px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-out hover:bg-vercel-gray-100 focus:outline-none ${
                   activeSection === section.id
-                    ? 'text-vercel-gray-600 border-vercel-gray-600'
-                    : 'text-vercel-gray-400 border-transparent hover:text-vercel-gray-600'
+                    ? 'text-vercel-gray-600'
+                    : 'text-vercel-gray-400 hover:text-vercel-gray-600'
                 }`}
               >
                 {section.label}
+                {/* Active indicator - sits on the header border */}
+                <span
+                  className={`absolute left-0 right-0 -bottom-[17px] h-[2px] bg-vercel-gray-600 transition-all duration-200 ease-out ${
+                    activeSection === section.id ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'
+                  }`}
+                  style={{ borderRadius: '1px 1px 0 0' }}
+                />
               </button>
             ))}
           </div>
@@ -251,6 +261,76 @@ function AtomsSection() {
     { columnKey: 'hours', content: '108.3' },
     { columnKey: 'rate', content: null },
     { columnKey: 'revenue', content: '$6,188.75' },
+  ];
+
+  // Sample data for AccordionListTable demo
+  const sampleListTableColumns: AccordionListTableColumn[] = [
+    { key: 'client', label: 'Client', align: 'left' },
+    { key: 'date', label: 'Date', align: 'left' },
+    { key: 'task', label: 'Task', align: 'left' },
+    { key: 'time', label: 'Time', align: 'right' },
+  ];
+
+  const sampleListTableItems: AccordionListTableItem[] = [
+    {
+      id: 'john',
+      statusColor: 'error',
+      headerLeft: <span className="text-sm font-medium text-vercel-gray-600">John Smith</span>,
+      headerRight: (
+        <div className="text-right">
+          <span className="text-sm font-medium text-vercel-gray-600">32.5h</span>
+          <span className="text-sm text-vercel-gray-400 mx-1">/</span>
+          <span className="text-sm font-mono text-vercel-gray-400">70.0h</span>
+          <span className="text-sm font-mono text-bteam-brand ml-3">-37.5h</span>
+        </div>
+      ),
+      rows: [
+        {
+          id: 'john-1',
+          cells: {
+            client: <span className="text-vercel-gray-600 font-medium">Acme Corp</span>,
+            date: <span className="text-vercel-gray-400 font-mono">Jan 9</span>,
+            task: <span className="text-vercel-gray-400 font-mono">Development</span>,
+            time: <span className="text-vercel-gray-600 font-medium">8.0h</span>,
+          },
+        },
+        {
+          id: 'john-2',
+          cells: {
+            client: <span className="text-vercel-gray-600 font-medium">Acme Corp</span>,
+            date: <span className="text-vercel-gray-400 font-mono">Jan 8</span>,
+            task: <span className="text-vercel-gray-400 font-mono">Code review</span>,
+            time: <span className="text-vercel-gray-600 font-medium">4.5h</span>,
+          },
+        },
+      ],
+      emptyMessage: 'No tasks recorded',
+    },
+    {
+      id: 'jane',
+      statusColor: 'warning',
+      headerLeft: <span className="text-sm font-medium text-vercel-gray-600">Jane Doe</span>,
+      headerRight: (
+        <div className="text-right">
+          <span className="text-sm font-medium text-vercel-gray-600">58.0h</span>
+          <span className="text-sm text-vercel-gray-400 mx-1">/</span>
+          <span className="text-sm font-mono text-vercel-gray-400">70.0h</span>
+          <span className="text-sm font-mono text-bteam-brand ml-3">-12.0h</span>
+        </div>
+      ),
+      rows: [
+        {
+          id: 'jane-1',
+          cells: {
+            client: <span className="text-vercel-gray-600 font-medium">TechStart</span>,
+            date: <span className="text-vercel-gray-400 font-mono">Jan 9</span>,
+            task: <span className="text-vercel-gray-400 font-mono">Design work</span>,
+            time: <span className="text-vercel-gray-600 font-medium">7.5h</span>,
+          },
+        },
+      ],
+      emptyMessage: 'No tasks recorded',
+    },
   ];
 
   // Sample data for AccordionNested demo
@@ -472,6 +552,43 @@ function AtomsSection() {
               <Avatar name="Bob Wilson" size={40} />
               <p className="text-2xs text-vercel-gray-400 mt-2">40px</p>
             </div>
+            <div className="text-center">
+              <Avatar name="With Image" size={40} src="https://api.dicebear.com/7.x/avataaars/svg?seed=demo" />
+              <p className="text-2xs text-vercel-gray-400 mt-2">with image</p>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Gradient initials fallback, optional image src with error handling, customizable size.
+            </p>
+          </div>
+        </div>
+
+        {/* AvatarUpload */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">AvatarUpload</h3>
+          <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/AvatarUpload.tsx</p>
+          <div className="flex gap-8 items-start">
+            <div>
+              <AvatarUpload
+                name="Demo User"
+                onImageCropped={() => {}}
+                size={96}
+              />
+            </div>
+            <div className="flex-1">
+              <div className="p-3 bg-vercel-gray-50 rounded-lg">
+                <p className="text-xs text-vercel-gray-400">
+                  <span className="font-medium">Features:</span> Click to upload, file validation (image types, max 10MB),
+                  circular crop modal with zoom control, outputs 256x256 JPEG blob.
+                </p>
+              </div>
+              <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+                <p className="text-xs text-vercel-gray-400">
+                  <span className="font-medium">Dependencies:</span> react-easy-crop for cropping UI.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -582,6 +699,18 @@ function AtomsSection() {
           </div>
         </div>
 
+        {/* AccordionListTable (Multiple expandable items with tables) */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">AccordionListTable (Resources Under Target Pattern)</h3>
+          <p className="text-xs text-vercel-gray-400 mb-4">Component: src/components/AccordionListTable.tsx — Multiple expandable items, each with table content. Optional status indicator dot.</p>
+          <div className="max-w-2xl">
+            <AccordionListTable
+              columns={sampleListTableColumns}
+              items={sampleListTableItems}
+            />
+          </div>
+        </div>
+
         {/* DropdownMenu */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-4">DropdownMenu</h3>
@@ -667,17 +796,9 @@ function MoleculesSection() {
         </div>
 
         <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">SubNavbar</h3>
-          <p className="text-xs text-vercel-gray-400">
-            Navigation bar with NavItem atoms for route switching.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/SubNavbar.tsx</p>
-        </div>
-
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
           <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">MainHeader</h3>
           <p className="text-xs text-vercel-gray-400">
-            Application header with logo, user avatar, and dropdown menu.
+            Unified navigation header with NavItem atoms, Docs dropdown, user avatar, and profile menu.
           </p>
           <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/MainHeader.tsx</p>
         </div>
@@ -696,6 +817,19 @@ function MoleculesSection() {
             HolidayEditorModal, UserEditorModal, EmployeeEditorModal, ProjectEditorModal - Form modals for CRUD operations.
           </p>
           <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*EditorModal.tsx</p>
+        </div>
+
+        <div className="p-6 border border-vercel-gray-100 rounded-lg">
+          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">ProfileEditorModal</h3>
+          <p className="text-xs text-vercel-gray-400">
+            User profile editor with avatar upload/crop, name fields, and email change with confirmation flow.
+          </p>
+          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/ProfileEditorModal.tsx</p>
+          <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Combines:</span> Modal, AvatarUpload, Input, Button, Spinner. Integrates with AuthContext for profile updates.
+            </p>
+          </div>
         </div>
 
         <div className="p-6 border border-vercel-gray-100 rounded-lg">

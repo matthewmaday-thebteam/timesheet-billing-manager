@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { MainHeader } from './components/MainHeader';
-import { SubNavbar, type NavRoute } from './components/SubNavbar';
+import { MainHeader, type NavRoute } from './components/MainHeader';
 import { Dashboard } from './components/Dashboard';
 import { Spinner } from './components/Spinner';
 import { HolidaysPage } from './components/pages/HolidaysPage';
@@ -74,8 +73,11 @@ function AuthenticatedApp() {
 
   return (
     <div className="min-h-screen bg-vercel-gray-50">
-      <MainHeader onOpenDocs={handleOpenDocs} />
-      <SubNavbar activeRoute={activeRoute} onRouteChange={setActiveRoute} />
+      <MainHeader
+        activeRoute={activeRoute}
+        onRouteChange={setActiveRoute}
+        onOpenDocs={handleOpenDocs}
+      />
       {renderPage()}
     </div>
   );

@@ -117,7 +117,6 @@ export function HolidayEditorModal({
       onClose={onClose}
       title={isEditing ? 'Edit Holiday' : 'Add Holiday'}
       maxWidth="sm"
-      centerTitle
       footer={footerContent}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
