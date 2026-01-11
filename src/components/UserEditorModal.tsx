@@ -3,6 +3,8 @@ import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
+import { Toggle } from './Toggle';
+import { Alert } from './Alert';
 import { Spinner } from './Spinner';
 import type { AppUser, CreateUserParams, UserRole } from '../types';
 
@@ -59,7 +61,6 @@ export function UserEditorModal({
 }: UserEditorModalProps) {
   const [formData, setFormData] = useState<FormData>(() => getFormDataFromUser(user));
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [showPassword, setShowPassword] = useState(false);
   const [lastResetKey, setLastResetKey] = useState<string>('');
 
   const isEditing = !!user;
@@ -71,7 +72,6 @@ export function UserEditorModal({
     setLastResetKey(resetKey);
     setFormData(getFormDataFromUser(user));
     setErrors({});
-    setShowPassword(false);
   }
 
   const validateForm = (): boolean => {
@@ -168,38 +168,29 @@ export function UserEditorModal({
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Email Address
-          </label>
-          <Input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            disabled={isEditing}
-            placeholder="user@example.com"
-            error={errors.email}
-          />
-        </div>
+        <Input
+          label="Email Address"
+          type="email"
+          value={formData.email}
+          onChange={(e) => handleInputChange('email', e.target.value)}
+          disabled={isEditing}
+          placeholder="user@example.com"
+          error={errors.email}
+        />
 
         {/* Display Name */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Display Name
-            <span className="ml-1 text-vercel-gray-300 normal-case tracking-normal">(optional)</span>
-          </label>
-          <Input
-            type="text"
-            value={formData.display_name}
-            onChange={(e) => handleInputChange('display_name', e.target.value)}
-            disabled={isEditing}
-            placeholder="John Doe"
-          />
-        </div>
+        <Input
+          label="Display Name (optional)"
+          type="text"
+          value={formData.display_name}
+          onChange={(e) => handleInputChange('display_name', e.target.value)}
+          disabled={isEditing}
+          placeholder="John Doe"
+        />
 
         {/* Role */}
         <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+          <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
             Role
           </label>
           <Select
@@ -210,7 +201,7 @@ export function UserEditorModal({
             className="w-full"
           />
           {isLastAdmin && (
-            <p className="mt-1 text-xs text-vercel-gray-300">
+            <p className="mt-1 text-xs text-vercel-gray-400">
               Cannot change role of the last admin user
             </p>
           )}
@@ -219,79 +210,35 @@ export function UserEditorModal({
         {/* Password (only for new users) */}
         {!isEditing && (
           <>
-            <div>
-              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-                Password
-                {formData.send_invite && (
-                  <span className="ml-1 text-vercel-gray-300 normal-case tracking-normal">(optional)</span>
-                )}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:outline-none transition-colors duration-200 ease-out ${
-                    errors.password
-                      ? 'border-error focus:border-error'
-                      : 'border-vercel-gray-100 focus:border-vercel-gray-600'
-                  }`}
-                  placeholder="Minimum 8 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors"
-                >
-                  {showPassword ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              {errors.password && <p className="mt-1 text-xs text-error">{errors.password}</p>}
-            </div>
+            <Input
+              label={formData.send_invite ? 'Password (optional)' : 'Password'}
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              placeholder="Minimum 8 characters"
+              error={errors.password}
+            />
 
             {/* Send Invite Toggle */}
-            <div className="flex items-center justify-between p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
-              <div>
-                <p className="text-sm font-medium text-vercel-gray-600">Send Invite Email</p>
-                <p className="text-xs text-vercel-gray-400">
-                  {formData.send_invite
-                    ? 'User will receive an email to set their password'
-                    : 'User will use the password you set above'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleInputChange('send_invite', !formData.send_invite)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-black ${
-                  formData.send_invite ? 'bg-vercel-gray-600' : 'bg-vercel-gray-100'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-out ${
-                    formData.send_invite ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
+            <Toggle
+              label="Send Invite Email"
+              description={
+                formData.send_invite
+                  ? 'User will receive an email to set their password'
+                  : 'User will use the password you set above'
+              }
+              checked={formData.send_invite}
+              onChange={(checked) => handleInputChange('send_invite', checked)}
+            />
           </>
         )}
 
         {/* Edit Mode Notice */}
         {isEditing && (
-          <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
-            <p className="text-xs text-vercel-gray-400">
-              To change the password, use the "Reset Password" option from the user's action menu.
-            </p>
-          </div>
+          <Alert
+            message='To change the password, use the "Reset Password" option from the user action menu.'
+            icon="info"
+          />
         )}
       </form>
     </Modal>

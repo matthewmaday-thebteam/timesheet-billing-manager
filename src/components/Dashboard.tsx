@@ -10,6 +10,7 @@ import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { ProjectCard } from './ProjectCard';
 import { BillingRatesTable } from './BillingRatesTable';
+import { EmployeePerformance } from './EmployeePerformance';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
@@ -90,29 +91,29 @@ export function Dashboard() {
 
         <DateRangeFilter dateRange={dateRange} onChange={setDateRange} />
 
-        {/* Charts Row - Hours by Resource & 12-Month Revenue Trend */}
-        <DashboardChartsRow
-          resources={resources}
-          monthlyAggregates={monthlyAggregates}
-          loading={loading}
-        />
+        {/* Charts and KPIs */}
+        <div className="space-y-3">
+          <DashboardChartsRow
+            resources={resources}
+            monthlyAggregates={monthlyAggregates}
+            loading={loading}
+          />
 
-        {error && (
-          <div className="p-4 bg-white border border-error rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-error" />
-              <span className="text-sm text-error">Error loading data: {error}</span>
+          {error && (
+            <div className="p-4 bg-white border border-error rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-error" />
+                <span className="text-sm text-error">Error loading data: {error}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="md" />
-            <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
-          </div>
-        ) : (
-          <>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Spinner size="md" />
+              <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
+            </div>
+          ) : (
             <StatsOverview
               projects={projects}
               resources={resources}
@@ -120,18 +121,29 @@ export function Dashboard() {
               totalRevenue={totalRevenue}
               onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
             />
+          )}
+        </div>
 
-            {/* Billing Rates Section */}
+        {!loading && (
+          <>
+
+            {/* Itemized Reports Section */}
             <section>
               <div className="flex justify-between items-end mb-4">
                 <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">
-                  Billing & Revenue
+                  Itemized Reports
                 </h2>
               </div>
-              <BillingRatesTable
-                projects={projects}
-                onRatesChange={handleRatesChange}
-              />
+              <div className="space-y-3">
+                <BillingRatesTable
+                  projects={projects}
+                  onRatesChange={handleRatesChange}
+                />
+                <EmployeePerformance
+                  projects={projects}
+                  dbRateLookup={dbRateLookup}
+                />
+              </div>
             </section>
 
             {/* Projects Section */}

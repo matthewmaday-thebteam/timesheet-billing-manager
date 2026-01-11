@@ -4,6 +4,7 @@ import { Button } from '../Button';
 import { Input } from '../Input';
 import { Card } from '../Card';
 import { Spinner } from '../Spinner';
+import { Alert } from '../Alert';
 
 interface LoginPageProps {
   onForgotPassword: () => void;
@@ -47,16 +48,7 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
         <Card variant="elevated" padding="lg">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-vercel-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm text-vercel-gray-200">{error}</span>
-                </div>
-              </div>
-            )}
+            {error && <Alert message={error} />}
 
             {/* Email Field */}
             <Input

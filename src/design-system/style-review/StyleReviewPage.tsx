@@ -17,6 +17,8 @@ import { DropdownMenu } from '../../components/DropdownMenu';
 import { Button } from '../../components/Button';
 import { Spinner } from '../../components/Spinner';
 import { Input } from '../../components/Input';
+import { Toggle } from '../../components/Toggle';
+import { Alert } from '../../components/Alert';
 import { Card } from '../../components/Card';
 import { Badge } from '../../components/Badge';
 import { DatePicker } from '../../components/DatePicker';
@@ -447,6 +449,56 @@ function AtomsSection() {
             <Input label="Small Size" size="sm" placeholder="Small input" />
             <Input label="Large Size" size="lg" placeholder="Large input" />
             <Input label="Disabled" disabled value="Disabled input" />
+          </div>
+        </div>
+
+        {/* Toggle */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Toggle</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Toggle.tsx</p>
+          </div>
+          <div className="grid gap-4 max-w-md">
+            <Toggle
+              label="Send Invite Email"
+              description="User will receive an email to set their password"
+              checked={true}
+              onChange={() => {}}
+            />
+            <Toggle
+              label="Toggle Off State"
+              description="This toggle is currently off"
+              checked={false}
+              onChange={() => {}}
+            />
+            <Toggle
+              label="Disabled Toggle"
+              checked={true}
+              onChange={() => {}}
+              disabled
+            />
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Label with optional description, on/off states, disabled state.
+            </p>
+          </div>
+        </div>
+
+        {/* Alert */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Alert</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Alert.tsx</p>
+          </div>
+          <div className="grid gap-4 max-w-md">
+            <Alert message="Invalid login credentials" icon="error" />
+            <Alert message="Please check your input and try again" icon="info" />
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Subtle gray styling (vercel-gray-50 bg, vercel-gray-200 border/icon/text). Error and info icon variants.
+            </p>
           </div>
         </div>
 
