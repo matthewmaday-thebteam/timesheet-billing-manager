@@ -86,6 +86,7 @@ export const PieChartAtom = forwardRef<HTMLDivElement, PieChartAtomProps>(
                 <Cell
                   key={`cell-${entry.name}-${index}`}
                   fill={getSegmentColor(entry, index)}
+                  stroke="none"
                 />
               ))}
             </Pie>

@@ -53,8 +53,8 @@ const yAxisFormatter = (value: number) => formatChartCurrency(value);
 // Chart margin configuration
 const chartMargin = { top: 5, right: 30, left: 20, bottom: 5 };
 
-// Shared line configuration
-const activeDotConfig = { r: 4 };
+// Shared line configuration - no stroke on active dot
+const activeDotConfig = { r: 4, stroke: 'none' };
 
 export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
   (
