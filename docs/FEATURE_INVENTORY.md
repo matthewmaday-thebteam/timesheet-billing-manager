@@ -350,7 +350,7 @@ Utils:
 | `src/components/Select.tsx` | Component | 80 | Reusable select input |
 | `src/components/Modal.tsx` | Component | 135 | Reusable modal |
 | `src/components/Button.tsx` | Component | 80 | Reusable button |
-| `src/components/Input.tsx` | Component | 90 | Reusable input field |
+| `src/components/Input.tsx` | Component | 98 | Reusable input field (error styling uses bteam-brand) |
 | `src/components/Card.tsx` | Component | 50 | Reusable card container |
 | `src/components/Badge.tsx` | Component | 60 | Reusable status badge |
 | `src/components/Spinner.tsx` | Component | 40 | Reusable loading spinner |
@@ -393,7 +393,7 @@ Utils:
 |---------|---------|
 | Email Input | Validated email field |
 | Password Input | Masked password field |
-| Error Display | Shows auth errors |
+| Error Display | Subtle gray styling (vercel-gray-50 bg, vercel-gray-200 border/icon/text) |
 | Forgot Password Link | Links to password reset |
 | Loading State | Shows spinner during auth |
 
@@ -472,7 +472,7 @@ Utils:
 | Avatar Upload | Click to upload, crop, and save profile photo |
 | Name Fields | First name, last name inputs |
 | Email Field | Read-only display with helper text |
-| Save/Cancel | Form submission with loading state |
+| Save/Cancel | Closes immediately on successful save |
 | Error Handling | Error banner at top of form |
 
 **Storage**: Avatars stored in Supabase `avatars` bucket with RLS policies
