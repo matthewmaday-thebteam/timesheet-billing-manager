@@ -29,10 +29,13 @@
 | F023 | Bulgarian Holidays Page | Complete | P1 | HolidaysPage.tsx |
 | F024 | Employees Page | Complete | P1 | EmployeesPage.tsx |
 | F025 | Project Rates Page | Complete | P1 | RatesPage.tsx |
-| F026 | Navigation System | Complete | P0 | SubNavbar.tsx, MainHeader.tsx |
+| F026 | Navigation System | Complete | P0 | MainHeader.tsx |
 | F027 | Dashboard Charts | Complete | P1 | DashboardChartsRow.tsx |
 | F028 | Hours by Resource Chart | Complete | P1 | PieChartAtom.tsx |
 | F029 | Revenue Trend Chart | Complete | P1 | LineGraphAtom.tsx |
+| F030 | Profile Editor Modal | Complete | P1 | ProfileEditorModal.tsx |
+| F031 | Dashboard Personalized Greeting | Complete | P2 | Dashboard.tsx |
+| F032 | Avatar Upload | Complete | P1 | AvatarUpload.tsx |
 
 ---
 
@@ -251,10 +254,23 @@
 
 ```
 App.tsx
+├── AuthProvider (context)
+├── MainHeader.tsx
+│   ├── NavItem.tsx (navigation tabs)
+│   ├── Avatar.tsx
+│   └── ProfileEditorModal.tsx
+│       ├── AvatarUpload.tsx
+│       │   ├── Avatar.tsx
+│       │   └── Modal.tsx (crop modal)
+│       ├── Input.tsx
+│       └── Modal.tsx
 └── Dashboard.tsx
     ├── DateRangeFilter.tsx
     │   ├── Button.tsx
     │   └── DatePicker.tsx
+    ├── DashboardChartsRow.tsx
+    │   ├── PieChartAtom.tsx
+    │   └── LineGraphAtom.tsx
     ├── StatsOverview.tsx
     │   └── MetricCard.tsx (5 cards)
     ├── BillingRatesTable.tsx
@@ -271,12 +287,20 @@ Reusable Atoms:
 ├── Spinner.tsx
 ├── DatePicker.tsx
 ├── MetricCard.tsx
+├── Modal.tsx
+├── Avatar.tsx
+├── AvatarUpload.tsx
+├── NavItem.tsx
 ├── AccordionNested.tsx
 └── AccordionFlat.tsx
 
 Hooks:
-└── useTimesheetData.ts
-    └── supabase.ts
+├── useTimesheetData.ts
+│   └── supabase.ts
+├── useProjects.ts
+├── useEmployees.ts
+├── useHolidays.ts
+└── useAdminUsers.ts
 
 Utils:
 ├── calculations.ts
@@ -291,8 +315,8 @@ Utils:
 
 | File | Type | Lines | Purpose |
 |------|------|-------|---------|
-| `src/App.tsx` | Component | 7 | Root component |
-| `src/components/Dashboard.tsx` | Component | 110 | Main dashboard |
+| `src/App.tsx` | Component | 153 | Root component with auth routing |
+| `src/components/Dashboard.tsx` | Component | 173 | Main dashboard with personalized greeting |
 | `src/components/DateRangeFilter.tsx` | Component | 95 | Date selection |
 | `src/components/StatsOverview.tsx` | Component | 60 | Stats cards (5 cards including revenue) |
 | `src/components/UnderHoursAlert.tsx` | Component | 60 | Alert banner |
@@ -317,8 +341,11 @@ Utils:
 | `src/components/pages/HolidaysPage.tsx` | Component | 250 | Holiday management |
 | `src/components/pages/EmployeesPage.tsx` | Component | 200 | Employee management |
 | `src/components/pages/RatesPage.tsx` | Component | 200 | Project rates |
-| `src/components/SubNavbar.tsx` | Component | 45 | Navigation tabs |
-| `src/components/MainHeader.tsx` | Component | 85 | App header with user menu |
+| `src/components/MainHeader.tsx` | Component | 220 | Unified nav header with tabs, docs dropdown, user menu |
+| `src/components/NavItem.tsx` | Component | 45 | Navigation tab item with active indicator |
+| `src/components/ProfileEditorModal.tsx` | Component | 200 | Profile editing modal with avatar upload |
+| `src/components/AvatarUpload.tsx` | Component | 285 | Avatar upload with crop functionality |
+| `src/components/Avatar.tsx` | Component | 65 | Avatar display with initials fallback |
 | `src/components/DropdownMenu.tsx` | Component | 150 | Reusable dropdown |
 | `src/components/Select.tsx` | Component | 80 | Reusable select input |
 | `src/components/Modal.tsx` | Component | 135 | Reusable modal |
@@ -331,6 +358,9 @@ Utils:
 | `src/components/MetricCard.tsx` | Component | 90 | Reusable metric display |
 | `src/components/AccordionNested.tsx` | Component | 160 | 3-level collapsible accordion |
 | `src/components/AccordionFlat.tsx` | Component | 130 | 2-level accordion with table |
+| `src/components/DashboardChartsRow.tsx` | Component | 85 | Charts row with pie and line graphs |
+| `src/design-system/style-review/StyleReviewPage.tsx` | Component | 600+ | Design system documentation |
+| `supabase/migrations/012_create_avatars_storage.sql` | SQL | 45 | Avatars storage bucket with RLS |
 
 ---
 
@@ -412,8 +442,8 @@ Utils:
 ---
 
 ### F026: Navigation System
-**Components**: `SubNavbar.tsx`, `MainHeader.tsx`
-**Description**: Application navigation and header.
+**Component**: `src/components/MainHeader.tsx`
+**Description**: Unified application navigation and header (merged SubNavbar into MainHeader).
 
 | Route | Page |
 |-------|------|
@@ -425,9 +455,61 @@ Utils:
 | users | User Management |
 
 **MainHeader Features**:
-- App title
-- User avatar with initial
-- Sign out dropdown
+- Left: Navigation tabs with active indicator
+- Right: Feedback link, Docs dropdown, user avatar with dropdown
+- User dropdown: Profile editor, Sign out
+- Docs dropdown: Components, Styles (opens StyleReviewPage)
+- NavItem component for consistent tab styling
+
+---
+
+### F030: Profile Editor Modal
+**Component**: `src/components/ProfileEditorModal.tsx`
+**Description**: Modal for editing user profile information and avatar.
+
+| Feature | Details |
+|---------|---------|
+| Avatar Upload | Click to upload, crop, and save profile photo |
+| Name Fields | First name, last name inputs |
+| Email Field | Read-only display with helper text |
+| Save/Cancel | Form submission with loading state |
+| Error Handling | Error banner at top of form |
+
+**Storage**: Avatars stored in Supabase `avatars` bucket with RLS policies
+
+---
+
+### F031: Dashboard Personalized Greeting
+**Component**: `src/components/Dashboard.tsx`
+**Description**: Time-based personalized greeting at top of dashboard.
+
+| Time Range | Greeting |
+|------------|----------|
+| Before 12pm | Good Morning |
+| 12pm - 5pm | Good Afternoon |
+| After 5pm | Good Evening |
+
+**Display**:
+- Heading: "{Greeting}, {First Name} {Last Name}" in heading-2xl
+- Subheading: "This is what is going on with The B Team today" in body-base
+- "The B Team" styled with bteam-brand color (#E50A73)
+
+---
+
+### F032: Avatar Upload
+**Component**: `src/components/AvatarUpload.tsx`
+**Description**: Avatar display with upload and crop functionality.
+
+| Feature | Details |
+|---------|---------|
+| Display | Shows current avatar or initials fallback |
+| Upload | Click to select image file |
+| Crop | Modal with react-easy-crop for circular crop |
+| Zoom | Slider control for zoom level |
+| Output | 256x256 JPEG, 90% quality |
+| Max Size | 10MB file size limit |
+
+**Integration**: Used in ProfileEditorModal for profile photo editing
 
 ---
 
