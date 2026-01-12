@@ -57,6 +57,23 @@ For semantic colors, reference `/docs/STYLEGUIDE.md`.
 - NEVER build locally (`npm run build`) unless explicitly requested
 - TypeScript validation (`npx tsc --noEmit`) CAN be run before deploying
 
+### Starting Development (Windows 11)
+
+**Important:** Run from Windows PowerShell/Command Prompt, NOT from WSL. The WSL → Windows filesystem causes permission issues with Vite's dependency cache.
+
+```powershell
+# Navigate to project
+cd "C:\Users\Matthew\Dropbox\Organizations\Concept Companies\timesheet-billing-manager"
+
+# Clear Vite cache if needed (fixes white screen issues)
+rmdir /s /q node_modules\.vite
+
+# Start development server
+npm run dev
+```
+
+Local server runs at: http://localhost:5173/
+
 ### Deployment
 - All testing must be done via Vercel deployments
 - Only deploy to Vercel when changes are complete

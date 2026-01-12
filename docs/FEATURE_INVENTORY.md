@@ -36,6 +36,9 @@
 | F030 | Profile Editor Modal | Complete | P1 | ProfileEditorModal.tsx |
 | F031 | Dashboard Personalized Greeting | Complete | P2 | Dashboard.tsx |
 | F032 | Avatar Upload | Complete | P1 | AvatarUpload.tsx |
+| F033 | Toggle Atom | Complete | P1 | Toggle.tsx |
+| F034 | Alert Atom | Complete | P1 | Alert.tsx |
+| F035 | Employee Performance | Complete | P1 | EmployeePerformance.tsx |
 
 ---
 
@@ -282,6 +285,8 @@ App.tsx
 Reusable Atoms:
 ├── Button.tsx
 ├── Input.tsx
+├── Toggle.tsx
+├── Alert.tsx
 ├── Card.tsx
 ├── Badge.tsx
 ├── Spinner.tsx
@@ -291,6 +296,7 @@ Reusable Atoms:
 ├── Avatar.tsx
 ├── AvatarUpload.tsx
 ├── NavItem.tsx
+├── Select.tsx
 ├── AccordionNested.tsx
 └── AccordionFlat.tsx
 
@@ -351,6 +357,9 @@ Utils:
 | `src/components/Modal.tsx` | Component | 135 | Reusable modal |
 | `src/components/Button.tsx` | Component | 80 | Reusable button |
 | `src/components/Input.tsx` | Component | 98 | Reusable input field (error styling uses bteam-brand) |
+| `src/components/Toggle.tsx` | Component | 58 | Reusable toggle switch with label/description |
+| `src/components/Alert.tsx` | Component | 56 | Reusable alert box (subtle gray styling) |
+| `src/components/EmployeePerformance.tsx` | Component | 122 | Employee hours/revenue using AccordionFlat pattern |
 | `src/components/Card.tsx` | Component | 50 | Reusable card container |
 | `src/components/Badge.tsx` | Component | 60 | Reusable status badge |
 | `src/components/Spinner.tsx` | Component | 40 | Reusable loading spinner |
@@ -510,6 +519,51 @@ Utils:
 | Max Size | 10MB file size limit |
 
 **Integration**: Used in ProfileEditorModal for profile photo editing
+
+---
+
+### F033: Toggle Atom
+**Component**: `src/components/Toggle.tsx`
+**Description**: Reusable toggle switch with label and description.
+
+| Feature | Details |
+|---------|---------|
+| Label | Required text displayed above toggle |
+| Description | Optional helper text |
+| States | On (gray-600) / Off (gray-100) |
+| Disabled | Reduced opacity, non-interactive |
+
+**Token Usage**: vercel-gray-50 (container bg), vercel-gray-100/600 (switch)
+
+---
+
+### F034: Alert Atom
+**Component**: `src/components/Alert.tsx`
+**Description**: Subtle alert box for displaying messages.
+
+| Feature | Details |
+|---------|---------|
+| Message | Required text content |
+| Icons | Error (circle with exclamation) or Info (circle with i) |
+| Styling | Subtle gray (vercel-gray-50 bg, vercel-gray-200 border/icon/text) |
+
+**Usage**: Login/forgot password error messages, edit mode notices
+
+---
+
+### F035: Employee Performance
+**Component**: `src/components/EmployeePerformance.tsx`
+**Description**: Dashboard section showing employee hours and revenue.
+
+| Feature | Details |
+|---------|---------|
+| Pattern | Uses AccordionFlat (Billing Rates Pattern) |
+| Columns | Employee, Hours, Revenue |
+| Sorting | By revenue (highest first) |
+| Footer | Totals row |
+| Header | Dynamic employee count in subhead |
+
+**Calculation**: Revenue = sum of (hours per project × project hourly rate)
 
 ---
 
