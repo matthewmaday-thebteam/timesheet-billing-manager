@@ -4,7 +4,8 @@ import { Select } from './Select';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Spinner } from './Spinner';
-import type { Resource, ResourceFormData, EmploymentType } from '../types';
+import type { Resource, ResourceFormData, EmploymentType, BillingMode } from '../types';
+import { DEFAULT_EXPECTED_HOURS } from '../utils/billing';
 
 interface EmployeeEditorModalProps {
   isOpen: boolean;
@@ -17,6 +18,27 @@ interface EmployeeEditorModalProps {
 
 interface FormErrors {
   email?: string;
+  expected_hours?: string;
+  monthly_cost?: string;
+  hourly_rate?: string;
+}
+
+const billingModeOptions = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'hourly', label: 'Hourly' },
+];
+
+/**
+ * Helper function to generate consistent number input classes
+ * Matches design system Input component styling
+ */
+function getNumberInputClasses(disabled: boolean, hasError: boolean): string {
+  const base = 'w-full px-3 py-2 border rounded-md text-sm transition-colors duration-200 ease-out focus:ring-2 focus:ring-offset-0 focus:outline-none';
+  const enabled = 'bg-white text-vercel-gray-600 placeholder-vercel-gray-300 border-vercel-gray-100 focus:border-vercel-gray-600 focus:ring-vercel-gray-600';
+  const disabledStyle = 'bg-vercel-gray-50 text-vercel-gray-200 cursor-not-allowed border-vercel-gray-100';
+  const errorStyle = 'border-bteam-brand focus:border-bteam-brand focus:ring-bteam-brand';
+
+  return `${base} ${disabled ? disabledStyle : enabled} ${hasError ? errorStyle : ''}`;
 }
 
 function getFormDataFromResource(resource: Resource | null): ResourceFormData {
@@ -26,6 +48,9 @@ function getFormDataFromResource(resource: Resource | null): ResourceFormData {
     email: resource?.email || '',
     teams_account: resource?.teams_account || '',
     employment_type_id: resource?.employment_type_id || '',
+    billing_mode: resource?.billing_mode || 'monthly',
+    expected_hours: resource?.expected_hours ?? null,
+    hourly_rate: resource?.hourly_rate ?? null,
     monthly_cost: resource?.monthly_cost ?? null,
   };
 }
@@ -67,6 +92,18 @@ export function EmployeeEditorModal({
       newErrors.email = 'Please enter a valid email address';
     }
 
+    // Billing mode specific validation
+    if (formData.billing_mode === 'monthly') {
+      if (formData.expected_hours !== null && formData.expected_hours <= 0) {
+        newErrors.expected_hours = 'Expected hours must be greater than 0';
+      }
+    } else {
+      // Hourly mode
+      if (formData.hourly_rate === null || formData.hourly_rate <= 0) {
+        newErrors.hourly_rate = 'Hourly rate is required and must be greater than 0';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,6 +115,34 @@ export function EmployeeEditorModal({
     if (errors[field as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleBillingModeChange = (newMode: string) => {
+    const mode = newMode as BillingMode;
+    if (mode === 'hourly') {
+      // Clear monthly-specific fields
+      setFormData(prev => ({
+        ...prev,
+        billing_mode: 'hourly',
+        monthly_cost: null,
+        expected_hours: null,
+      }));
+    } else {
+      // Clear hourly field, set default expected hours
+      setFormData(prev => ({
+        ...prev,
+        billing_mode: 'monthly',
+        hourly_rate: null,
+        expected_hours: DEFAULT_EXPECTED_HOURS,
+      }));
+    }
+    // Clear related errors
+    setErrors(prev => ({
+      ...prev,
+      expected_hours: undefined,
+      monthly_cost: undefined,
+      hourly_rate: undefined,
+    }));
   };
 
   const handleBlur = (field: string) => {
@@ -100,6 +165,9 @@ export function EmployeeEditorModal({
     employmentTypes.map(et => ({ value: et.id, label: et.name })),
     [employmentTypes]
   );
+
+  const isMonthlyBilling = formData.billing_mode === 'monthly';
+  const isHourlyBilling = formData.billing_mode === 'hourly';
 
   if (!resource) return null;
 
@@ -223,13 +291,60 @@ export function EmployeeEditorModal({
           />
         </div>
 
+        {/* Billing Mode */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            Billing Mode
+          </label>
+          <Select
+            value={formData.billing_mode}
+            onChange={handleBillingModeChange}
+            options={billingModeOptions}
+            placeholder="Select billing mode"
+            className="w-full"
+          />
+        </div>
+
+        {/* Expected Hours */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            Expected Hours
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.expected_hours ?? ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                setFormData(prev => ({ ...prev, expected_hours: value }));
+                if (errors.expected_hours) {
+                  setErrors(prev => ({ ...prev, expected_hours: undefined }));
+                }
+              }}
+              onBlur={() => handleBlur('expected_hours')}
+              disabled={isHourlyBilling}
+              className={getNumberInputClasses(isHourlyBilling, !!(errors.expected_hours && touched.expected_hours))}
+              placeholder={isHourlyBilling ? '—' : '160'}
+            />
+          </div>
+          {errors.expected_hours && touched.expected_hours && (
+            <p className="mt-1 text-xs font-mono text-bteam-brand" role="alert">
+              {errors.expected_hours}
+            </p>
+          )}
+        </div>
+
         {/* Monthly Cost */}
         <div>
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Monthly Cost
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vercel-gray-400 text-sm">$</span>
+            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${
+              isHourlyBilling ? 'text-vercel-gray-200' : 'text-vercel-gray-400'
+            }`}>$</span>
             <input
               type="number"
               step="0.01"
@@ -238,12 +353,55 @@ export function EmployeeEditorModal({
               onChange={(e) => {
                 const value = e.target.value === '' ? null : parseFloat(e.target.value);
                 setFormData(prev => ({ ...prev, monthly_cost: value }));
+                if (errors.monthly_cost) {
+                  setErrors(prev => ({ ...prev, monthly_cost: undefined }));
+                }
               }}
               onBlur={() => handleBlur('monthly_cost')}
-              className="w-full pl-7 pr-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
-              placeholder="0.00"
+              disabled={isHourlyBilling}
+              className={`pl-7 pr-3 ${getNumberInputClasses(isHourlyBilling, !!(errors.monthly_cost && touched.monthly_cost))}`}
+              placeholder={isHourlyBilling ? '—' : '0.00'}
             />
           </div>
+          {errors.monthly_cost && touched.monthly_cost && (
+            <p className="mt-1 text-xs font-mono text-bteam-brand" role="alert">
+              {errors.monthly_cost}
+            </p>
+          )}
+        </div>
+
+        {/* Hourly Rate */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            Hourly Rate
+          </label>
+          <div className="relative">
+            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${
+              isMonthlyBilling ? 'text-vercel-gray-200' : 'text-vercel-gray-400'
+            }`}>$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.hourly_rate ?? ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                setFormData(prev => ({ ...prev, hourly_rate: value }));
+                if (errors.hourly_rate) {
+                  setErrors(prev => ({ ...prev, hourly_rate: undefined }));
+                }
+              }}
+              onBlur={() => handleBlur('hourly_rate')}
+              disabled={isMonthlyBilling}
+              className={`pl-7 pr-3 ${getNumberInputClasses(isMonthlyBilling, !!(errors.hourly_rate && touched.hourly_rate))}`}
+              placeholder={isMonthlyBilling ? '—' : '0.00'}
+            />
+          </div>
+          {errors.hourly_rate && touched.hourly_rate && (
+            <p className="mt-1 text-xs font-mono text-bteam-brand" role="alert">
+              {errors.hourly_rate}
+            </p>
+          )}
         </div>
       </form>
     </Modal>

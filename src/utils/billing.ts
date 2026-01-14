@@ -1,4 +1,49 @@
-import type { ProjectSummary, Project } from '../types';
+import type { ProjectSummary, Project, BillingMode } from '../types';
+
+// ============================================================================
+// Employee Billing Constants & Utilities
+// ============================================================================
+
+/** Default expected hours for full-time employees */
+export const DEFAULT_EXPECTED_HOURS = 160;
+
+/**
+ * Calculate effective hourly rate for an employee/resource
+ * Returns actual hourly_rate for hourly billing, or calculated rate for monthly
+ */
+export function getEffectiveHourlyRate(
+  billingMode: BillingMode,
+  hourlyRate: number | null,
+  monthlyCost: number | null,
+  expectedHours: number | null
+): number | null {
+  if (billingMode === 'hourly') {
+    return hourlyRate;
+  }
+
+  const hours = expectedHours ?? DEFAULT_EXPECTED_HOURS;
+  if (hours <= 0 || monthlyCost == null) {
+    return null;
+  }
+
+  return monthlyCost / hours;
+}
+
+/**
+ * Format hours value for display
+ */
+export function formatHours(value: number | null): string {
+  if (value == null) return '—';
+  // Show integer if whole number, otherwise show 2 decimals
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  return value.toFixed(2);
+}
+
+// ============================================================================
+// Project Billing Constants & Utilities
+// ============================================================================
 
 export interface ProjectRate {
   projectName: string;
@@ -178,8 +223,10 @@ export function getProjectRatesArray(
 
 /**
  * Format currency for display
+ * Returns '—' for null/undefined values
  */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

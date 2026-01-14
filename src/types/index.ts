@@ -49,6 +49,8 @@ export interface EmploymentType {
   created_at: string;
 }
 
+export type BillingMode = 'monthly' | 'hourly';
+
 export interface Resource {
   id: string;
   user_id: string | null;
@@ -59,6 +61,9 @@ export interface Resource {
   teams_account: string | null;
   employment_type_id: string;
   employment_type?: EmploymentType;
+  billing_mode: BillingMode;
+  expected_hours: number | null;
+  hourly_rate: number | null;
   monthly_cost: number | null;
   created_at: string;
   updated_at: string;
@@ -70,6 +75,9 @@ export interface ResourceFormData {
   email: string;
   teams_account: string;
   employment_type_id: string;
+  billing_mode: BillingMode;
+  expected_hours: number | null;
+  hourly_rate: number | null;
   monthly_cost: number | null;
 }
 

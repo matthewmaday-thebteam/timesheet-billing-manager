@@ -65,6 +65,9 @@ export function useResources(): UseResourcesResult {
               teams_account: data.teams_account || null,
               employment_type_id: data.employment_type_id,
               employment_type: newEmploymentType || r.employment_type,
+              billing_mode: data.billing_mode,
+              expected_hours: data.expected_hours,
+              hourly_rate: data.hourly_rate,
               monthly_cost: data.monthly_cost,
               updated_at: new Date().toISOString(),
             }
@@ -81,6 +84,9 @@ export function useResources(): UseResourcesResult {
           email: data.email || null,
           teams_account: data.teams_account || null,
           employment_type_id: data.employment_type_id,
+          billing_mode: data.billing_mode,
+          expected_hours: data.expected_hours,
+          hourly_rate: data.hourly_rate,
           monthly_cost: data.monthly_cost,
           updated_at: new Date().toISOString(),
         })

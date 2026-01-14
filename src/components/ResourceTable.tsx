@@ -1,6 +1,7 @@
 import { Spinner } from './Spinner';
 import { Badge } from './Badge';
 import type { Resource } from '../types';
+import { DEFAULT_EXPECTED_HOURS, formatCurrency, getEffectiveHourlyRate, formatHours } from '../utils/billing';
 
 interface ResourceTableProps {
   resources: Resource[];
@@ -65,13 +66,16 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                 Email
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-                Teams Account
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Type
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Expected Hours
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Monthly Cost
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Hourly Rate
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Status
@@ -100,19 +104,39 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                   <span className="text-sm font-mono text-vercel-gray-400">{resource.email || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm font-mono text-vercel-gray-400">{resource.teams_account || '—'}</span>
-                </td>
-                <td className="px-4 py-3">
                   <Badge variant="default">
                     {resource.employment_type?.name || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className="text-sm text-vercel-gray-600 font-mono">
-                    {resource.monthly_cost != null
-                      ? `$${resource.monthly_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      : '—'}
+                  <span className="text-sm font-mono text-vercel-gray-400">
+                    {resource.billing_mode === 'hourly'
+                      ? '—'
+                      : formatHours(resource.expected_hours ?? DEFAULT_EXPECTED_HOURS)}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className="text-sm font-mono text-vercel-gray-400">
+                    {resource.billing_mode === 'hourly'
+                      ? '—'
+                      : formatCurrency(resource.monthly_cost)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {resource.billing_mode === 'hourly' ? (
+                    <span className="text-sm font-mono text-vercel-gray-600">
+                      {formatCurrency(resource.hourly_rate)}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-mono text-vercel-gray-300">
+                      {formatCurrency(getEffectiveHourlyRate(
+                        resource.billing_mode,
+                        resource.hourly_rate,
+                        resource.monthly_cost,
+                        resource.expected_hours
+                      ))}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {isIncomplete(resource) ? (
