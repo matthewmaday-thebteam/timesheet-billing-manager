@@ -52,29 +52,27 @@ export function useUserAssociations(): UseUserAssociationsResult {
         throw new Error(assocError.message);
       }
 
-      // Create a set of already associated user_ids (by source)
+      // Create a set of already associated user_ids
       const associatedSet = new Set(
-        associations?.map(a => `${a.source}:${a.user_id}`) || []
+        associations?.map(a => a.user_id) || []
       );
 
-      // Filter to unassociated users, dedupe, and infer source
+      // Filter to unassociated users, dedupe by user_id
       const seen = new Set<string>();
       const unassociated: UnassociatedUser[] = [];
 
       for (const entry of timesheetUsers || []) {
         if (!entry.user_id) continue;
 
-        // Infer source from workspace_id pattern
+        // Skip if already associated or already seen
+        if (associatedSet.has(entry.user_id) || seen.has(entry.user_id)) continue;
+
+        // Infer source from workspace_id pattern (for database record only)
         // Clockify uses MongoDB ObjectIds (24 hex chars), ClickUp uses numeric strings
         const isClickUp = /^\d+$/.test(entry.clockify_workspace_id);
         const source: AssociationSource = isClickUp ? 'clickup' : 'clockify';
 
-        const key = `${source}:${entry.user_id}`;
-
-        // Skip if already associated or already seen
-        if (associatedSet.has(key) || seen.has(key)) continue;
-
-        seen.add(key);
+        seen.add(entry.user_id);
         unassociated.push({
           user_id: entry.user_id,
           user_name: entry.user_name || entry.user_id,
@@ -82,11 +80,8 @@ export function useUserAssociations(): UseUserAssociationsResult {
         });
       }
 
-      // Sort by source then by name
-      unassociated.sort((a, b) => {
-        if (a.source !== b.source) return a.source.localeCompare(b.source);
-        return a.user_name.localeCompare(b.user_name);
-      });
+      // Sort by name
+      unassociated.sort((a, b) => a.user_name.localeCompare(b.user_name));
 
       setUnassociatedUsers(unassociated);
     } catch (err) {
@@ -126,7 +121,7 @@ export function useUserAssociations(): UseUserAssociationsResult {
 
       // Remove from unassociated list
       setUnassociatedUsers(prev =>
-        prev.filter(u => !(u.user_id === userId && u.source === source))
+        prev.filter(u => u.user_id !== userId)
       );
 
       return data as ResourceUserAssociation;
@@ -175,10 +170,7 @@ export function useUserAssociations(): UseUserAssociationsResult {
             user_name: association.user_name || association.user_id,
             source: association.source as AssociationSource,
           },
-        ].sort((a, b) => {
-          if (a.source !== b.source) return a.source.localeCompare(b.source);
-          return a.user_name.localeCompare(b.user_name);
-        }));
+        ].sort((a, b) => a.user_name.localeCompare(b.user_name)));
       }
 
       return true;

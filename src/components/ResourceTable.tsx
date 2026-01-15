@@ -1,20 +1,14 @@
 import { Spinner } from './Spinner';
 import { Badge } from './Badge';
-import type { Resource, ResourceUserAssociation, AssociationSource } from '../types';
+import type { Resource, ResourceUserAssociation } from '../types';
 import { DEFAULT_EXPECTED_HOURS, formatCurrency, getEffectiveHourlyRate, formatHours } from '../utils/billing';
-
-// Helper to get badge variant for source
-const getSourceBadgeVariant = (source: AssociationSource): 'info' | 'success' => {
-  return source === 'clockify' ? 'info' : 'success';
-};
 
 // Helper to format association for display
 const formatAssociation = (assoc: ResourceUserAssociation) => {
-  const label = assoc.source === 'clockify' ? 'CL' : 'CU';
   const truncatedId = assoc.user_id.length > 8
     ? `${assoc.user_id.substring(0, 8)}...`
     : assoc.user_id;
-  return { label, truncatedId, fullId: assoc.user_id };
+  return { truncatedId, fullId: assoc.user_id };
 };
 
 interface ResourceTableProps {
@@ -109,26 +103,17 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     {resource.associations && resource.associations.length > 0 ? (
-                      // Show associations with source badges
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {resource.associations.map((assoc) => {
-                          const { label, truncatedId, fullId } = formatAssociation(assoc);
+                      // Show associations as comma-separated list
+                      <span className="text-sm text-vercel-gray-400 font-mono">
+                        {resource.associations.map((assoc, idx) => {
+                          const { truncatedId, fullId } = formatAssociation(assoc);
                           return (
-                            <span
-                              key={assoc.id}
-                              className="inline-flex items-center gap-0.5"
-                              title={`${assoc.source}: ${fullId}`}
-                            >
-                              <Badge variant={getSourceBadgeVariant(assoc.source)} size="sm">
-                                {label}
-                              </Badge>
-                              <span className="text-xs text-vercel-gray-400 font-mono">
-                                {truncatedId}
-                              </span>
+                            <span key={assoc.id} title={fullId}>
+                              {truncatedId}{idx < resource.associations!.length - 1 ? ', ' : ''}
                             </span>
                           );
                         })}
-                      </div>
+                      </span>
                     ) : (
                       // Fallback to external_label if no associations
                       <span className="text-sm text-vercel-gray-400 font-mono">{resource.external_label}</span>

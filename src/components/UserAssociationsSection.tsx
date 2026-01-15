@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Select } from './Select';
-import { Badge } from './Badge';
 import { Spinner } from './Spinner';
 import { useUserAssociations } from '../hooks/useUserAssociations';
-import type { ResourceUserAssociation, AssociationSource } from '../types';
+import type { ResourceUserAssociation } from '../types';
 
 interface UserAssociationsSectionProps {
   resourceId: string;
@@ -17,10 +16,9 @@ interface UserAssociationsSectionProps {
  * UserAssociationsSection - Manages multiple time tracking system IDs for an employee
  *
  * Features:
- * - Displays current associations with source badges
+ * - Displays current associations
  * - Add new associations from unassociated users dropdown
- * - Remove associations (mark for deletion)
- * - Changes are held locally until parent component saves
+ * - Remove associations
  */
 export function UserAssociationsSection({
   resourceId,
@@ -38,7 +36,6 @@ export function UserAssociationsSection({
   } = useUserAssociations();
 
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<AssociationSource>('clockify');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   // Fetch unassociated users when adding mode is opened
@@ -48,30 +45,19 @@ export function UserAssociationsSection({
     }
   }, [isAddingNew, fetchUnassociatedUsers]);
 
-  // Get badge variant based on source
-  const getSourceBadgeVariant = (source: AssociationSource) => {
-    return source === 'clockify' ? 'info' : 'success';
-  };
-
-  // Get display label for source
-  const getSourceLabel = (source: AssociationSource) => {
-    return source === 'clockify' ? 'Clockify' : 'ClickUp';
-  };
-
-  // Filter unassociated users by selected source
-  const filteredUsers = unassociatedUsers.filter(u => u.source === selectedSource);
-
-  // Get user options for dropdown
-  const userOptions = filteredUsers.map(u => ({
+  // Get user options for dropdown - all unassociated users
+  const userOptions = unassociatedUsers.map(u => ({
     value: u.user_id,
-    label: `${u.user_name} (${u.user_id.substring(0, 8)}...)`,
+    label: u.user_name
+      ? `${u.user_name} (${u.user_id.substring(0, 8)}...)`
+      : u.user_id,
   }));
 
   // Handle adding a new association
   const handleAddAssociation = async () => {
     if (!selectedUserId) return;
 
-    const user = filteredUsers.find(u => u.user_id === selectedUserId);
+    const user = unassociatedUsers.find(u => u.user_id === selectedUserId);
     if (!user) return;
 
     const result = await addAssociation(resourceId, user.user_id, user.source, user.user_name);
@@ -88,6 +74,11 @@ export function UserAssociationsSection({
     if (success) {
       onAssociationsChange(associations.filter(a => a.id !== associationId));
     }
+  };
+
+  // Format user ID for display
+  const formatUserId = (userId: string) => {
+    return userId.length > 12 ? `${userId.substring(0, 12)}...` : userId;
   };
 
   return (
@@ -112,15 +103,14 @@ export function UserAssociationsSection({
               className="flex items-center justify-between px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md"
             >
               <div className="flex items-center gap-2">
-                <Badge variant={getSourceBadgeVariant(assoc.source)} size="sm">
-                  {getSourceLabel(assoc.source)}
-                </Badge>
                 <span className="text-sm text-vercel-gray-600">
-                  {assoc.user_name || assoc.user_id}
+                  {assoc.user_name || formatUserId(assoc.user_id)}
                 </span>
-                <span className="text-xs text-vercel-gray-300 font-mono">
-                  ({assoc.user_id.substring(0, 12)}...)
-                </span>
+                {assoc.user_name && (
+                  <span className="text-xs text-vercel-gray-300 font-mono">
+                    ({formatUserId(assoc.user_id)})
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -141,43 +131,24 @@ export function UserAssociationsSection({
       {/* Add new association UI */}
       {isAddingNew ? (
         <div className="space-y-3 p-3 border border-vercel-gray-100 rounded-md bg-white">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-vercel-gray-400 mb-1">
-                Source
-              </label>
+          <div>
+            <label className="block text-xs font-medium text-vercel-gray-400 mb-1">
+              Select User
+            </label>
+            {loading ? (
+              <div className="flex items-center justify-center py-2">
+                <Spinner size="sm" />
+              </div>
+            ) : (
               <Select
-                value={selectedSource}
-                onChange={(value) => {
-                  setSelectedSource(value as AssociationSource);
-                  setSelectedUserId('');
-                }}
-                options={[
-                  { value: 'clockify', label: 'Clockify' },
-                  { value: 'clickup', label: 'ClickUp' },
-                ]}
+                value={selectedUserId}
+                onChange={(value) => setSelectedUserId(value)}
+                options={userOptions}
+                placeholder={unassociatedUsers.length === 0 ? 'No users available' : 'Select user...'}
                 className="w-full"
+                disabled={unassociatedUsers.length === 0}
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-vercel-gray-400 mb-1">
-                User
-              </label>
-              {loading ? (
-                <div className="flex items-center justify-center py-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : (
-                <Select
-                  value={selectedUserId}
-                  onChange={(value) => setSelectedUserId(value)}
-                  options={userOptions}
-                  placeholder={filteredUsers.length === 0 ? 'No users available' : 'Select user...'}
-                  className="w-full"
-                  disabled={filteredUsers.length === 0}
-                />
-              )}
-            </div>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button
