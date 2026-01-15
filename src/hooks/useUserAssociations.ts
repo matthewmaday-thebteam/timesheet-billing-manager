@@ -36,9 +36,9 @@ export function useUserAssociations(): UseUserAssociationsResult {
     setError(null);
 
     try {
-      // Get all user_ids currently in timesheet data
+      // Get all user_ids currently in timesheet data (use view for RLS compatibility)
       const { data: timesheetUsers, error: timesheetError } = await supabase
-        .from('timesheet_daily_rollups')
+        .from('v_timesheet_entries')
         .select('user_id, user_name, clockify_workspace_id')
         .not('user_id', 'is', null);
 
