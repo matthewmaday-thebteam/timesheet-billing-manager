@@ -7,6 +7,7 @@ import type { ResourceUserAssociation } from '../types';
 
 interface UserAssociationsSectionProps {
   resourceId: string;
+  externalLabel: string;
   associations: ResourceUserAssociation[];
   onAssociationsChange: (associations: ResourceUserAssociation[]) => void;
   disabled?: boolean;
@@ -22,10 +23,13 @@ interface UserAssociationsSectionProps {
  */
 export function UserAssociationsSection({
   resourceId,
+  externalLabel,
   associations,
   onAssociationsChange,
   disabled = false,
 }: UserAssociationsSectionProps) {
+  // Filter out the self-association (where user_id matches the resource's external_label)
+  const additionalAssociations = associations.filter(a => a.user_id !== externalLabel);
   const {
     unassociatedUsers,
     loading,
@@ -90,14 +94,14 @@ export function UserAssociationsSection({
         User Associations
       </label>
 
-      {/* Current associations list */}
+      {/* Current associations list (excluding self-association) */}
       <div className="space-y-2">
-        {associations.length === 0 ? (
+        {additionalAssociations.length === 0 ? (
           <div className="text-sm text-vercel-gray-300 italic py-2">
-            No user associations
+            No additional user associations
           </div>
         ) : (
-          associations.map((assoc) => (
+          additionalAssociations.map((assoc) => (
             <div
               key={assoc.id}
               className="flex items-center justify-between px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md"
