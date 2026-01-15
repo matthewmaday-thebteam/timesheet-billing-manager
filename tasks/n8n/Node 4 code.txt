@@ -1,0 +1,65 @@
+// Node 4: Normalize ClickUp time entries -> one item per time entry
+
+  function toUTCDateStringFromStart(startMs) {
+    if (!startMs) return null;
+    var dt = new Date(Number(startMs));
+    if (Number.isNaN(dt.getTime())) return null;
+
+    var y = dt.getUTCFullYear();
+    var m = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    var d = String(dt.getUTCDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  }
+
+  var timeentries = items.map(function(i) { return i.json; });
+  var out = [];
+
+  for (var i = 0; i < timeentries.length; i++) {
+    var e = timeentries[i];
+
+    var entry_id = (e && e.id) ? e.id : null;
+    if (!entry_id) continue;
+
+    var durationMs = parseInt((e && e.duration) ? e.duration : '0', 10);
+    var duration_seconds = Math.floor(durationMs / 1000);
+
+    var startMs = (e && e.start) ? parseInt(e.start, 10) : null;
+    var endMs = (e && e.end) ? parseInt(e.end, 10) : null;
+
+    var task = e && e.task ? e.task : {};
+    var user = e && e.user ? e.user : {};
+    var taskLocation = e && e.task_location ? e.task_location : {};
+    var tags = e && e.tags ? e.tags : [];
+    var spaceLookup = e._spaceLookup || {};
+
+    // Look up space name from spaceLookup if not provided by task_location
+    var spaceId = taskLocation.space_id || null;
+    var spaceName = taskLocation.space_name || (spaceId && spaceLookup[spaceId]) || null;
+
+    out.push({
+      json: {
+        entry_id: entry_id,
+        task_id: task.id || null,
+        task_name: task.name || (e && e.description) || "(no task)",
+        user_id: user.id ? String(user.id) : null,
+        user_name: user.username || null,
+        user_email: user.email || null,
+        space_id: spaceId,
+        folder_id: taskLocation.folder_id || null,
+        list_id: taskLocation.list_id || null,
+        list_name: taskLocation.list_name || null,
+        folder_name: taskLocation.folder_name || null,
+        space_name: spaceName,
+        description: ((e && e.description) ? e.description : "").trim() || "(no description)",
+        billable: (e && e.billable) ? e.billable : false,
+        tags: tags.map(function(t) { return t.name; }).join(', '),
+        start: startMs ? new Date(startMs).toISOString() : null,
+        end: endMs ? new Date(endMs).toISOString() : null,
+        duration_seconds: duration_seconds,
+        work_date: toUTCDateStringFromStart(startMs),
+        source: 'clickup',
+      }
+    });
+  }
+
+  return out;

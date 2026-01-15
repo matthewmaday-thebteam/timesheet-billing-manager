@@ -1,0 +1,12 @@
+  // Node 3: Extract time entries array (pass spaceLookup through)
+  var data = items[0].json;
+  var te = data.timeentries;
+  var spaceLookup = data.spaceLookup || {};
+  if (!te) te = [];
+  var result = [];
+  for (var i = 0; i < te.length; i++) {
+    var entry = te[i];
+    entry._spaceLookup = spaceLookup;
+    result.push({ json: entry });
+  }
+  return result;
