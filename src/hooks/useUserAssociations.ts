@@ -12,7 +12,7 @@ interface UseUserAssociationsResult {
   unassociatedUsers: UnassociatedUser[];
   loading: boolean;
   error: string | null;
-  fetchUnassociatedUsers: () => Promise<void>;
+  fetchUnassociatedUsers: (currentResourceId: string) => Promise<void>;
   addAssociation: (resourceId: string, userId: string, source: AssociationSource, userName: string) => Promise<ResourceUserAssociation | null>;
   removeAssociation: (associationId: string) => Promise<boolean>;
   isUpdating: boolean;
@@ -25,10 +25,11 @@ export function useUserAssociations(): UseUserAssociationsResult {
   const [isUpdating, setIsUpdating] = useState(false);
 
   /**
-   * Fetches all user_ids from timesheet_daily_rollups that are NOT yet associated with any resource.
-   * Returns distinct users grouped by their source (inferred from workspace_id pattern).
+   * Fetches all user_ids from timesheet_daily_rollups that are NOT associated with OTHER resources.
+   * Users associated with the current resource are excluded (they're already shown).
+   * Users not associated with any resource are included.
    */
-  const fetchUnassociatedUsers = useCallback(async () => {
+  const fetchUnassociatedUsers = useCallback(async (currentResourceId: string) => {
     setLoading(true);
     setError(null);
 
@@ -43,18 +44,32 @@ export function useUserAssociations(): UseUserAssociationsResult {
         throw new Error(timesheetError.message);
       }
 
-      // Get all user_ids already associated
+      // Get all user_ids already associated with OTHER resources (not current)
       const { data: associations, error: assocError } = await supabase
         .from('resource_user_associations')
-        .select('user_id, source');
+        .select('user_id, resource_id')
+        .neq('resource_id', currentResourceId);
 
       if (assocError) {
         throw new Error(assocError.message);
       }
 
-      // Create a set of already associated user_ids
-      const associatedSet = new Set(
+      // Get current resource's associations (to exclude from dropdown)
+      const { data: currentAssocs, error: currentError } = await supabase
+        .from('resource_user_associations')
+        .select('user_id')
+        .eq('resource_id', currentResourceId);
+
+      if (currentError) {
+        throw new Error(currentError.message);
+      }
+
+      // Create sets of user_ids to exclude
+      const associatedWithOthersSet = new Set(
         associations?.map(a => a.user_id) || []
+      );
+      const currentResourceUserIds = new Set(
+        currentAssocs?.map(a => a.user_id) || []
       );
 
       // Filter to unassociated users, dedupe by user_id
@@ -64,8 +79,13 @@ export function useUserAssociations(): UseUserAssociationsResult {
       for (const entry of timesheetUsers || []) {
         if (!entry.user_id) continue;
 
-        // Skip if already associated or already seen
-        if (associatedSet.has(entry.user_id) || seen.has(entry.user_id)) continue;
+        // Skip if:
+        // - Already associated with another resource
+        // - Already associated with current resource (shown in associations list)
+        // - Already seen in this loop
+        if (associatedWithOthersSet.has(entry.user_id) ||
+            currentResourceUserIds.has(entry.user_id) ||
+            seen.has(entry.user_id)) continue;
 
         // Infer source from workspace_id pattern (for database record only)
         // Clockify uses MongoDB ObjectIds (24 hex chars), ClickUp uses numeric strings

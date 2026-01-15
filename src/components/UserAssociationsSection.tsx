@@ -41,9 +41,9 @@ export function UserAssociationsSection({
   // Fetch unassociated users when adding mode is opened
   useEffect(() => {
     if (isAddingNew) {
-      fetchUnassociatedUsers();
+      fetchUnassociatedUsers(resourceId);
     }
-  }, [isAddingNew, fetchUnassociatedUsers]);
+  }, [isAddingNew, fetchUnassociatedUsers, resourceId]);
 
   // Get user options for dropdown - all unassociated users
   const userOptions = unassociatedUsers.map(u => ({
