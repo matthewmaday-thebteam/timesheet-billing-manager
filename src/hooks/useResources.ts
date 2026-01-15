@@ -26,7 +26,8 @@ export function useResources(): UseResourcesResult {
         .from('resources')
         .select(`
           *,
-          employment_type:employment_types(*)
+          employment_type:employment_types(*),
+          associations:resource_user_associations(*)
         `)
         .order('external_label', { ascending: true });
 

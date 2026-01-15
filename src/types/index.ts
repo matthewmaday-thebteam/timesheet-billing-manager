@@ -51,6 +51,19 @@ export interface EmploymentType {
 
 export type BillingMode = 'monthly' | 'hourly';
 
+// User Association Types (for multi-system time tracking)
+export type AssociationSource = 'clockify' | 'clickup';
+
+export interface ResourceUserAssociation {
+  id: string;
+  resource_id: string;
+  user_id: string;
+  source: AssociationSource;
+  user_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Resource {
   id: string;
   user_id: string | null;
@@ -67,6 +80,8 @@ export interface Resource {
   monthly_cost: number | null;
   created_at: string;
   updated_at: string;
+  // Multi-system user associations (Clockify, ClickUp, etc.)
+  associations?: ResourceUserAssociation[];
 }
 
 export interface ResourceFormData {

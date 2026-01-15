@@ -12,6 +12,17 @@ interface ResourceRecord {
   last_name: string | null;
 }
 
+interface AssociationRecord {
+  user_id: string;
+  resource_id: string;
+  source: string;
+  resource: {
+    first_name: string | null;
+    last_name: string | null;
+    external_label: string;
+  } | null;
+}
+
 interface UseTimesheetDataOptions {
   /** Number of months before start date to fetch for historical charts */
   extendedMonths?: number;
@@ -36,6 +47,7 @@ export function useTimesheetData(
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [extendedEntries, setExtendedEntries] = useState<TimesheetEntry[]>([]);
   const [resourceRecords, setResourceRecords] = useState<ResourceRecord[]>([]);
+  const [associationRecords, setAssociationRecords] = useState<AssociationRecord[]>([]);
   const [projectRates, setProjectRates] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +82,16 @@ export function useTimesheetData(
         .from('projects')
         .select('project_name, rate');
 
+      // Fetch associations with their resource data for user_id -> displayName mapping
+      const associationsPromise = supabase
+        .from('resource_user_associations')
+        .select(`
+          user_id,
+          resource_id,
+          source,
+          resource:resources(first_name, last_name, external_label)
+        `);
+
       // If extended months requested, fetch historical entries too
       const extendedPromise = extendedMonths > 0
         ? supabase
@@ -80,10 +102,11 @@ export function useTimesheetData(
             .order('work_date', { ascending: false })
         : null;
 
-      const [entriesResult, resourcesResult, projectsResult, extendedResult] = await Promise.all([
+      const [entriesResult, resourcesResult, projectsResult, associationsResult, extendedResult] = await Promise.all([
         entriesPromise,
         resourcesPromise,
         projectsPromise,
+        associationsPromise,
         extendedPromise,
       ]);
 
@@ -96,12 +119,16 @@ export function useTimesheetData(
       if (projectsResult.error) {
         throw new Error(projectsResult.error.message);
       }
+      if (associationsResult.error) {
+        throw new Error(associationsResult.error.message);
+      }
       if (extendedResult?.error) {
         throw new Error(extendedResult.error.message);
       }
 
       setEntries(entriesResult.data || []);
       setResourceRecords(resourcesResult.data || []);
+      setAssociationRecords(associationsResult.data || []);
       setExtendedEntries(extendedResult?.data || []);
 
       // Build project rates map
@@ -123,25 +150,60 @@ export function useTimesheetData(
     fetchData();
   }, [fetchData]);
 
-  // Build display name lookup: external_label -> "first_name last_name"
+  // Build display name lookup: user_name/external_label -> "first_name last_name"
+  // Uses associations to map user_ids from different systems to the same display name
   const displayNameLookup = useMemo(() => {
     const lookup = new Map<string, string>();
+
+    // First, add external_label -> displayName from resources (existing behavior)
     for (const r of resourceRecords) {
       if (r.first_name || r.last_name) {
         const displayName = [r.first_name, r.last_name].filter(Boolean).join(' ');
         lookup.set(r.external_label, displayName);
       }
     }
+
+    // Then, add user_name from associations (for multi-system support)
+    // This allows entries from different systems with different user_names
+    // to be grouped under the same resource's display name
+    for (const assoc of associationRecords) {
+      const resource = assoc.resource;
+      if (resource && (resource.first_name || resource.last_name)) {
+        const displayName = [resource.first_name, resource.last_name].filter(Boolean).join(' ');
+        // Map both the user_id and the external_label to this display name
+        // (entries use user_name which often equals external_label)
+        lookup.set(resource.external_label, displayName);
+      }
+    }
+
     return lookup;
-  }, [resourceRecords]);
+  }, [resourceRecords, associationRecords]);
+
+  // Build user_id -> displayName lookup for proper grouping
+  // This maps timesheet entry user_ids to their resource's display name
+  const userIdToDisplayNameLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+
+    for (const assoc of associationRecords) {
+      const resource = assoc.resource;
+      if (resource) {
+        const displayName = resource.first_name || resource.last_name
+          ? [resource.first_name, resource.last_name].filter(Boolean).join(' ')
+          : resource.external_label;
+        lookup.set(assoc.user_id, displayName);
+      }
+    }
+
+    return lookup;
+  }, [associationRecords]);
 
   const projects = useMemo(
-    () => aggregateByProject(entries, displayNameLookup),
-    [entries, displayNameLookup]
+    () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup),
+    [entries, displayNameLookup, userIdToDisplayNameLookup]
   );
   const resources = useMemo(
-    () => aggregateByResource(entries, displayNameLookup),
-    [entries, displayNameLookup]
+    () => aggregateByResource(entries, displayNameLookup, userIdToDisplayNameLookup),
+    [entries, displayNameLookup, userIdToDisplayNameLookup]
   );
 
   // Calculate monthly aggregates for line chart (uses extended entries if available)

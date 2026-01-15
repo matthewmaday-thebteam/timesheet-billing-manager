@@ -13,9 +13,30 @@ export function getWeekKey(dateStr: string): string {
   return format(weekStart, 'yyyy-MM-dd');
 }
 
+/**
+ * Helper to get the grouping key for a resource.
+ * Uses user_id -> displayName mapping (from associations) if available,
+ * otherwise falls back to user_name.
+ */
+function getResourceKey(
+  entry: TimesheetEntry,
+  userIdToDisplayNameLookup?: Map<string, string>
+): string {
+  // If we have associations, check if this user_id maps to a resource
+  if (userIdToDisplayNameLookup && entry.user_id) {
+    const associatedName = userIdToDisplayNameLookup.get(entry.user_id);
+    if (associatedName) {
+      return associatedName;
+    }
+  }
+  // Fall back to user_name from the entry
+  return entry.user_name;
+}
+
 export function aggregateByProject(
   entries: TimesheetEntry[],
-  displayNameLookup?: Map<string, string>
+  displayNameLookup?: Map<string, string>,
+  userIdToDisplayNameLookup?: Map<string, string>
 ): ProjectSummary[] {
   const projectMap = new Map<string, {
     totalMinutes: number;
@@ -40,15 +61,18 @@ export function aggregateByProject(
     const project = projectMap.get(entry.project_name)!;
     project.totalMinutes += entry.total_minutes;
 
+    // Get resource key - uses associations if available
+    const resourceKey = getResourceKey(entry, userIdToDisplayNameLookup);
+
     // Get or create resource
-    if (!project.resourceMap.has(entry.user_name)) {
-      project.resourceMap.set(entry.user_name, {
+    if (!project.resourceMap.has(resourceKey)) {
+      project.resourceMap.set(resourceKey, {
         totalMinutes: 0,
         weeklyMinutes: new Map(),
         taskMap: new Map(),
       });
     }
-    const resource = project.resourceMap.get(entry.user_name)!;
+    const resource = project.resourceMap.get(resourceKey)!;
     resource.totalMinutes += entry.total_minutes;
 
     // Track weekly minutes
@@ -103,7 +127,8 @@ export function aggregateByProject(
 
 export function aggregateByResource(
   entries: TimesheetEntry[],
-  displayNameLookup?: Map<string, string>
+  displayNameLookup?: Map<string, string>,
+  userIdToDisplayNameLookup?: Map<string, string>
 ): ResourceSummary[] {
   const resourceMap = new Map<string, {
     totalMinutes: number;
@@ -115,14 +140,17 @@ export function aggregateByResource(
   }>();
 
   for (const entry of entries) {
-    if (!resourceMap.has(entry.user_name)) {
-      resourceMap.set(entry.user_name, {
+    // Get resource key - uses associations if available
+    const resourceKey = getResourceKey(entry, userIdToDisplayNameLookup);
+
+    if (!resourceMap.has(resourceKey)) {
+      resourceMap.set(resourceKey, {
         totalMinutes: 0,
         weeklyMinutes: new Map(),
         taskMap: new Map(),
       });
     }
-    const resource = resourceMap.get(entry.user_name)!;
+    const resource = resourceMap.get(resourceKey)!;
     resource.totalMinutes += entry.total_minutes;
 
     const weekKey = getWeekKey(entry.work_date);

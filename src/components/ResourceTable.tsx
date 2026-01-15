@@ -1,7 +1,21 @@
 import { Spinner } from './Spinner';
 import { Badge } from './Badge';
-import type { Resource } from '../types';
+import type { Resource, ResourceUserAssociation, AssociationSource } from '../types';
 import { DEFAULT_EXPECTED_HOURS, formatCurrency, getEffectiveHourlyRate, formatHours } from '../utils/billing';
+
+// Helper to get badge variant for source
+const getSourceBadgeVariant = (source: AssociationSource): 'info' | 'success' => {
+  return source === 'clockify' ? 'info' : 'success';
+};
+
+// Helper to format association for display
+const formatAssociation = (assoc: ResourceUserAssociation) => {
+  const label = assoc.source === 'clockify' ? 'CL' : 'CU';
+  const truncatedId = assoc.user_id.length > 8
+    ? `${assoc.user_id.substring(0, 8)}...`
+    : assoc.user_id;
+  return { label, truncatedId, fullId: assoc.user_id };
+};
 
 interface ResourceTableProps {
   resources: Resource[];
@@ -90,11 +104,35 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                 className="hover:bg-vercel-gray-50 cursor-pointer transition-colors duration-200 ease-out"
               >
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-vercel-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <svg className="w-3.5 h-3.5 text-vercel-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    <span className="text-sm text-vercel-gray-400 font-mono">{resource.external_label}</span>
+                    {resource.associations && resource.associations.length > 0 ? (
+                      // Show associations with source badges
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {resource.associations.map((assoc) => {
+                          const { label, truncatedId, fullId } = formatAssociation(assoc);
+                          return (
+                            <span
+                              key={assoc.id}
+                              className="inline-flex items-center gap-0.5"
+                              title={`${assoc.source}: ${fullId}`}
+                            >
+                              <Badge variant={getSourceBadgeVariant(assoc.source)} size="sm">
+                                {label}
+                              </Badge>
+                              <span className="text-xs text-vercel-gray-400 font-mono">
+                                {truncatedId}
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      // Fallback to external_label if no associations
+                      <span className="text-sm text-vercel-gray-400 font-mono">{resource.external_label}</span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3">

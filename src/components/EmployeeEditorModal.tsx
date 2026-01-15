@@ -4,7 +4,8 @@ import { Select } from './Select';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Spinner } from './Spinner';
-import type { Resource, ResourceFormData, EmploymentType, BillingMode } from '../types';
+import { UserAssociationsSection } from './UserAssociationsSection';
+import type { Resource, ResourceFormData, EmploymentType, BillingMode, ResourceUserAssociation } from '../types';
 import { DEFAULT_EXPECTED_HOURS } from '../utils/billing';
 
 interface EmployeeEditorModalProps {
@@ -67,6 +68,7 @@ export function EmployeeEditorModal({
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [lastResourceId, setLastResourceId] = useState<string | null>(resource?.id ?? null);
+  const [associations, setAssociations] = useState<ResourceUserAssociation[]>(resource?.associations || []);
 
   // Reset form when resource changes (React-recommended pattern)
   const currentResourceId = resource?.id ?? null;
@@ -75,6 +77,7 @@ export function EmployeeEditorModal({
     setFormData(getFormDataFromResource(resource));
     setErrors({});
     setTouched({});
+    setAssociations(resource?.associations || []);
   }
 
   // Validate email format
@@ -219,6 +222,14 @@ export function EmployeeEditorModal({
             {resource.external_label}
           </div>
         </div>
+
+        {/* User Associations (Multi-system support) */}
+        <UserAssociationsSection
+          resourceId={resource.id}
+          associations={associations}
+          onAssociationsChange={setAssociations}
+          disabled={isSaving}
+        />
 
         {/* First Name */}
         <div>
