@@ -13,16 +13,6 @@ interface UserAssociationsSectionProps {
   disabled?: boolean;
 }
 
-interface PendingAssociation {
-  user_id: string;
-  source: AssociationSource;
-  user_name: string;
-}
-
-interface PendingRemoval {
-  id: string;
-}
-
 /**
  * UserAssociationsSection - Manages multiple time tracking system IDs for an employee
  *
@@ -50,8 +40,6 @@ export function UserAssociationsSection({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [selectedSource, setSelectedSource] = useState<AssociationSource>('clockify');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [pendingAdditions, setPendingAdditions] = useState<PendingAssociation[]>([]);
-  const [pendingRemovals, setPendingRemovals] = useState<PendingRemoval[]>([]);
 
   // Fetch unassociated users when adding mode is opened
   useEffect(() => {
@@ -102,11 +90,6 @@ export function UserAssociationsSection({
     }
   };
 
-  // Get visible associations (excluding pending removals)
-  const visibleAssociations = associations.filter(
-    a => !pendingRemovals.some(pr => pr.id === a.id)
-  );
-
   return (
     <div className="space-y-3">
       <label className="flex items-center gap-2 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
@@ -118,12 +101,12 @@ export function UserAssociationsSection({
 
       {/* Current associations list */}
       <div className="space-y-2">
-        {visibleAssociations.length === 0 ? (
+        {associations.length === 0 ? (
           <div className="text-sm text-vercel-gray-300 italic py-2">
             No user associations
           </div>
         ) : (
-          visibleAssociations.map((assoc) => (
+          associations.map((assoc) => (
             <div
               key={assoc.id}
               className="flex items-center justify-between px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md"

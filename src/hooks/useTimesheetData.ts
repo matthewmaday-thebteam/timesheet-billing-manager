@@ -128,7 +128,14 @@ export function useTimesheetData(
 
       setEntries(entriesResult.data || []);
       setResourceRecords(resourcesResult.data || []);
-      setAssociationRecords(associationsResult.data || []);
+      // Transform association data - Supabase may return resource as array
+      const normalizedAssociations: AssociationRecord[] = (associationsResult.data || []).map((assoc) => ({
+        user_id: assoc.user_id,
+        resource_id: assoc.resource_id,
+        source: assoc.source,
+        resource: Array.isArray(assoc.resource) ? assoc.resource[0] || null : assoc.resource,
+      }));
+      setAssociationRecords(normalizedAssociations);
       setExtendedEntries(extendedResult?.data || []);
 
       // Build project rates map
