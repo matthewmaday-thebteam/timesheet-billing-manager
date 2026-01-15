@@ -25,9 +25,11 @@ export function useUserAssociations(): UseUserAssociationsResult {
   const [isUpdating, setIsUpdating] = useState(false);
 
   /**
-   * Fetches all user_ids from timesheet_daily_rollups that are NOT associated with OTHER resources.
-   * Users associated with the current resource are excluded (they're already shown).
-   * Users not associated with any resource are included.
+   * Fetches all user_ids from timesheet_daily_rollups that are available for association.
+   * A user is available if:
+   * - They only have a self-association (user_id = resource's external_label), OR
+   * - They have no associations at all
+   * Excludes users already associated with the current resource (non-self associations).
    */
   const fetchUnassociatedUsers = useCallback(async (currentResourceId: string) => {
     setLoading(true);
@@ -44,56 +46,57 @@ export function useUserAssociations(): UseUserAssociationsResult {
         throw new Error(timesheetError.message);
       }
 
-      // Get all user_ids already associated with OTHER resources (not current)
-      const { data: associations, error: assocError } = await supabase
+      // Get ALL associations with their resource's external_label to identify self-associations
+      const { data: allAssociations, error: assocError } = await supabase
         .from('resource_user_associations')
-        .select('user_id, resource_id')
-        .neq('resource_id', currentResourceId);
+        .select('user_id, resource_id, resource:resources(external_label)');
 
       if (assocError) {
         throw new Error(assocError.message);
       }
 
-      // Get current resource's associations (to exclude from dropdown)
-      const { data: currentAssocs, error: currentError } = await supabase
-        .from('resource_user_associations')
-        .select('user_id')
-        .eq('resource_id', currentResourceId);
+      // Find user_ids that have "real" associations (non-self associations)
+      // A self-association is where user_id === resource.external_label
+      const reallyAssociatedUserIds = new Set<string>();
+      const currentResourceNonSelfUserIds = new Set<string>();
 
-      if (currentError) {
-        throw new Error(currentError.message);
+      for (const assoc of allAssociations || []) {
+        const resourceExtLabel = Array.isArray(assoc.resource)
+          ? assoc.resource[0]?.external_label
+          : assoc.resource?.external_label;
+
+        const isSelfAssociation = assoc.user_id === resourceExtLabel;
+
+        if (!isSelfAssociation) {
+          // This is a real association (user associated with a different resource)
+          reallyAssociatedUserIds.add(assoc.user_id);
+
+          // Track if this is a non-self association with the current resource
+          if (assoc.resource_id === currentResourceId) {
+            currentResourceNonSelfUserIds.add(assoc.user_id);
+          }
+        }
       }
 
-      // Create sets of user_ids to exclude
-      const associatedWithOthersSet = new Set(
-        associations?.map(a => a.user_id) || []
-      );
-      const currentResourceUserIds = new Set(
-        currentAssocs?.map(a => a.user_id) || []
-      );
-
-      // Filter to unassociated users, dedupe by user_id
+      // Filter to available users, dedupe by user_id
       const seen = new Set<string>();
-      const unassociated: UnassociatedUser[] = [];
+      const available: UnassociatedUser[] = [];
 
       for (const entry of timesheetUsers || []) {
         if (!entry.user_id) continue;
 
         // Skip if:
-        // - Already associated with another resource
-        // - Already associated with current resource (shown in associations list)
+        // - Has a real association with ANY resource (including current)
         // - Already seen in this loop
-        if (associatedWithOthersSet.has(entry.user_id) ||
-            currentResourceUserIds.has(entry.user_id) ||
+        if (reallyAssociatedUserIds.has(entry.user_id) ||
             seen.has(entry.user_id)) continue;
 
         // Infer source from workspace_id pattern (for database record only)
-        // Clockify uses MongoDB ObjectIds (24 hex chars), ClickUp uses numeric strings
         const isClickUp = /^\d+$/.test(entry.clockify_workspace_id);
         const source: AssociationSource = isClickUp ? 'clickup' : 'clockify';
 
         seen.add(entry.user_id);
-        unassociated.push({
+        available.push({
           user_id: entry.user_id,
           user_name: entry.user_name || entry.user_id,
           source,
@@ -101,9 +104,9 @@ export function useUserAssociations(): UseUserAssociationsResult {
       }
 
       // Sort by name
-      unassociated.sort((a, b) => a.user_name.localeCompare(b.user_name));
+      available.sort((a, b) => a.user_name.localeCompare(b.user_name));
 
-      setUnassociatedUsers(unassociated);
+      setUnassociatedUsers(available);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch unassociated users');
     } finally {
