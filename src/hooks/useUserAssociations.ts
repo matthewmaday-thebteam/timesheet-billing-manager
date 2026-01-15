@@ -8,11 +8,17 @@ interface UnassociatedUser {
   source: AssociationSource;
 }
 
+interface FetchOptions {
+  currentResourceId: string;
+  currentResourceUserId: string | null;
+  currentExternalLabel: string;
+}
+
 interface UseUserAssociationsResult {
   unassociatedUsers: UnassociatedUser[];
   loading: boolean;
   error: string | null;
-  fetchUnassociatedUsers: (currentResourceId: string) => Promise<void>;
+  fetchUnassociatedUsers: (options: FetchOptions) => Promise<void>;
   addAssociation: (resourceId: string, userId: string, source: AssociationSource, userName: string) => Promise<ResourceUserAssociation | null>;
   removeAssociation: (associationId: string) => Promise<boolean>;
   isUpdating: boolean;
@@ -25,13 +31,14 @@ export function useUserAssociations(): UseUserAssociationsResult {
   const [isUpdating, setIsUpdating] = useState(false);
 
   /**
-   * Fetches all user_ids from timesheet_daily_rollups that are available for association.
+   * Fetches all user_ids from timesheet data that are available for association.
    * A user is available if:
-   * - They only have a self-association (user_id = resource's external_label), OR
+   * - They only have a self-association (user_id = resource's user_id or external_label), OR
    * - They have no associations at all
-   * Excludes users already associated with the current resource (non-self associations).
+   * Excludes the current resource's own user_id/external_label (can't associate self to self).
    */
-  const fetchUnassociatedUsers = useCallback(async (currentResourceId: string) => {
+  const fetchUnassociatedUsers = useCallback(async (options: FetchOptions) => {
+    const { currentResourceId, currentResourceUserId, currentExternalLabel } = options;
     setLoading(true);
     setError(null);
 
@@ -92,9 +99,12 @@ export function useUserAssociations(): UseUserAssociationsResult {
         if (!entry.user_id) continue;
 
         // Skip if:
+        // - This is the current resource's own user_id or external_label (can't associate self to self)
         // - Has a real association with ANY resource (including current)
         // - Already seen in this loop
-        if (reallyAssociatedUserIds.has(entry.user_id) ||
+        const isSelf = entry.user_id === currentResourceUserId || entry.user_id === currentExternalLabel;
+        if (isSelf ||
+            reallyAssociatedUserIds.has(entry.user_id) ||
             seen.has(entry.user_id)) continue;
 
         // Infer source from workspace_id pattern (for database record only)
