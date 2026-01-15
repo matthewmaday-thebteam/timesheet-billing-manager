@@ -46,28 +46,28 @@ export function useUserAssociations(): UseUserAssociationsResult {
         throw new Error(timesheetError.message);
       }
 
-      // Get ALL associations with their resource's external_label to identify self-associations
+      // Get ALL associations with their resource's user_id to identify self-associations
       const { data: allAssociations, error: assocError } = await supabase
         .from('resource_user_associations')
-        .select('user_id, resource_id, resource:resources(external_label)');
+        .select('user_id, resource_id, resource:resources(user_id)');
 
       if (assocError) {
         throw new Error(assocError.message);
       }
 
       // Find user_ids that have "real" associations (non-self associations)
-      // A self-association is where user_id === resource.external_label
+      // A self-association is where association.user_id === resource.user_id
       const reallyAssociatedUserIds = new Set<string>();
       const currentResourceNonSelfUserIds = new Set<string>();
 
       for (const assoc of allAssociations || []) {
         // Handle Supabase join result - may be array or object
-        const resourceData = assoc.resource as { external_label: string } | { external_label: string }[] | null;
-        const resourceExtLabel = Array.isArray(resourceData)
-          ? resourceData[0]?.external_label
-          : resourceData?.external_label;
+        const resourceData = assoc.resource as { user_id: string | null } | { user_id: string | null }[] | null;
+        const resourceUserId = Array.isArray(resourceData)
+          ? resourceData[0]?.user_id
+          : resourceData?.user_id;
 
-        const isSelfAssociation = assoc.user_id === resourceExtLabel;
+        const isSelfAssociation = assoc.user_id === resourceUserId;
 
         if (!isSelfAssociation) {
           // This is a real association (user associated with a different resource)

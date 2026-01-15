@@ -7,7 +7,7 @@ import type { ResourceUserAssociation } from '../types';
 
 interface UserAssociationsSectionProps {
   resourceId: string;
-  externalLabel: string;
+  resourceUserId: string | null;
   associations: ResourceUserAssociation[];
   onAssociationsChange: (associations: ResourceUserAssociation[]) => void;
   disabled?: boolean;
@@ -23,13 +23,13 @@ interface UserAssociationsSectionProps {
  */
 export function UserAssociationsSection({
   resourceId,
-  externalLabel,
+  resourceUserId,
   associations,
   onAssociationsChange,
   disabled = false,
 }: UserAssociationsSectionProps) {
-  // Filter out the self-association (where user_id matches the resource's external_label)
-  const additionalAssociations = associations.filter(a => a.user_id !== externalLabel);
+  // Filter out the self-association (where user_id matches the resource's user_id)
+  const additionalAssociations = associations.filter(a => a.user_id !== resourceUserId);
   const {
     unassociatedUsers,
     loading,

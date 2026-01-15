@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.5.1
-**Last Updated:** 2026-01-11 (Charts Refinements)
+**Version:** 1.6.0
+**Last Updated:** 2026-01-13 (Task 019 - Toggle & Alert)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -267,6 +267,8 @@ Use Tailwind's default spacing scale:
 | **AccordionFlat** | `src/components/AccordionFlat.tsx` | **Official** | Task 018 |
 | **PieChartAtom** | `src/components/atoms/charts/PieChartAtom.tsx` | **Official** | Charts |
 | **LineGraphAtom** | `src/components/atoms/charts/LineGraphAtom.tsx` | **Official** | Charts |
+| **Toggle** | `src/components/Toggle.tsx` | **Official** | Task 019 |
+| **Alert** | `src/components/Alert.tsx` | **Official** | Task 019 |
 
 ### Button Component
 
@@ -449,6 +451,33 @@ const data: LineGraphDataPoint[] = [
 <LineGraphAtom data={data} />
 <LineGraphAtom data={data} showGrid={false} />
 <LineGraphAtom data={data} height={300} />
+```
+
+### Toggle Component
+
+```tsx
+import { Toggle } from '@/components/Toggle';
+
+// Boolean switch with label and description
+<Toggle
+  label="Send Invite Email"
+  description="User will receive an email to set their password"
+  checked={true}
+  onChange={(checked) => console.log(checked)}
+/>
+<Toggle label="Feature Flag" checked={false} onChange={handleChange} />
+<Toggle label="Disabled Toggle" checked={true} onChange={handleChange} disabled />
+```
+
+### Alert Component
+
+```tsx
+import { Alert } from '@/components/Alert';
+
+// Subtle alert box with icon variants
+// Icons: error, info
+<Alert message="Invalid login credentials" icon="error" />
+<Alert message="Please check your input and try again" icon="info" />
 ```
 
 ### DashboardChartsRow Molecule
@@ -683,6 +712,11 @@ This displays:
 ---
 
 ## Changelog
+
+### v1.6.0 (2026-01-13) - Task 019
+- Added Toggle component to official atoms (boolean switch with label/description)
+- Added Alert component to official atoms (subtle message box with error/info icons)
+- Both components documented in STYLEGUIDE.md with usage examples
 
 ### v1.5.1 (2026-01-11) - Charts Refinements
 - Revenue line now uses The B Team brand color (#E50A73)
