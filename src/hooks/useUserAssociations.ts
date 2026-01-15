@@ -61,9 +61,11 @@ export function useUserAssociations(): UseUserAssociationsResult {
       const currentResourceNonSelfUserIds = new Set<string>();
 
       for (const assoc of allAssociations || []) {
-        const resourceExtLabel = Array.isArray(assoc.resource)
-          ? assoc.resource[0]?.external_label
-          : assoc.resource?.external_label;
+        // Handle Supabase join result - may be array or object
+        const resourceData = assoc.resource as { external_label: string } | { external_label: string }[] | null;
+        const resourceExtLabel = Array.isArray(resourceData)
+          ? resourceData[0]?.external_label
+          : resourceData?.external_label;
 
         const isSelfAssociation = assoc.user_id === resourceExtLabel;
 
