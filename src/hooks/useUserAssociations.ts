@@ -46,28 +46,32 @@ export function useUserAssociations(): UseUserAssociationsResult {
         throw new Error(timesheetError.message);
       }
 
-      // Get ALL associations with their resource's user_id to identify self-associations
+      // Get ALL associations with their resource's user_id AND external_label to identify self-associations
       const { data: allAssociations, error: assocError } = await supabase
         .from('resource_user_associations')
-        .select('user_id, resource_id, resource:resources(user_id)');
+        .select('user_id, resource_id, resource:resources(user_id, external_label)');
 
       if (assocError) {
         throw new Error(assocError.message);
       }
 
       // Find user_ids that have "real" associations (non-self associations)
-      // A self-association is where association.user_id === resource.user_id
+      // A self-association is where association.user_id matches resource.user_id OR resource.external_label
       const reallyAssociatedUserIds = new Set<string>();
       const currentResourceNonSelfUserIds = new Set<string>();
 
       for (const assoc of allAssociations || []) {
         // Handle Supabase join result - may be array or object
-        const resourceData = assoc.resource as { user_id: string | null } | { user_id: string | null }[] | null;
+        const resourceData = assoc.resource as { user_id: string | null; external_label: string } | { user_id: string | null; external_label: string }[] | null;
         const resourceUserId = Array.isArray(resourceData)
           ? resourceData[0]?.user_id
           : resourceData?.user_id;
+        const resourceExtLabel = Array.isArray(resourceData)
+          ? resourceData[0]?.external_label
+          : resourceData?.external_label;
 
-        const isSelfAssociation = assoc.user_id === resourceUserId;
+        // Self-association if user_id matches either the resource's user_id OR external_label
+        const isSelfAssociation = assoc.user_id === resourceUserId || assoc.user_id === resourceExtLabel;
 
         if (!isSelfAssociation) {
           // This is a real association (user associated with a different resource)

@@ -227,6 +227,7 @@ export function EmployeeEditorModal({
         <UserAssociationsSection
           resourceId={resource.id}
           resourceUserId={resource.user_id}
+          externalLabel={resource.external_label}
           associations={associations}
           onAssociationsChange={setAssociations}
           disabled={isSaving}
