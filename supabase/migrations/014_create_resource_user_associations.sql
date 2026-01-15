@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_rua_source ON resource_user_associations(source);
 -- ============================================================================
 -- Updated_at trigger (reuses existing function from resources table)
 -- ============================================================================
+DROP TRIGGER IF EXISTS set_resource_user_associations_updated_at ON resource_user_associations;
 CREATE TRIGGER set_resource_user_associations_updated_at
   BEFORE UPDATE ON resource_user_associations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -35,21 +36,25 @@ CREATE TRIGGER set_resource_user_associations_updated_at
 -- ============================================================================
 ALTER TABLE resource_user_associations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow authenticated read on resource_user_associations" ON resource_user_associations;
 CREATE POLICY "Allow authenticated read on resource_user_associations"
   ON resource_user_associations
   FOR SELECT TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Allow authenticated insert on resource_user_associations" ON resource_user_associations;
 CREATE POLICY "Allow authenticated insert on resource_user_associations"
   ON resource_user_associations
   FOR INSERT TO authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated update on resource_user_associations" ON resource_user_associations;
 CREATE POLICY "Allow authenticated update on resource_user_associations"
   ON resource_user_associations
   FOR UPDATE TO authenticated
   USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated delete on resource_user_associations" ON resource_user_associations;
 CREATE POLICY "Allow authenticated delete on resource_user_associations"
   ON resource_user_associations
   FOR DELETE TO authenticated
