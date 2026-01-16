@@ -1,20 +1,25 @@
 import { Spinner } from './Spinner';
 import { Badge } from './Badge';
-import type { Resource, ResourceUserAssociation } from '../types';
+import type { Resource, ResourceWithGrouping } from '../types';
 import { DEFAULT_EXPECTED_HOURS, formatCurrency, getEffectiveHourlyRate, formatHours } from '../utils/billing';
 
-// Helper to format association for display
-const formatAssociation = (assoc: ResourceUserAssociation) => {
-  const truncatedId = assoc.user_id.length > 8
-    ? `${assoc.user_id.substring(0, 8)}...`
-    : assoc.user_id;
-  return { truncatedId, fullId: assoc.user_id };
+// Helper to format ID for display
+const formatSystemId = (id: string) => {
+  const truncatedId = id.length > 8
+    ? `${id.substring(0, 8)}...`
+    : id;
+  return { truncatedId, fullId: id };
 };
 
+// Type guard to check if resource has grouping info
+function hasGroupingInfo(resource: Resource | ResourceWithGrouping): resource is ResourceWithGrouping {
+  return 'all_system_ids' in resource && Array.isArray((resource as ResourceWithGrouping).all_system_ids);
+}
+
 interface ResourceTableProps {
-  resources: Resource[];
+  resources: (Resource | ResourceWithGrouping)[];
   loading: boolean;
-  onRowClick: (resource: Resource) => void;
+  onRowClick: (resource: Resource | ResourceWithGrouping) => void;
 }
 
 export function ResourceTable({ resources, loading, onRowClick }: ResourceTableProps) {
@@ -102,11 +107,31 @@ export function ResourceTable({ resources, loading, onRowClick }: ResourceTableP
                     <svg className="w-3.5 h-3.5 text-vercel-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    {resource.associations && resource.associations.length > 0 ? (
-                      // Show associations as comma-separated list
+                    {/* Use all_system_ids if available (includes grouped member IDs) */}
+                    {hasGroupingInfo(resource) && resource.all_system_ids.length > 0 ? (
+                      <>
+                        <span className="text-sm text-vercel-gray-400 font-mono">
+                          {resource.all_system_ids.map((id, idx) => {
+                            const { truncatedId, fullId } = formatSystemId(id);
+                            return (
+                              <span key={id} title={fullId}>
+                                {truncatedId}{idx < resource.all_system_ids.length - 1 ? ', ' : ''}
+                              </span>
+                            );
+                          })}
+                        </span>
+                        {/* Show badge if this is a grouped entity */}
+                        {resource.grouping_role === 'primary' && resource.member_count > 0 && (
+                          <Badge variant="info" size="sm">
+                            {resource.member_count + 1} IDs
+                          </Badge>
+                        )}
+                      </>
+                    ) : resource.associations && resource.associations.length > 0 ? (
+                      // Fallback to associations if no grouping info
                       <span className="text-sm text-vercel-gray-400 font-mono">
                         {resource.associations.map((assoc, idx) => {
-                          const { truncatedId, fullId } = formatAssociation(assoc);
+                          const { truncatedId, fullId } = formatSystemId(assoc.user_id);
                           return (
                             <span key={assoc.id} title={fullId}>
                               {truncatedId}{idx < resource.associations!.length - 1 ? ', ' : ''}

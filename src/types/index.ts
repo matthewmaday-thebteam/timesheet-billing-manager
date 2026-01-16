@@ -168,3 +168,135 @@ export interface DeleteUserResult {
   deleted_user_id: string;
   deleted_email: string;
 }
+
+// ============================================================================
+// Physical Person Grouping Types
+// ============================================================================
+// These types support grouping multiple employee entities (from different
+// time tracking systems) that represent the same physical person.
+
+/**
+ * Role of an entity within the Physical Person grouping system.
+ * - 'primary': The anchor entity for a group (shown in Employee table)
+ * - 'member': An entity associated to a group (hidden from Employee table)
+ * - 'unassociated': An entity not in any group (shown in Employee table)
+ */
+export type EntityGroupRole = 'primary' | 'member' | 'unassociated';
+
+/**
+ * Canonical entity mapping from v_entity_canonical view.
+ * Maps any entity_id to its canonical (primary) entity_id.
+ */
+export interface EntityCanonicalMapping {
+  entity_id: string;
+  canonical_entity_id: string;
+  group_id: string | null;
+  role: EntityGroupRole;
+}
+
+/**
+ * Physical person group record from physical_person_groups table.
+ */
+export interface PhysicalPersonGroup {
+  id: string;
+  primary_resource_id: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+/**
+ * Group member record from physical_person_group_members table.
+ */
+export interface PhysicalPersonGroupMember {
+  id: string;
+  group_id: string;
+  member_resource_id: string;
+  created_at: string;
+}
+
+/**
+ * Member entity display data (for the associations list in modal).
+ */
+export interface GroupMemberDisplay {
+  member_resource_id: string;
+  external_label: string;
+  first_name: string | null;
+  last_name: string | null;
+  user_id: string | null;
+  added_at: string;
+  display_name: string;
+}
+
+/**
+ * Unassociated entity available for adding to a group (for dropdown).
+ */
+export interface UnassociatedEntity {
+  resource_id: string;
+  external_label: string;
+  first_name: string | null;
+  last_name: string | null;
+  user_id: string | null;
+  display_name: string;
+}
+
+/**
+ * Result from rpc_group_get RPC.
+ */
+export interface GroupGetResult {
+  success: boolean;
+  entity_id: string;
+  role: EntityGroupRole;
+  group_id: string | null;
+  primary_resource_id: string | null;
+  members: GroupMemberDisplay[];
+  message?: string;
+}
+
+/**
+ * Result from group mutation RPCs (create, add, remove).
+ */
+export interface GroupMutationResult {
+  success: boolean;
+  group_id: string | null;
+  primary_resource_id: string;
+  member_resource_ids: string[];
+  group_dissolved?: boolean;
+  removed_member_resource_id?: string;
+}
+
+/**
+ * Staged addition of a member entity (local state before save).
+ */
+export interface StagedMemberAdd {
+  resource_id: string;
+  display_name: string;
+  external_label: string;
+  user_id: string | null;
+}
+
+/**
+ * Complete staged changes state for the Edit Employee modal.
+ * Separates persisted state from pending UI changes.
+ */
+export interface StagedGroupChanges {
+  /** Entities staged to be added on Save */
+  additions: StagedMemberAdd[];
+  /** Entity IDs staged to be removed on Save */
+  removals: Set<string>;
+}
+
+/**
+ * Extended Resource type with grouping information.
+ * Used for Employee table display.
+ */
+export interface ResourceWithGrouping extends Resource {
+  /** Entity's role in the grouping system */
+  grouping_role: EntityGroupRole;
+  /** Group ID if this entity is a primary or member */
+  group_id: string | null;
+  /** Count of members if this is a primary entity */
+  member_count: number;
+  /** All system IDs (primary + members) for display */
+  all_system_ids: string[];
+}

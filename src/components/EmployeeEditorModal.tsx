@@ -1,11 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Select } from './Select';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Spinner } from './Spinner';
-import { UserAssociationsSection } from './UserAssociationsSection';
-import type { Resource, ResourceFormData, EmploymentType, BillingMode, ResourceUserAssociation } from '../types';
+import { PhysicalPersonGroupSection } from './PhysicalPersonGroupSection';
+import { usePhysicalPersonGroup } from '../hooks/usePhysicalPersonGroup';
+import { useGroupMutations } from '../hooks/useGroupMutations';
+import type {
+  Resource,
+  ResourceFormData,
+  EmploymentType,
+  BillingMode,
+  StagedGroupChanges,
+} from '../types';
 import { DEFAULT_EXPECTED_HOURS } from '../utils/billing';
 
 interface EmployeeEditorModalProps {
@@ -15,6 +23,8 @@ interface EmployeeEditorModalProps {
   onSave: (id: string, data: ResourceFormData) => Promise<boolean>;
   isSaving: boolean;
   employmentTypes: EmploymentType[];
+  /** Callback when group changes are saved (to trigger refetch) */
+  onGroupChange?: () => void;
 }
 
 interface FormErrors {
@@ -56,6 +66,12 @@ function getFormDataFromResource(resource: Resource | null): ResourceFormData {
   };
 }
 
+// Initial empty staged changes
+const EMPTY_STAGED_CHANGES: StagedGroupChanges = {
+  additions: [],
+  removals: new Set<string>(),
+};
+
 export function EmployeeEditorModal({
   isOpen,
   onClose,
@@ -63,12 +79,23 @@ export function EmployeeEditorModal({
   onSave,
   isSaving,
   employmentTypes,
+  onGroupChange,
 }: EmployeeEditorModalProps) {
   const [formData, setFormData] = useState<ResourceFormData>(() => getFormDataFromResource(resource));
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [lastResourceId, setLastResourceId] = useState<string | null>(resource?.id ?? null);
-  const [associations, setAssociations] = useState<ResourceUserAssociation[]>(resource?.associations || []);
+  const [stagedGroupChanges, setStagedGroupChanges] = useState<StagedGroupChanges>(EMPTY_STAGED_CHANGES);
+
+  // Fetch physical person group data for this resource
+  const {
+    role: entityRole,
+    members: persistedMembers,
+    loading: loadingGroup,
+  } = usePhysicalPersonGroup(resource?.id ?? null);
+
+  // Group mutation hook
+  const { saveChanges: saveGroupChanges, isSaving: isSavingGroup, saveError: groupSaveError } = useGroupMutations();
 
   // Reset form when resource changes (React-recommended pattern)
   const currentResourceId = resource?.id ?? null;
@@ -77,8 +104,13 @@ export function EmployeeEditorModal({
     setFormData(getFormDataFromResource(resource));
     setErrors({});
     setTouched({});
-    setAssociations(resource?.associations || []);
+    setStagedGroupChanges(EMPTY_STAGED_CHANGES);
   }
+
+  // Handle staged changes update
+  const handleStagedChangesUpdate = useCallback((changes: StagedGroupChanges) => {
+    setStagedGroupChanges(changes);
+  }, []);
 
   // Validate email format
   const validateEmail = (email: string): boolean => {
@@ -153,15 +185,39 @@ export function EmployeeEditorModal({
     validateForm();
   };
 
+  // Check if there are pending group changes
+  const hasGroupChanges = stagedGroupChanges.additions.length > 0 || stagedGroupChanges.removals.size > 0;
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     if (!validateForm() || !resource) return;
 
-    const success = await onSave(resource.id, formData);
-    if (success) {
-      onClose();
+    // 1. Save resource form data
+    const formSuccess = await onSave(resource.id, formData);
+    if (!formSuccess) return;
+
+    // 2. Save staged group changes (if any)
+    if (hasGroupChanges) {
+      const hasExistingGroup = entityRole === 'primary';
+      const result = await saveGroupChanges({
+        primaryResourceId: resource.id,
+        hasExistingGroup,
+        additions: stagedGroupChanges.additions,
+        removals: Array.from(stagedGroupChanges.removals),
+      });
+
+      if (!result.success) {
+        // Show error but keep modal open for retry
+        console.error('Failed to save group changes:', result.error);
+        return;
+      }
+
+      // Notify parent to refetch data
+      onGroupChange?.();
     }
+
+    onClose();
   };
 
   const employmentTypeOptions = useMemo(() =>
@@ -171,6 +227,7 @@ export function EmployeeEditorModal({
 
   const isMonthlyBilling = formData.billing_mode === 'monthly';
   const isHourlyBilling = formData.billing_mode === 'hourly';
+  const isAnySaving = isSaving || isSavingGroup;
 
   if (!resource) return null;
 
@@ -180,6 +237,7 @@ export function EmployeeEditorModal({
         type="button"
         variant="secondary"
         onClick={onClose}
+        disabled={isAnySaving}
       >
         Cancel
       </Button>
@@ -187,13 +245,15 @@ export function EmployeeEditorModal({
         type="button"
         variant="primary"
         onClick={() => handleSubmit()}
-        disabled={isSaving || Object.keys(errors).length > 0}
+        disabled={isAnySaving || Object.keys(errors).length > 0}
       >
-        {isSaving ? (
+        {isAnySaving ? (
           <span className="flex items-center gap-2">
             <Spinner size="sm" color="white" />
             Saving...
           </span>
+        ) : hasGroupChanges ? (
+          'Save Changes'
         ) : (
           'Save Changes'
         )}
@@ -223,15 +283,28 @@ export function EmployeeEditorModal({
           </div>
         </div>
 
-        {/* User Associations (Multi-system support) */}
-        <UserAssociationsSection
-          resourceId={resource.id}
-          resourceUserId={resource.user_id}
-          externalLabel={resource.external_label}
-          associations={associations}
-          onAssociationsChange={setAssociations}
-          disabled={isSaving}
-        />
+        {/* Physical Person Grouping (Multi-system support) */}
+        {loadingGroup ? (
+          <div className="flex items-center justify-center py-4">
+            <Spinner size="sm" />
+            <span className="ml-2 text-sm text-vercel-gray-400">Loading group data...</span>
+          </div>
+        ) : (
+          <PhysicalPersonGroupSection
+            resourceId={resource.id}
+            persistedMembers={persistedMembers}
+            stagedChanges={stagedGroupChanges}
+            onStagedChangesUpdate={handleStagedChangesUpdate}
+            disabled={isAnySaving}
+          />
+        )}
+
+        {/* Show group error if any */}
+        {groupSaveError && (
+          <div className="p-3 bg-error-light border border-error-border rounded-md">
+            <p className="text-sm text-error-text">{groupSaveError}</p>
+          </div>
+        )}
 
         {/* First Name */}
         <div>

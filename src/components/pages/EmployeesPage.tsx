@@ -1,18 +1,19 @@
-import { useState } from 'react';
-import { useResources } from '../../hooks/useResources';
+import { useState, useCallback } from 'react';
+import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorModal } from '../EmployeeEditorModal';
 import { MetricCard } from '../MetricCard';
-import type { Resource } from '../../types';
+import type { Resource, ResourceWithGrouping } from '../../types';
 
 export function EmployeesPage() {
-  const { resources, loading, error, updateResource, isUpdating } = useResources();
+  // Use the new hook that filters out member entities and includes grouping info
+  const { entities, loading, error, updateResource, isUpdating, refetch } = useEmployeeTableEntities();
   const { employmentTypes } = useEmploymentTypes();
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [selectedResource, setSelectedResource] = useState<Resource | ResourceWithGrouping | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleRowClick = (resource: Resource) => {
+  const handleRowClick = (resource: Resource | ResourceWithGrouping) => {
     setSelectedResource(resource);
     setIsModalOpen(true);
   };
@@ -26,7 +27,12 @@ export function EmployeesPage() {
     return updateResource(id, data, employmentTypes);
   };
 
-  const incompleteCount = resources.filter(r => !r.email || !r.first_name).length;
+  // Callback when group changes are saved - refetch the entity list
+  const handleGroupChange = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const incompleteCount = entities.filter(r => !r.email || !r.first_name).length;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -52,22 +58,22 @@ export function EmployeesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard title="Total" value={resources.length} />
+        <MetricCard title="Total" value={entities.length} />
         <MetricCard
           title="Full-time"
-          value={resources.filter(r => r.employment_type?.name === 'Full-time').length}
+          value={entities.filter(r => r.employment_type?.name === 'Full-time').length}
         />
         <MetricCard
           title="Part-time"
-          value={resources.filter(r => r.employment_type?.name === 'Part-time').length}
+          value={entities.filter(r => r.employment_type?.name === 'Part-time').length}
         />
         <MetricCard
           title="Contractor"
-          value={resources.filter(r => r.employment_type?.name === 'Contractor').length}
+          value={entities.filter(r => r.employment_type?.name === 'Contractor').length}
         />
         <MetricCard
           title="Vendor"
-          value={resources.filter(r => r.employment_type?.name === 'Vendor').length}
+          value={entities.filter(r => r.employment_type?.name === 'Vendor').length}
         />
         <MetricCard
           title="Incomplete"
@@ -90,7 +96,7 @@ export function EmployeesPage() {
 
       {/* Resource Table */}
       <ResourceTable
-        resources={resources}
+        resources={entities}
         loading={loading}
         onRowClick={handleRowClick}
       />
@@ -103,6 +109,7 @@ export function EmployeesPage() {
         onSave={handleSaveResource}
         isSaving={isUpdating}
         employmentTypes={employmentTypes}
+        onGroupChange={handleGroupChange}
       />
     </div>
   );

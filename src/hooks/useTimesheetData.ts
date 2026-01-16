@@ -7,6 +7,7 @@ import type { TimesheetEntry, ProjectSummary, ResourceSummary, DateRange } from 
 import type { MonthlyAggregate } from '../types/charts';
 
 interface ResourceRecord {
+  id: string;
   external_label: string;
   first_name: string | null;
   last_name: string | null;
@@ -21,6 +22,12 @@ interface AssociationRecord {
     last_name: string | null;
     external_label: string;
   } | null;
+}
+
+interface CanonicalMappingRecord {
+  entity_id: string;
+  canonical_entity_id: string;
+  role: string;
 }
 
 interface UseTimesheetDataOptions {
@@ -48,6 +55,7 @@ export function useTimesheetData(
   const [extendedEntries, setExtendedEntries] = useState<TimesheetEntry[]>([]);
   const [resourceRecords, setResourceRecords] = useState<ResourceRecord[]>([]);
   const [associationRecords, setAssociationRecords] = useState<AssociationRecord[]>([]);
+  const [canonicalMappings, setCanonicalMappings] = useState<CanonicalMappingRecord[]>([]);
   const [projectRates, setProjectRates] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +84,7 @@ export function useTimesheetData(
 
       const resourcesPromise = supabase
         .from('resources')
-        .select('external_label, first_name, last_name');
+        .select('id, external_label, first_name, last_name');
 
       const projectsPromise = supabase
         .from('projects')
@@ -92,6 +100,11 @@ export function useTimesheetData(
           resource:resources(first_name, last_name, external_label)
         `);
 
+      // Fetch canonical entity mapping for physical person grouping
+      const canonicalPromise = supabase
+        .from('v_entity_canonical')
+        .select('entity_id, canonical_entity_id, role');
+
       // If extended months requested, fetch historical entries too
       const extendedPromise = extendedMonths > 0
         ? supabase
@@ -102,11 +115,12 @@ export function useTimesheetData(
             .order('work_date', { ascending: false })
         : null;
 
-      const [entriesResult, resourcesResult, projectsResult, associationsResult, extendedResult] = await Promise.all([
+      const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, extendedResult] = await Promise.all([
         entriesPromise,
         resourcesPromise,
         projectsPromise,
         associationsPromise,
+        canonicalPromise,
         extendedPromise,
       ]);
 
@@ -122,6 +136,10 @@ export function useTimesheetData(
       if (associationsResult.error) {
         throw new Error(associationsResult.error.message);
       }
+      // Canonical mapping is optional - don't fail if view doesn't exist yet
+      if (canonicalResult.error && !canonicalResult.error.message.includes('does not exist')) {
+        console.warn('Failed to fetch canonical mapping:', canonicalResult.error.message);
+      }
       if (extendedResult?.error) {
         throw new Error(extendedResult.error.message);
       }
@@ -136,6 +154,7 @@ export function useTimesheetData(
         resource: Array.isArray(assoc.resource) ? assoc.resource[0] || null : assoc.resource,
       }));
       setAssociationRecords(normalizedAssociations);
+      setCanonicalMappings(canonicalResult.data || []);
       setExtendedEntries(extendedResult?.data || []);
 
       // Build project rates map
@@ -157,52 +176,86 @@ export function useTimesheetData(
     fetchData();
   }, [fetchData]);
 
+  // Build canonical entity mapping: resource_id -> canonical_resource_id
+  // This allows grouped entities to be aggregated under the primary entity
+  const canonicalEntityMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const mapping of canonicalMappings) {
+      map.set(mapping.entity_id, mapping.canonical_entity_id);
+    }
+    return map;
+  }, [canonicalMappings]);
+
+  // Build resource_id -> displayName lookup
+  const resourceDisplayNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of resourceRecords) {
+      const displayName = r.first_name || r.last_name
+        ? [r.first_name, r.last_name].filter(Boolean).join(' ')
+        : r.external_label;
+      map.set(r.id, displayName);
+    }
+    return map;
+  }, [resourceRecords]);
+
   // Build display name lookup: user_name/external_label -> "first_name last_name"
-  // Uses associations to map user_ids from different systems to the same display name
+  // Uses associations and canonical mapping to aggregate grouped entities
   const displayNameLookup = useMemo(() => {
     const lookup = new Map<string, string>();
 
-    // First, add external_label -> displayName from resources (existing behavior)
+    // First, add external_label -> displayName from resources
+    // Use canonical entity's display name if the resource is grouped
     for (const r of resourceRecords) {
       if (r.first_name || r.last_name) {
-        const displayName = [r.first_name, r.last_name].filter(Boolean).join(' ');
+        // Get canonical entity for this resource (or self if not grouped)
+        const canonicalId = canonicalEntityMap.get(r.id) || r.id;
+        const canonicalDisplayName = resourceDisplayNameMap.get(canonicalId);
+        const displayName = canonicalDisplayName || [r.first_name, r.last_name].filter(Boolean).join(' ');
         lookup.set(r.external_label, displayName);
       }
     }
 
     // Then, add user_name from associations (for multi-system support)
     // This allows entries from different systems with different user_names
-    // to be grouped under the same resource's display name
+    // to be grouped under the same canonical entity's display name
     for (const assoc of associationRecords) {
       const resource = assoc.resource;
       if (resource && (resource.first_name || resource.last_name)) {
-        const displayName = [resource.first_name, resource.last_name].filter(Boolean).join(' ');
-        // Map both the user_id and the external_label to this display name
-        // (entries use user_name which often equals external_label)
+        // Get canonical entity for the associated resource
+        const canonicalId = canonicalEntityMap.get(assoc.resource_id) || assoc.resource_id;
+        const canonicalDisplayName = resourceDisplayNameMap.get(canonicalId);
+        const displayName = canonicalDisplayName || [resource.first_name, resource.last_name].filter(Boolean).join(' ');
         lookup.set(resource.external_label, displayName);
       }
     }
 
     return lookup;
-  }, [resourceRecords, associationRecords]);
+  }, [resourceRecords, associationRecords, canonicalEntityMap, resourceDisplayNameMap]);
 
   // Build user_id -> displayName lookup for proper grouping
-  // This maps timesheet entry user_ids to their resource's display name
+  // This maps timesheet entry user_ids to their CANONICAL entity's display name
+  // (so grouped entities' time entries are aggregated together)
   const userIdToDisplayNameLookup = useMemo(() => {
     const lookup = new Map<string, string>();
 
     for (const assoc of associationRecords) {
-      const resource = assoc.resource;
-      if (resource) {
-        const displayName = resource.first_name || resource.last_name
-          ? [resource.first_name, resource.last_name].filter(Boolean).join(' ')
-          : resource.external_label;
+      // Get canonical entity for this resource
+      const canonicalId = canonicalEntityMap.get(assoc.resource_id) || assoc.resource_id;
+      const canonicalDisplayName = resourceDisplayNameMap.get(canonicalId);
+
+      if (canonicalDisplayName) {
+        lookup.set(assoc.user_id, canonicalDisplayName);
+      } else if (assoc.resource) {
+        // Fallback to the resource's own display name
+        const displayName = assoc.resource.first_name || assoc.resource.last_name
+          ? [assoc.resource.first_name, assoc.resource.last_name].filter(Boolean).join(' ')
+          : assoc.resource.external_label;
         lookup.set(assoc.user_id, displayName);
       }
     }
 
     return lookup;
-  }, [associationRecords]);
+  }, [associationRecords, canonicalEntityMap, resourceDisplayNameMap]);
 
   const projects = useMemo(
     () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup),
