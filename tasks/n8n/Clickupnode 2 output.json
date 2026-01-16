@@ -1202,6 +1202,126 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
       },
       {
+        "id": "4911587098694088749",
+        "task": {
+          "id": "86c7dxrv0",
+          "custom_id": "NEO-5921",
+          "name": "Onboarding",
+          "status": {
+            "status": "new",
+            "color": "#656f7d",
+            "type": "unstarted",
+            "orderindex": 1
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100767901,
+          "username": "Valeri",
+          "email": "vstoyanov@yourbteam.com",
+          "color": "#f57c01",
+          "initials": "V",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768549543279",
+        "end": "1768549773323",
+        "duration": "230044",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768549773323",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+      },
+      {
+        "id": "4911591034477967532",
+        "task": {
+          "id": "86c7kxez8",
+          "custom_id": "NEO-5973",
+          "name": "Website fixes",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100767901,
+          "username": "Valeri",
+          "email": "vstoyanov@yourbteam.com",
+          "color": "#f57c01",
+          "initials": "V",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768549777951",
+        "end": "1768551859447",
+        "duration": "2081496",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768551859447",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5973"
+      },
+      {
+        "id": "4911626550049063077",
+        "task": {
+          "id": "86c7dxrv0",
+          "custom_id": "NEO-5921",
+          "name": "Onboarding",
+          "status": {
+            "status": "new",
+            "color": "#656f7d",
+            "type": "unstarted",
+            "orderindex": 1
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100767901,
+          "username": "Valeri",
+          "email": "vstoyanov@yourbteam.com",
+          "color": "#f57c01",
+          "initials": "V",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768551894921",
+        "end": "1768558728615",
+        "duration": "6833694",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768558728615",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+      },
+      {
         "id": "4897270615235197540",
         "task": {
           "id": "86c69v552",
@@ -3760,6 +3880,126 @@
           "space_id": "90156375674"
         },
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+      },
+      {
+        "id": "4911706857012024351",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100723025,
+          "username": "TheBTeam QA",
+          "email": "thebteamqa@gmail.com",
+          "color": "#795548",
+          "initials": "TQ",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768556682443",
+        "end": "1768556683179",
+        "duration": "736",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768556683179",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
+      },
+      {
+        "id": "4911706877094351905",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100723025,
+          "username": "TheBTeam QA",
+          "email": "thebteamqa@gmail.com",
+          "color": "#795548",
+          "initials": "TQ",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768556683689",
+        "end": "1768556687834",
+        "duration": "4145",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768556687834",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
+      },
+      {
+        "id": "4911706957339776038",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100723025,
+          "username": "TheBTeam QA",
+          "email": "thebteamqa@gmail.com",
+          "color": "#795548",
+          "initials": "TQ",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768554048358",
+        "end": "1768556754512",
+        "duration": "2706154",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768556754512",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
       },
       {
         "id": "4895703722095372603",
@@ -6762,6 +7002,46 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
       },
       {
+        "id": "4911555051040633605",
+        "task": {
+          "id": "86c7edbhy",
+          "custom_id": "NEO-5923",
+          "name": "Reseller: Reward Choice - reset reward choice",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1005
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639081,
+          "username": "Tanya",
+          "email": "tangelinova@yourbteam.com",
+          "color": "#5f55ee",
+          "initials": "T",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639081_V3U.jpg"
+        },
+        "billable": false,
+        "start": "1768547633928",
+        "end": "1768556680613",
+        "duration": "9046685",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768556680613",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+      },
+      {
         "id": "4895701979596941516",
         "task": {
           "id": "86c6g0m2k",
@@ -8482,6 +8762,46 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
       },
       {
+        "id": "4911495014494596409",
+        "task": {
+          "id": "86c7fm4hk",
+          "custom_id": "NEO-5948",
+          "name": "Front End for Code Buffer 2.0",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639078,
+          "username": "Teodor Dimitrov",
+          "email": "tdimitrov@yourbteam.com",
+          "color": "#3e63dd",
+          "initials": "TD",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639078_5Sf.jpg"
+        },
+        "billable": false,
+        "start": "1768544054232",
+        "end": "1768556805162",
+        "duration": "12750930",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768556805162",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+      },
+      {
         "id": "4895595241472348431",
         "task": {
           "id": "86c6zqbxv",
@@ -9482,6 +9802,246 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
       },
       {
+        "id": "4911527364423151543",
+        "task": {
+          "id": "86c6zqbxv",
+          "custom_id": "NEO-5846",
+          "name": "Super: Dashboard",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768545983808",
+        "end": "1768550383607",
+        "duration": "4399799",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768550383607",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+      },
+      {
+        "id": "4911601187763878507",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768550384061",
+        "end": "1768550392914",
+        "duration": "8853",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768550392914",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
+      },
+      {
+        "id": "4911601344026868340",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768550393528",
+        "end": "1768555576821",
+        "duration": "5183293",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768555576821",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
+      },
+      {
+        "id": "4911688382612852649",
+        "task": {
+          "id": "86c6zqbxv",
+          "custom_id": "NEO-5846",
+          "name": "Super: Dashboard",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768555581591",
+        "end": "1768555592651",
+        "duration": "11060",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768555592651",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+      },
+      {
+        "id": "4911688587999530945",
+        "task": {
+          "id": "86c7m7q8z",
+          "custom_id": "NEO-5978",
+          "name": "Issues with redemptions on VIP server",
+          "status": {
+            "status": "released",
+            "color": "#008844",
+            "type": "done",
+            "orderindex": 17
+          },
+          "custom_type": 1002
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768555593963",
+        "end": "1768556177714",
+        "duration": "583751",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768556177714",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5978"
+      },
+      {
+        "id": "4911698404700934635",
+        "task": {
+          "id": "86c6zqbxv",
+          "custom_id": "NEO-5846",
+          "name": "Super: Dashboard",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639076,
+          "username": "Dobromir Petrevski",
+          "email": "dpetrevski@yourbteam.com",
+          "color": "#622aea",
+          "initials": "DP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+        },
+        "billable": false,
+        "start": "1768556179047",
+        "end": "1768559390807",
+        "duration": "3211760",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768559390807",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+      },
+      {
         "id": "4895558344683376062",
         "task": {
           "id": "86c69kyk0",
@@ -10202,9 +10762,17 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
       }
     ],
+    "spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "folderLookup": {
+      "901510928967": "Projects"
+    },
     "_meta": {
-      "totalTimeEntries": 255,
+      "totalTimeEntries": 269,
       "teamMembersChecked": 15,
+      "spacesLoaded": 1,
+      "foldersLoaded": 1,
       "rangeStart": "2026-01-01T00:00:00.000Z",
       "rangeEnd": "2026-02-01T00:00:00.000Z"
     }

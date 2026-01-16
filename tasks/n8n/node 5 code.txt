@@ -1,80 +1,39 @@
-// Node 5: Flatten & aggregate ClickUp data for timesheet_daily_rollups
-  // Rolls up multiple entries per task/user/date into single rows
+// Node 5: Process ClickUp entries - use entry_id as unique task_id
 
-  var CLICKUP_TEAM_ID = "90151498763";
-  var syncedAt = new Date().toISOString();
+var CLICKUP_TEAM_ID = "90151498763";
+var syncedAt = new Date().toISOString();
 
-  function roundUpMinutesTo15FromSeconds(seconds) {
-    var minutes = seconds / 60;
-    return Math.ceil(minutes / 15) * 15;
-  }
+function roundUpMinutesTo15FromSeconds(seconds) {
+  var minutes = seconds / 60;
+  return Math.ceil(minutes / 15) * 15;
+}
 
-  // Aggregate by unique task_id only (each task appears once)
-  var aggregated = {};
+var rows = [];
 
-  for (var i = 0; i < items.length; i++) {
-    var e = items[i].json;
+for (var i = 0; i < items.length; i++) {
+  var e = items[i].json;
 
-    if (!e.work_date) continue;
+  if (!e.work_date) continue;
+  if (!e.entry_id) continue;  // Must have unique entry_id
 
-    var seconds = Number(e.duration_seconds || 0);
-    if (!isFinite(seconds) || seconds <= 0) continue;
+  var seconds = Number(e.duration_seconds || 0);
+  if (!isFinite(seconds) || seconds <= 0) continue;
 
-    var projectId = e.space_id ? String(e.space_id) : null;
-    var projectName = e.space_name || "No Project";
-    var userId = e.user_id ? String(e.user_id) : null;
-    var userName = e.user_name || "Unknown";
-    var taskId = e.task_id ? String(e.task_id) : null;
-    var taskName = e.task_name || "No Task";
+  var minutesRoundedUp = roundUpMinutesTo15FromSeconds(seconds);
+  if (minutesRoundedUp <= 0) continue;
 
-    // Use task_id as unique key (each task appears only once)
-    var key = taskId || "no-task-" + i;
+  rows.push({
+    clockify_workspace_id: CLICKUP_TEAM_ID,
+    work_date: e.work_date,
+    project_id: e.space_id ? String(e.space_id) : null,
+    project_name: e.project_name || "No Project",
+    user_id: e.user_id,
+    user_name: e.user_name || "Unknown",
+    task_id: String(e.entry_id),  // USE entry_id - unique per time entry
+    task_name: e.task_name || "No Task",
+    total_minutes: minutesRoundedUp,
+    synced_at: syncedAt,
+  });
+}
 
-    if (!aggregated[key]) {
-      aggregated[key] = {
-        clockify_workspace_id: CLICKUP_TEAM_ID,
-        work_date: e.work_date,
-        project_id: projectId,
-        project_name: projectName,
-        user_id: userId,
-        user_name: userName,
-        task_id: taskId,
-        task_name: taskName,
-        total_seconds: 0,
-        synced_at: syncedAt,
-      };
-    }
-
-    // Update to most recent work_date
-    if (e.work_date > aggregated[key].work_date) {
-      aggregated[key].work_date = e.work_date;
-    }
-
-    aggregated[key].total_seconds += seconds;
-  }
-
-  // Convert to rows with rounded minutes
-  var rows = [];
-  var keys = Object.keys(aggregated);
-
-  for (var j = 0; j < keys.length; j++) {
-    var row = aggregated[keys[j]];
-    var minutesRoundedUp = roundUpMinutesTo15FromSeconds(row.total_seconds);
-
-    if (minutesRoundedUp <= 0) continue;
-
-    rows.push({
-      clockify_workspace_id: row.clockify_workspace_id,
-      task_id: row.task_id,
-      work_date: row.work_date,
-      project_id: row.project_id,
-      project_name: row.project_name,
-      user_id: row.user_id,
-      user_name: row.user_name,
-      task_name: row.task_name,
-      total_minutes: minutesRoundedUp,
-      synced_at: row.synced_at,
-    });
-  }
-
-  return [{ json: { rows: rows } }];
+return [{ json: { rows: rows } }];

@@ -37,7 +37,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5897"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5897",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4896073645581762141",
@@ -77,7 +83,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897072755839425262",
@@ -117,7 +129,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897135355826627416",
@@ -157,7 +175,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897148361088263512",
@@ -197,7 +221,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5864"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5864",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897163467696203777",
@@ -237,7 +267,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897273083616656079",
@@ -277,7 +313,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898876543470487289",
@@ -317,7 +359,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900001874747162616",
@@ -357,7 +405,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900208120771212663",
@@ -397,7 +451,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901426854114458766",
@@ -437,7 +497,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901701270111091354",
@@ -477,7 +543,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901702060972276429",
@@ -517,7 +589,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905799162782370639",
@@ -557,7 +635,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906020739625080523",
@@ -597,7 +681,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907242538098580009",
@@ -637,7 +727,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907361018076560152",
@@ -677,7 +773,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907614078036180753",
@@ -717,7 +819,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907642284898338929",
@@ -757,7 +865,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908685864643416415",
@@ -797,7 +911,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908774781522634913",
@@ -837,7 +957,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908800264486350798",
@@ -877,7 +1003,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5967"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5967",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908823034305803801",
@@ -917,7 +1049,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908936727962145237",
@@ -957,7 +1095,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908986480812973597",
@@ -997,7 +1141,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909088512509048646",
@@ -1037,7 +1187,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5967"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5967",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910165591270967555",
@@ -1077,7 +1233,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910179626301345029",
@@ -1117,7 +1279,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5961",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910192879412793459",
@@ -1157,7 +1325,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5969",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910370178951104340",
@@ -1197,7 +1371,151 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911587098694088749",
+    "task": {
+      "id": "86c7dxrv0",
+      "custom_id": "NEO-5921",
+      "name": "Onboarding",
+      "status": {
+        "status": "new",
+        "color": "#656f7d",
+        "type": "unstarted",
+        "orderindex": 1
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100767901,
+      "username": "Valeri",
+      "email": "vstoyanov@yourbteam.com",
+      "color": "#f57c01",
+      "initials": "V",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768549543279",
+    "end": "1768549773323",
+    "duration": "230044",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768549773323",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911591034477967532",
+    "task": {
+      "id": "86c7kxez8",
+      "custom_id": "NEO-5973",
+      "name": "Website fixes",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100767901,
+      "username": "Valeri",
+      "email": "vstoyanov@yourbteam.com",
+      "color": "#f57c01",
+      "initials": "V",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768549777951",
+    "end": "1768551859447",
+    "duration": "2081496",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768551859447",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5973",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911626550049063077",
+    "task": {
+      "id": "86c7dxrv0",
+      "custom_id": "NEO-5921",
+      "name": "Onboarding",
+      "status": {
+        "status": "new",
+        "color": "#656f7d",
+        "type": "unstarted",
+        "orderindex": 1
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100767901,
+      "username": "Valeri",
+      "email": "vstoyanov@yourbteam.com",
+      "color": "#f57c01",
+      "initials": "V",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768551894921",
+    "end": "1768558728615",
+    "duration": "6833694",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768558728615",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5921",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897270615235197540",
@@ -1237,7 +1555,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897311081074868320",
@@ -1277,7 +1601,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5884"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5884",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897326165754987110",
@@ -1317,7 +1647,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897340258817754192",
@@ -1357,7 +1693,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897351106311308722",
@@ -1397,7 +1739,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897381231329364563",
@@ -1437,7 +1785,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5808",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897381703675103854",
@@ -1477,7 +1831,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5897"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5897",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897382512789899919",
@@ -1517,7 +1877,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897382828503550620",
@@ -1557,7 +1923,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5880",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897402135337848173",
@@ -1597,7 +1969,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5858"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5858",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897404895038885331",
@@ -1637,7 +2015,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897413342132260655",
@@ -1677,7 +2061,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897418361959174131",
@@ -1717,7 +2107,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5895"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5895",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897421059299299438",
@@ -1757,7 +2153,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897424439958655208",
@@ -1797,7 +2199,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5686"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5686",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898519502084206873",
@@ -1837,7 +2245,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898524255572816427",
@@ -1877,7 +2291,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5886"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5886",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898785390339387848",
@@ -1917,7 +2337,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900092502734624859",
@@ -1957,7 +2383,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901480709598562166",
@@ -1997,7 +2429,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901489347096562020",
@@ -2037,7 +2475,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5919"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5919",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901491850374629858",
@@ -2077,7 +2521,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901519444583207005",
@@ -2117,7 +2567,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901530578346398472",
@@ -2157,7 +2613,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901541999067092536",
@@ -2197,7 +2659,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901784664266329821",
@@ -2237,7 +2705,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901817739809478416",
@@ -2277,7 +2751,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905752757204254066",
@@ -2317,7 +2797,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907242398696692255",
@@ -2357,7 +2843,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907247408927038237",
@@ -2397,7 +2889,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907251622289955854",
@@ -2437,7 +2935,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5953"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5953",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907345818472511260",
@@ -2477,7 +2981,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5958"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5958",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908909830964333557",
@@ -2517,7 +3027,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908915550636035403",
@@ -2557,7 +3073,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908971815278041750",
@@ -2597,7 +3119,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909013833949734016",
@@ -2637,7 +3165,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5874"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5874",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909020026453714446",
@@ -2677,7 +3211,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5878"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5878",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909029449863620741",
@@ -2717,7 +3257,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5882"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5882",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909050029904063776",
@@ -2757,7 +3303,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5879"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5879",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909050927250238819",
@@ -2797,7 +3349,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5866"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5866",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909067732417081774",
@@ -2837,7 +3395,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5884"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5884",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909074173542626151",
@@ -2877,7 +3441,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909085014241408551",
@@ -2917,7 +3487,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909088770660071254",
@@ -2957,7 +3533,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909097270517791169",
@@ -2997,7 +3579,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910076113797872148",
@@ -3037,7 +3625,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5886"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5886",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910084152315706033",
@@ -3077,7 +3671,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910089482051353398",
@@ -3117,7 +3717,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5895"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5895",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910096884679146514",
@@ -3157,7 +3763,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910100780717800601",
@@ -3197,7 +3809,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5928"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5928",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910122039983816758",
@@ -3237,7 +3855,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910192745429946477",
@@ -3277,7 +3901,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910198709260472782",
@@ -3317,7 +3947,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910214436273083941",
@@ -3357,7 +3993,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910224868513765622",
@@ -3397,7 +4039,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910233402563451664",
@@ -3437,7 +4085,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910248174935695816",
@@ -3477,7 +4131,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910257491407627627",
@@ -3517,7 +4177,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910277868292762338",
@@ -3557,7 +4223,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5858"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5858",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910336307362626841",
@@ -3597,7 +4269,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910337828871568782",
@@ -3637,7 +4315,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910411829245464731",
@@ -3677,7 +4361,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5953"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5953",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910412821164806350",
@@ -3717,7 +4407,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5686"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5686",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910431057595946349",
@@ -3757,7 +4453,151 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911706857012024351",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100723025,
+      "username": "TheBTeam QA",
+      "email": "thebteamqa@gmail.com",
+      "color": "#795548",
+      "initials": "TQ",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768556682443",
+    "end": "1768556683179",
+    "duration": "736",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768556683179",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911706877094351905",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100723025,
+      "username": "TheBTeam QA",
+      "email": "thebteamqa@gmail.com",
+      "color": "#795548",
+      "initials": "TQ",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768556683689",
+    "end": "1768556687834",
+    "duration": "4145",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768556687834",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911706957339776038",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100723025,
+      "username": "TheBTeam QA",
+      "email": "thebteamqa@gmail.com",
+      "color": "#795548",
+      "initials": "TQ",
+      "profilePicture": null
+    },
+    "billable": false,
+    "start": "1768554048358",
+    "end": "1768556754512",
+    "duration": "2706154",
+    "description": "",
+    "tags": [],
+    "source": "clickup",
+    "at": "1768556754512",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895703722095372603",
@@ -3797,7 +4637,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895796063036588266",
@@ -3837,7 +4683,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5909",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895893143524562796",
@@ -3877,7 +4729,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4896096675431269127",
@@ -3917,7 +4775,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4896185355013541936",
@@ -3957,7 +4821,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897127696188662220",
@@ -3997,7 +4867,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898530192694014738",
@@ -4037,7 +4913,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898718981387280982",
@@ -4077,7 +4959,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5918",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898912976688205867",
@@ -4117,7 +5005,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898913816807297142",
@@ -4157,7 +5051,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900014278277153541",
@@ -4197,7 +5097,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900186488732217374",
@@ -4237,7 +5143,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900271585271563499",
@@ -4277,7 +5189,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5928"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5928",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900287287386786055",
@@ -4317,7 +5235,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900516812217477544",
@@ -4357,7 +5281,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901451851713298688",
@@ -4397,7 +5327,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901662306201334398",
@@ -4437,7 +5373,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901754202059786131",
@@ -4477,7 +5419,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4902084019930100060",
@@ -4517,7 +5465,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905826516791547207",
@@ -4557,7 +5511,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906006341636412053",
@@ -4597,7 +5557,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906105681293962490",
@@ -4637,7 +5603,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906347890136149598",
@@ -4677,7 +5649,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907268243981164582",
@@ -4717,7 +5695,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907564708561515019",
@@ -4757,7 +5741,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907777314442274959",
@@ -4797,7 +5787,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908737034363690546",
@@ -4837,7 +5833,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908894232163207150",
@@ -4877,7 +5879,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909148651748410850",
@@ -4917,7 +5925,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4909174356154600299",
@@ -4957,7 +5971,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910226454497548623",
@@ -4997,7 +6017,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910331042521250483",
@@ -5037,7 +6063,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910382378486942186",
@@ -5077,7 +6109,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910453217781701401",
@@ -5117,7 +6155,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5971",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910674974224502695",
@@ -5157,7 +6201,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895604386011370171",
@@ -5197,7 +6247,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895696032996616025",
@@ -5237,7 +6293,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5906"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5906",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895747733363455045",
@@ -5277,7 +6339,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897054120479643928",
@@ -5317,7 +6385,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897133665807328016",
@@ -5357,7 +6431,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897263006851627354",
@@ -5397,7 +6477,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898494478614883800",
@@ -5437,7 +6523,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5889",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899951190240753575",
@@ -5477,7 +6569,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900182633965514524",
@@ -5517,7 +6615,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901399926682777689",
@@ -5557,7 +6661,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901632457051040585",
@@ -5597,7 +6707,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905752090192477517",
@@ -5637,7 +6753,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905981302597831606",
@@ -5677,7 +6799,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907216635368920400",
@@ -5717,7 +6845,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907263401556533000",
@@ -5757,7 +6891,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5958"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5958",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907291741478807211",
@@ -5797,7 +6937,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908649206107687759",
@@ -5837,7 +6983,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908778388892510600",
@@ -5877,7 +7029,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908886899076974126",
@@ -5917,7 +7075,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5960",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908965308419365019",
@@ -5957,7 +7121,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910087567401908983",
@@ -5997,7 +7167,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910329103897164285",
@@ -6037,7 +7213,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5950",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897129336580956744",
@@ -6077,7 +7259,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897130323148366472",
@@ -6117,7 +7305,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897167872604596459",
@@ -6157,7 +7351,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897255625094690886",
@@ -6197,7 +7397,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5867",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897320805652578737",
@@ -6237,7 +7443,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897338839381394458",
@@ -6277,7 +7489,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5859",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897345806137115900",
@@ -6317,7 +7535,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898508694000332662",
@@ -6357,7 +7581,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5908",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898793482577867620",
@@ -6397,7 +7627,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5919"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5919",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898824392316647911",
@@ -6437,7 +7673,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899959031055874196",
@@ -6477,7 +7719,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901414001340938808",
@@ -6517,7 +7765,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5920",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901432383280872791",
@@ -6557,7 +7811,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905731732768913902",
@@ -6597,7 +7857,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5865",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907212477370815594",
@@ -6637,7 +7903,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907219884746561052",
@@ -6677,7 +7949,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908653240323492788",
@@ -6717,7 +7995,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910099575341939807",
@@ -6757,7 +8041,59 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911555051040633605",
+    "task": {
+      "id": "86c7edbhy",
+      "custom_id": "NEO-5923",
+      "name": "Reseller: Reward Choice - reset reward choice",
+      "status": {
+        "status": "in progress",
+        "color": "#1090e0",
+        "type": "custom",
+        "orderindex": 5
+      },
+      "custom_type": 1005
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639081,
+      "username": "Tanya",
+      "email": "tangelinova@yourbteam.com",
+      "color": "#5f55ee",
+      "initials": "T",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639081_V3U.jpg"
+    },
+    "billable": false,
+    "start": "1768547633928",
+    "end": "1768556680613",
+    "duration": "9046685",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768556680613",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5923",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895701979596941516",
@@ -6797,7 +8133,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897136894699987879",
@@ -6837,7 +8179,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898661850134958936",
@@ -6877,7 +8225,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901513032582909655",
@@ -6917,7 +8271,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901513843492867838",
@@ -6957,7 +8317,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906003384920527305",
@@ -6997,7 +8363,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5745",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906161592389696481",
@@ -7037,7 +8409,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907471353202694667",
@@ -7077,7 +8455,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910256620284241170",
@@ -7117,7 +8501,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5726",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895608666248270668",
@@ -7157,7 +8547,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5891",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895721444741049697",
@@ -7197,7 +8593,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5907",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895931339104935966",
@@ -7237,7 +8639,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895974823232891174",
@@ -7277,7 +8685,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897089344596958340",
@@ -7317,7 +8731,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897168855262914847",
@@ -7357,7 +8777,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897215586419700060",
@@ -7397,7 +8823,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897269395732920889",
@@ -7437,7 +8869,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5912",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897345469552608501",
@@ -7477,7 +8915,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897466587613583204",
@@ -7517,7 +8961,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898494074736963020",
@@ -7557,7 +9007,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5903",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898802745010386263",
@@ -7597,7 +9053,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5916",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898853046039953869",
@@ -7637,7 +9099,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899975815704181613",
@@ -7677,7 +9145,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899977945236208587",
@@ -7717,7 +9191,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900131652384940598",
@@ -7757,7 +9237,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5922",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900346370953402138",
@@ -7797,7 +9283,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901337824156808308",
@@ -7837,7 +9329,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901506194156113216",
@@ -7877,7 +9375,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901510267110510140",
@@ -7917,7 +9421,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5926",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901589193325371698",
@@ -7957,7 +9467,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5938",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901734224086516493",
@@ -7997,7 +9513,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5939",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901816670513616580",
@@ -8037,7 +9559,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905688963719460251",
@@ -8077,7 +9605,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905942052837883602",
@@ -8117,7 +9651,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4313",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905996609139855371",
@@ -8157,7 +9697,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907169595746242294",
@@ -8197,7 +9743,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907394302026269689",
@@ -8237,7 +9789,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908584944957998508",
@@ -8277,7 +9835,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908687651886682543",
@@ -8317,7 +9881,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908825939884734181",
@@ -8357,7 +9927,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908910989850528812",
@@ -8397,7 +9973,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910045862229276537",
@@ -8437,7 +10019,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910296325730168754",
@@ -8477,7 +10065,59 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911495014494596409",
+    "task": {
+      "id": "86c7fm4hk",
+      "custom_id": "NEO-5948",
+      "name": "Front End for Code Buffer 2.0",
+      "status": {
+        "status": "in progress",
+        "color": "#1090e0",
+        "type": "custom",
+        "orderindex": 5
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639078,
+      "username": "Teodor Dimitrov",
+      "email": "tdimitrov@yourbteam.com",
+      "color": "#3e63dd",
+      "initials": "TD",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639078_5Sf.jpg"
+    },
+    "billable": false,
+    "start": "1768544054232",
+    "end": "1768556805162",
+    "duration": "12750930",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768556805162",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5948",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895595241472348431",
@@ -8517,7 +10157,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895906238208760395",
@@ -8557,7 +10203,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897056927576316222",
@@ -8597,7 +10249,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897169811027355992",
@@ -8637,7 +10295,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5687",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897222332420813421",
@@ -8677,7 +10341,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4897256302021802076",
@@ -8717,7 +10387,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898511773055676395",
@@ -8757,7 +10433,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898768346013331048",
@@ -8797,7 +10479,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899991140936023551",
@@ -8837,7 +10525,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900181468083220173",
@@ -8877,7 +10571,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901397973496068143",
@@ -8917,7 +10617,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901478360704435919",
@@ -8957,7 +10663,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901764446479534603",
@@ -8997,7 +10709,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901764556152195602",
@@ -9037,7 +10755,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905760168287764226",
@@ -9077,7 +10801,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905760317202333451",
@@ -9117,7 +10847,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905990080168808009",
@@ -9157,7 +10893,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906144840305964905",
@@ -9197,7 +10939,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907208581734814647",
@@ -9237,7 +10985,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907442869482902019",
@@ -9277,7 +11031,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-4443",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907522542904633139",
@@ -9317,7 +11077,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908647764860947244",
@@ -9357,7 +11123,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908885215399462351",
@@ -9397,7 +11169,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910102633509649620",
@@ -9437,7 +11215,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910319274847729555",
@@ -9477,7 +11261,289 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911527364423151543",
+    "task": {
+      "id": "86c6zqbxv",
+      "custom_id": "NEO-5846",
+      "name": "Super: Dashboard",
+      "status": {
+        "status": "in progress",
+        "color": "#1090e0",
+        "type": "custom",
+        "orderindex": 5
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768545983808",
+    "end": "1768550383607",
+    "duration": "4399799",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768550383607",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911601187763878507",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768550384061",
+    "end": "1768550392914",
+    "duration": "8853",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768550392914",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911601344026868340",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768550393528",
+    "end": "1768555576821",
+    "duration": "5183293",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768555576821",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911688382612852649",
+    "task": {
+      "id": "86c6zqbxv",
+      "custom_id": "NEO-5846",
+      "name": "Super: Dashboard",
+      "status": {
+        "status": "in progress",
+        "color": "#1090e0",
+        "type": "custom",
+        "orderindex": 5
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768555581591",
+    "end": "1768555592651",
+    "duration": "11060",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768555592651",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911688587999530945",
+    "task": {
+      "id": "86c7m7q8z",
+      "custom_id": "NEO-5978",
+      "name": "Issues with redemptions on VIP server",
+      "status": {
+        "status": "released",
+        "color": "#008844",
+        "type": "done",
+        "orderindex": 17
+      },
+      "custom_type": 1002
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768555593963",
+    "end": "1768556177714",
+    "duration": "583751",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768556177714",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5978",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
+  },
+  {
+    "id": "4911698404700934635",
+    "task": {
+      "id": "86c6zqbxv",
+      "custom_id": "NEO-5846",
+      "name": "Super: Dashboard",
+      "status": {
+        "status": "in progress",
+        "color": "#1090e0",
+        "type": "custom",
+        "orderindex": 5
+      },
+      "custom_type": null
+    },
+    "wid": "90151498763",
+    "user": {
+      "id": 100639076,
+      "username": "Dobromir Petrevski",
+      "email": "dpetrevski@yourbteam.com",
+      "color": "#622aea",
+      "initials": "DP",
+      "profilePicture": "https://attachments.clickup.com/profilePictures/100639076_BVJ.jpg"
+    },
+    "billable": false,
+    "start": "1768556179047",
+    "end": "1768559390807",
+    "duration": "3211760",
+    "description": "",
+    "tags": [],
+    "source": "clickup_automatic",
+    "at": "1768559390807",
+    "is_locked": false,
+    "approval_id": null,
+    "task_location": {
+      "list_id": "901516922128",
+      "folder_id": "901510928967",
+      "space_id": "90156375674"
+    },
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-5846",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4895558344683376062",
@@ -9517,7 +11583,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4896221472433722249",
@@ -9557,7 +11629,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4896998989843223904",
@@ -9597,7 +11675,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4898446111562099247",
@@ -9637,7 +11721,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4899896013970305800",
@@ -9677,7 +11767,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4900470832931623457",
@@ -9717,7 +11813,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901447260057714704",
@@ -9757,7 +11859,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901447508142407716",
@@ -9797,7 +11905,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4901785744500936484",
@@ -9837,7 +11951,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4902053750577655495",
@@ -9877,7 +11997,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4905731033611991509",
@@ -9917,7 +12043,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906082063252022965",
@@ -9957,7 +12089,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906130965061792641",
@@ -9997,7 +12135,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4906340684489649452",
@@ -10037,7 +12181,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4907158998770077059",
@@ -10077,7 +12227,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4908643175268960926",
@@ -10117,7 +12273,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910067860263237954",
@@ -10157,7 +12319,13 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   },
   {
     "id": "4910700131911554022",
@@ -10197,6 +12365,12 @@
       "folder_id": "901510928967",
       "space_id": "90156375674"
     },
-    "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+    "task_url": "https://app.clickup.com/t/90151498763/NEO-93",
+    "_spaceLookup": {
+      "90156375674": "NeoCurrency"
+    },
+    "_folderLookup": {
+      "901510928967": "Projects"
+    }
   }
 ]
