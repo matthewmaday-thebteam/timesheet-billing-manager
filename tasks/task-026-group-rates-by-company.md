@@ -1,6 +1,6 @@
 # Task 026: Group Projects by Company in Rates Tab
 
-**Status:** READY FOR DEPLOYMENT
+**Status:** COMPLETE
 
 ## 1. Problem Statement
 
@@ -87,14 +87,27 @@ Project B | Hours | Rate | Revenue
 | File | Description |
 |------|-------------|
 | `supabase/migrations/018_update_view_with_client.sql` | Updates views to include client_id and client_name |
+| `supabase/migrations/019_fix_project_auto_creation.sql` | Fixes trigger to auto-create projects on INSERT OR UPDATE |
 
 ### Files Modified
 | File | Changes |
 |------|---------|
 | `src/types/index.ts` | Added `client_id`, `client_name` to `TimesheetEntry`; Added `clientId`, `clientName` to `ProjectSummary` |
 | `src/utils/calculations.ts` | Updated `aggregateByProject()` to include client info |
-| `src/components/AccordionFlat.tsx` | Added `AccordionFlatGroup` type and `groups` prop for grouped rows |
-| `src/components/BillingRatesTable.tsx` | Groups projects by `clientName`, passes groups to AccordionFlat |
+| `src/components/AccordionFlat.tsx` | Added `AccordionFlatGroup` type, `groups` prop, spacer for REVENUE column alignment |
+| `src/components/BillingRatesTable.tsx` | Groups projects by `clientName`, implements Two-Line Alignment Rule |
+| `src/components/pages/RatesPage.tsx` | Replaced flat table with BillingRatesTable accordion, added date filter |
+| `src/components/Dashboard.tsx` | Removed BillingRatesTable (now lives on RatesPage only) |
+
+### Two-Line Alignment Rule
+Implemented consistent horizontal alignment in the billing rates table:
+- **Edge Line:** Header total + 3-dot icons flush with container right padding
+- **Financial Line:** REVENUE header + all dollar amounts 16px left of icons
+
+### Bug Fix: Project Auto-Creation
+The original trigger `trg_auto_create_project` only fired on INSERT. When n8n does an UPSERT that results in an UPDATE, new projects weren't created. Migration 019 fixes this by:
+1. Changing trigger to fire on `INSERT OR UPDATE`
+2. Backfilling any missing projects from existing timesheet data
 
 ### TypeScript Validation
 - Passed with no errors
@@ -102,9 +115,10 @@ Project B | Hours | Rate | Revenue
 ### Deployment Steps
 1. Run migration 017 (add client columns) - from Task 025
 2. Run migration 018 (update views)
-3. Update n8n workflows to include client data - from Task 025
-4. Deploy frontend changes to Vercel
-5. Trigger sync to populate client data
+3. Run migration 019 (fix project auto-creation trigger)
+4. Update n8n workflows to include client data - from Task 025
+5. Deploy frontend changes to Vercel
+6. Trigger sync to populate client data
 
 ### Rollback
 If issues occur, revert frontend changes. Views can be reverted by re-running migration 006.

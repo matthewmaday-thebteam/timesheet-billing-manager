@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
@@ -9,7 +9,6 @@ import { DateRangeFilter } from './DateRangeFilter';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { ProjectCard } from './ProjectCard';
-import { BillingRatesTable } from './BillingRatesTable';
 import { EmployeePerformance } from './EmployeePerformance';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
@@ -42,12 +41,6 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  // Force re-render when billing rates change
-  const [ratesVersion, setRatesVersion] = useState(0);
-  const handleRatesChange = useCallback(() => {
-    setRatesVersion(v => v + 1);
-  }, []);
-
   const { entries, projects, resources, monthlyAggregates, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
@@ -63,11 +56,9 @@ export function Dashboard() {
   // Build database rate lookup
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
 
-  // Calculate revenue (re-calculates when ratesVersion or dbProjects changes)
+  // Calculate revenue
   const rates = getBillingRates();
   const totalRevenue = calculateTotalRevenue(projects, rates, dbRateLookup);
-  // Use ratesVersion to ensure React sees this as a dependency
-  void ratesVersion;
 
   return (
     <>
@@ -135,10 +126,6 @@ export function Dashboard() {
                 </h2>
               </div>
               <div className="space-y-3">
-                <BillingRatesTable
-                  projects={projects}
-                  onRatesChange={handleRatesChange}
-                />
                 <EmployeePerformance
                   projects={projects}
                   dbRateLookup={dbRateLookup}
