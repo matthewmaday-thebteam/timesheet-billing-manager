@@ -40,6 +40,8 @@ export function aggregateByProject(
 ): ProjectSummary[] {
   const projectMap = new Map<string, {
     totalMinutes: number;
+    clientId: string;
+    clientName: string;
     resourceMap: Map<string, {
       totalMinutes: number;
       weeklyMinutes: Map<string, number>;
@@ -55,6 +57,8 @@ export function aggregateByProject(
     if (!projectMap.has(entry.project_name)) {
       projectMap.set(entry.project_name, {
         totalMinutes: 0,
+        clientId: entry.client_id || '',
+        clientName: entry.client_name || 'Unassigned',
         resourceMap: new Map(),
       });
     }
@@ -119,6 +123,8 @@ export function aggregateByProject(
       projectName,
       totalMinutes: projectData.totalMinutes,
       resources: resources.sort((a, b) => b.totalMinutes - a.totalMinutes),
+      clientId: projectData.clientId,
+      clientName: projectData.clientName,
     });
   }
 

@@ -2,6 +2,52 @@
   {
     "timeentries": [
       {
+        "id": "4912145391913104855",
+        "task": "0",
+        "wid": "90151498763",
+        "user": {
+          "id": 87366087,
+          "username": "Kamen Kamenov",
+          "email": "kamen@yourbteam.com",
+          "color": "#cddc39",
+          "initials": "KK",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768561200000",
+        "end": "1768582800000",
+        "duration": "21600000",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768582820799",
+        "is_locked": false,
+        "approval_id": null
+      },
+      {
+        "id": "4912146031343138285",
+        "task": "0",
+        "wid": "90151498763",
+        "user": {
+          "id": 87366087,
+          "username": "Kamen Kamenov",
+          "email": "kamen@yourbteam.com",
+          "color": "#cddc39",
+          "initials": "KK",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768485600000",
+        "end": "1768500000000",
+        "duration": "14400000",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768582858903",
+        "is_locked": false,
+        "approval_id": null
+      },
+      {
         "id": "4895807803883340997",
         "task": {
           "id": "86c769m83",
@@ -848,10 +894,10 @@
           "custom_id": "NEO-5967",
           "name": "Client User> Search> Sanitize returned first/last names + email",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -888,10 +934,10 @@
           "custom_id": "NEO-5969",
           "name": "Update PurseCollector wordpress to 6.9",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -968,10 +1014,10 @@
           "custom_id": "NEO-5969",
           "name": "Update PurseCollector wordpress to 6.9",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -1008,10 +1054,10 @@
           "custom_id": "NEO-5967",
           "name": "Client User> Search> Sanitize returned first/last names + email",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -1048,10 +1094,10 @@
           "custom_id": "NEO-5969",
           "name": "Update PurseCollector wordpress to 6.9",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -1128,10 +1174,10 @@
           "custom_id": "NEO-5969",
           "name": "Update PurseCollector wordpress to 6.9",
           "status": {
-            "status": "new",
-            "color": "#656f7d",
-            "type": "unstarted",
-            "orderindex": 1
+            "status": "ready for qa",
+            "color": "#f8ae00",
+            "type": "custom",
+            "orderindex": 6
           },
           "custom_type": null
         },
@@ -1312,6 +1358,86 @@
         "tags": [],
         "source": "clickup_automatic",
         "at": "1768558728615",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+      },
+      {
+        "id": "4911833141516005978",
+        "task": {
+          "id": "86c7dxrv0",
+          "custom_id": "NEO-5921",
+          "name": "Onboarding",
+          "status": {
+            "status": "new",
+            "color": "#656f7d",
+            "type": "unstarted",
+            "orderindex": 1
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100767901,
+          "username": "Valeri",
+          "email": "vstoyanov@yourbteam.com",
+          "color": "#f57c01",
+          "initials": "V",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768560308343",
+        "end": "1768577576949",
+        "duration": "17268606",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768577576949",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5921"
+      },
+      {
+        "id": "4912058552673986282",
+        "task": {
+          "id": "86c7dxrv0",
+          "custom_id": "NEO-5921",
+          "name": "Onboarding",
+          "status": {
+            "status": "new",
+            "color": "#656f7d",
+            "type": "unstarted",
+            "orderindex": 1
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100767901,
+          "username": "Valeri",
+          "email": "vstoyanov@yourbteam.com",
+          "color": "#f57c01",
+          "initials": "V",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768577643817",
+        "end": "1768580522102",
+        "duration": "2878285",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768580522102",
         "is_locked": false,
         "approval_id": null,
         "task_location": {
@@ -5402,6 +5528,166 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
       },
       {
+        "id": "4911665962833234364",
+        "task": {
+          "id": "86c69kyk0",
+          "custom_id": "NEO-93",
+          "name": "PM",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1014
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 43120967,
+          "username": "Asparouh Mantchev",
+          "email": "asparouh.mantchev@yourbteam.com",
+          "color": "#02bcd4",
+          "initials": "AM",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/43120967_uZM.jpg"
+        },
+        "billable": false,
+        "start": "1768554250369",
+        "end": "1768572219689",
+        "duration": "17969320",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768572219689",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+      },
+      {
+        "id": "4911967635732517475",
+        "task": {
+          "id": "86c7k4eym",
+          "custom_id": "NEO-5971",
+          "name": "Universal Currency: Reports",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 43120967,
+          "username": "Asparouh Mantchev",
+          "email": "asparouh.mantchev@yourbteam.com",
+          "color": "#02bcd4",
+          "initials": "AM",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/43120967_uZM.jpg"
+        },
+        "billable": false,
+        "start": "1768572231238",
+        "end": "1768573336881",
+        "duration": "1105643",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768573336881",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5971"
+      },
+      {
+        "id": "4911986368165271314",
+        "task": {
+          "id": "86c69kyk0",
+          "custom_id": "NEO-93",
+          "name": "PM",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1014
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 43120967,
+          "username": "Asparouh Mantchev",
+          "email": "asparouh.mantchev@yourbteam.com",
+          "color": "#02bcd4",
+          "initials": "AM",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/43120967_uZM.jpg"
+        },
+        "billable": false,
+        "start": "1768573348456",
+        "end": "1768575077372",
+        "duration": "1728916",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768575077372",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+      },
+      {
+        "id": "4912077119666612858",
+        "task": {
+          "id": "86c69kyk0",
+          "custom_id": "NEO-93",
+          "name": "PM",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1014
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 43120967,
+          "username": "Asparouh Mantchev",
+          "email": "asparouh.mantchev@yourbteam.com",
+          "color": "#02bcd4",
+          "initials": "AM",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/43120967_uZM.jpg"
+        },
+        "billable": false,
+        "start": "1768578757501",
+        "end": "1768588043201",
+        "duration": "9285700",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768588043201",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+      },
+      {
         "id": "4895604386011370171",
         "task": {
           "id": "86c75xdf7",
@@ -6282,6 +6568,46 @@
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5950"
       },
       {
+        "id": "4911547695389045215",
+        "task": {
+          "id": "86c7gpnd7",
+          "custom_id": "NEO-5950",
+          "name": "Admin Password Swap every 90 days",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1005
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639082,
+          "username": "Toshko Todorov",
+          "email": "ttodorov@yourbteam.com",
+          "color": "#0091ff",
+          "initials": "TT",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639082_NnW.jpg"
+        },
+        "billable": false,
+        "start": "1768547194378",
+        "end": "1768575891370",
+        "duration": "28696992",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768575891370",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5950"
+      },
+      {
         "id": "4897129336580956744",
         "task": {
           "id": "86c741mb1",
@@ -6848,10 +7174,10 @@
           "custom_id": "NEO-5923",
           "name": "Reseller: Reward Choice - reset reward choice",
           "status": {
-            "status": "in progress",
-            "color": "#1090e0",
+            "status": "ready for qa",
+            "color": "#f8ae00",
             "type": "custom",
-            "orderindex": 5
+            "orderindex": 6
           },
           "custom_type": 1005
         },
@@ -6888,10 +7214,10 @@
           "custom_id": "NEO-5923",
           "name": "Reseller: Reward Choice - reset reward choice",
           "status": {
-            "status": "in progress",
-            "color": "#1090e0",
+            "status": "ready for qa",
+            "color": "#f8ae00",
             "type": "custom",
-            "orderindex": 5
+            "orderindex": 6
           },
           "custom_type": 1005
         },
@@ -6928,10 +7254,10 @@
           "custom_id": "NEO-5923",
           "name": "Reseller: Reward Choice - reset reward choice",
           "status": {
-            "status": "in progress",
-            "color": "#1090e0",
+            "status": "ready for qa",
+            "color": "#f8ae00",
             "type": "custom",
-            "orderindex": 5
+            "orderindex": 6
           },
           "custom_type": 1005
         },
@@ -6968,10 +7294,10 @@
           "custom_id": "NEO-5923",
           "name": "Reseller: Reward Choice - reset reward choice",
           "status": {
-            "status": "in progress",
-            "color": "#1090e0",
+            "status": "ready for qa",
+            "color": "#f8ae00",
             "type": "custom",
-            "orderindex": 5
+            "orderindex": 6
           },
           "custom_type": 1005
         },
@@ -7008,10 +7334,10 @@
           "custom_id": "NEO-5923",
           "name": "Reseller: Reward Choice - reset reward choice",
           "status": {
-            "status": "in progress",
-            "color": "#1090e0",
+            "status": "ready for qa",
+            "color": "#f8ae00",
             "type": "custom",
-            "orderindex": 5
+            "orderindex": 6
           },
           "custom_type": 1005
         },
@@ -7040,6 +7366,46 @@
           "space_id": "90156375674"
         },
         "task_url": "https://app.clickup.com/t/90151498763/NEO-5923"
+      },
+      {
+        "id": "4911706834681549849",
+        "task": {
+          "id": "86c73mmdy",
+          "custom_id": "NEO-5865",
+          "name": "Reseller: Reports - New report",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1005
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639081,
+          "username": "Tanya",
+          "email": "tangelinova@yourbteam.com",
+          "color": "#5f55ee",
+          "initials": "T",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639081_V3U.jpg"
+        },
+        "billable": false,
+        "start": "1768556679613",
+        "end": "1768566050134",
+        "duration": "9370521",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768566050134",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5865"
       },
       {
         "id": "4895701979596941516",
@@ -7392,6 +7758,86 @@
         "tags": [],
         "source": "clickup",
         "at": "1768470273754",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5726"
+      },
+      {
+        "id": "4910257272246854997",
+        "task": {
+          "id": "86c6ec846",
+          "custom_id": "NEO-5726",
+          "name": "Auto Convert all program funds to universal currency",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1005
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639080,
+          "username": "Nas",
+          "email": "amarinov@yourbteam.com",
+          "color": "#1090e0",
+          "initials": "N",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768464939527",
+        "end": "1768494238527",
+        "duration": "29299000",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768569384871",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5726"
+      },
+      {
+        "id": "4911920287811716501",
+        "task": {
+          "id": "86c6ec846",
+          "custom_id": "NEO-5726",
+          "name": "Auto Convert all program funds to universal currency",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1005
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639080,
+          "username": "Nas",
+          "email": "amarinov@yourbteam.com",
+          "color": "#1090e0",
+          "initials": "N",
+          "profilePicture": null
+        },
+        "billable": false,
+        "start": "1768549516702",
+        "end": "1768578821702",
+        "duration": "29305000",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768587954980",
         "is_locked": false,
         "approval_id": null,
         "task_location": {
@@ -8792,6 +9238,46 @@
         "tags": [],
         "source": "clickup_automatic",
         "at": "1768556805162",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-5948"
+      },
+      {
+        "id": "4911736135686642452",
+        "task": {
+          "id": "86c7fm4hk",
+          "custom_id": "NEO-5948",
+          "name": "Front End for Code Buffer 2.0",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": null
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 100639078,
+          "username": "Teodor Dimitrov",
+          "email": "tdimitrov@yourbteam.com",
+          "color": "#3e63dd",
+          "initials": "TD",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/100639078_5Sf.jpg"
+        },
+        "billable": false,
+        "start": "1768558426465",
+        "end": "1768572904760",
+        "duration": "14478295",
+        "description": "",
+        "tags": [],
+        "source": "clickup_automatic",
+        "at": "1768572904760",
         "is_locked": false,
         "approval_id": null,
         "task_location": {
@@ -10760,6 +11246,86 @@
           "space_id": "90156375674"
         },
         "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+      },
+      {
+        "id": "4911493955718049074",
+        "task": {
+          "id": "86c69kyk0",
+          "custom_id": "NEO-93",
+          "name": "PM",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1014
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 230631040,
+          "username": "Stanimir Dimitrov",
+          "email": "sdimitrov@yourbteam.com",
+          "color": null,
+          "initials": "SD",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/230631040_kpF.jpg"
+        },
+        "billable": false,
+        "start": "1768543272535",
+        "end": "1768571008914",
+        "duration": "27736379",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768571008914",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
+      },
+      {
+        "id": "4912143535698703775",
+        "task": {
+          "id": "86c69kyk0",
+          "custom_id": "NEO-93",
+          "name": "PM",
+          "status": {
+            "status": "in progress",
+            "color": "#1090e0",
+            "type": "custom",
+            "orderindex": 5
+          },
+          "custom_type": 1014
+        },
+        "wid": "90151498763",
+        "user": {
+          "id": 230631040,
+          "username": "Stanimir Dimitrov",
+          "email": "sdimitrov@yourbteam.com",
+          "color": null,
+          "initials": "SD",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/230631040_kpF.jpg"
+        },
+        "billable": false,
+        "start": "1768582229973",
+        "end": "1768588064480",
+        "duration": "5834507",
+        "description": "",
+        "tags": [],
+        "source": "clickup",
+        "at": "1768588064794",
+        "is_locked": false,
+        "approval_id": null,
+        "task_location": {
+          "list_id": "901516922128",
+          "folder_id": "901510928967",
+          "space_id": "90156375674"
+        },
+        "task_url": "https://app.clickup.com/t/90151498763/NEO-93"
       }
     ],
     "spaceLookup": {
@@ -10768,9 +11334,26 @@
     "folderLookup": {
       "901510928967": "Projects"
     },
+    "_syncMeta": {
+      "sync_run_id": "288a2294-7a76-4bd6-ade8-0241d040bae5",
+      "sync_run_at": "2026-01-16T23:11:06.423Z",
+      "fetch_complete": true,
+      "source": "clickup",
+      "workspace_id": "90151498763",
+      "range_start": "2026-01-01T00:00:00.000Z",
+      "range_end": "2026-02-01T00:00:00.000Z",
+      "total_entries": 284,
+      "members_total": 16,
+      "members_fetched": 16,
+      "members_failed": 0,
+      "error_count": 0,
+      "errors": []
+    },
     "_meta": {
-      "totalTimeEntries": 269,
-      "teamMembersChecked": 15,
+      "totalTimeEntries": 284,
+      "teamMembersChecked": 16,
+      "teamMembersFetched": 16,
+      "teamMembersFailed": 0,
       "spacesLoaded": 1,
       "foldersLoaded": 1,
       "rangeStart": "2026-01-01T00:00:00.000Z",

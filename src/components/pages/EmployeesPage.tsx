@@ -4,6 +4,7 @@ import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorModal } from '../EmployeeEditorModal';
 import { MetricCard } from '../MetricCard';
+import { Alert } from '../Alert';
 import type { Resource, ResourceWithGrouping } from '../../types';
 
 export function EmployeesPage() {
@@ -45,14 +46,11 @@ export function EmployeesPage() {
           </p>
         </div>
         {incompleteCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-warning-light border border-warning rounded-md">
-            <svg className="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span className="text-sm font-medium text-warning">
-              {incompleteCount} incomplete {incompleteCount === 1 ? 'record' : 'records'}
-            </span>
-          </div>
+          <Alert
+            message={`${incompleteCount} incomplete ${incompleteCount === 1 ? 'record' : 'records'}`}
+            icon="warning"
+            variant="warning"
+          />
         )}
       </div>
 

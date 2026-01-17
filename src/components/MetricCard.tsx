@@ -27,7 +27,7 @@ export function MetricCard({
   const titleClasses = isAlert
     ? 'text-white'
     : isWarning
-      ? 'text-warning-dark'
+      ? 'text-warning-text-dark'
       : 'text-vercel-gray-400';
 
   const valueClasses = isAlert

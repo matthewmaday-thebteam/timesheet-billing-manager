@@ -13,6 +13,9 @@ export interface TimesheetEntry {
   project_key: string;
   user_key: string;
   task_key: string;
+  // Client/Company fields (for Company => Project grouping)
+  client_id: string;
+  client_name: string;
 }
 
 export interface TaskSummary {
@@ -33,6 +36,9 @@ export interface ProjectSummary {
   projectName: string;
   totalMinutes: number;
   resources: ResourceSummary[];
+  // Client/Company info (for grouping)
+  clientId: string;
+  clientName: string;
 }
 
 export interface DateRange {
