@@ -6,6 +6,7 @@ import { Spinner } from './components/Spinner';
 import { HolidaysPage } from './components/pages/HolidaysPage';
 import { EmployeesPage } from './components/pages/EmployeesPage';
 import { RatesPage } from './components/pages/RatesPage';
+import { RevenuePage } from './components/pages/RevenuePage';
 import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { LoginPage } from './components/pages/LoginPage';
@@ -62,6 +63,8 @@ function AuthenticatedApp() {
         return <EmployeesPage />;
       case 'rates':
         return <RatesPage />;
+      case 'revenue':
+        return <RevenuePage />;
       case 'eom-reports':
         return <EOMReportsPage />;
       case 'users':

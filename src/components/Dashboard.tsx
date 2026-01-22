@@ -82,11 +82,29 @@ export function Dashboard() {
 
         <DateRangeFilter dateRange={dateRange} onChange={setDateRange} />
 
-        {/* Charts and KPIs */}
+        {/* Stats Overview - Above Charts */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Spinner size="md" />
+            <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
+          </div>
+        ) : (
+          <StatsOverview
+            projects={projects}
+            resources={resources}
+            underHoursCount={underHoursItems.length}
+            totalRevenue={totalRevenue}
+            onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
+          />
+        )}
+
+        {/* Charts */}
         <div className="space-y-3">
           <DashboardChartsRow
             resources={resources}
+            entries={entries}
             monthlyAggregates={monthlyAggregates}
+            projectRates={dbRateLookup}
             loading={loading}
           />
 
@@ -97,21 +115,6 @@ export function Dashboard() {
                 <span className="text-sm text-error">Error loading data: {error}</span>
               </div>
             </div>
-          )}
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="md" />
-              <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
-            </div>
-          ) : (
-            <StatsOverview
-              projects={projects}
-              resources={resources}
-              underHoursCount={underHoursItems.length}
-              totalRevenue={totalRevenue}
-              onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
-            />
           )}
         </div>
 

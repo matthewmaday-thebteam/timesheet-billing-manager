@@ -51,8 +51,8 @@ export interface AccordionFlatGroup {
 }
 
 export interface AccordionFlatProps {
-  /** Content displayed on the left side of the header */
-  header: ReactNode;
+  /** Content displayed on the left side of the header (optional) */
+  header?: ReactNode;
   /** Optional content displayed on the right side of the header */
   headerRight?: ReactNode;
   /** Table column definitions */
@@ -67,6 +67,8 @@ export interface AccordionFlatProps {
   defaultExpanded?: boolean;
   /** Whether group sections start expanded (only applies when using groups) */
   groupsDefaultExpanded?: boolean;
+  /** When true, removes expand/collapse functionality and keeps content always visible */
+  alwaysExpanded?: boolean;
   /** Optional className for the container */
   className?: string;
 }
@@ -80,9 +82,10 @@ export function AccordionFlat({
   footer,
   defaultExpanded = false,
   groupsDefaultExpanded = true,
+  alwaysExpanded = false,
   className = '',
 }: AccordionFlatProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useState(alwaysExpanded || defaultExpanded);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(groupsDefaultExpanded && groups ? groups.map(g => g.id) : [])
   );
@@ -103,30 +106,41 @@ export function AccordionFlat({
   const isGrouped = groups && groups.length > 0;
   const displayRows = isGrouped ? [] : (rows || []);
 
+  const hasHeader = header || headerRight;
+
   return (
     <div className={`bg-white rounded-lg border border-vercel-gray-100 overflow-hidden ${className}`}>
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-vercel-gray-50 transition-colors focus:outline-none"
-      >
-        <div className="flex items-center gap-3">
-          <svg
-            className={`w-4 h-4 text-vercel-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Header - only render if header content exists */}
+      {hasHeader && (
+        alwaysExpanded ? (
+          <div className="w-full flex items-center justify-between p-6">
+            {header && <div>{header}</div>}
+            {headerRight && <div>{headerRight}</div>}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="w-full flex items-center justify-between p-6 text-left hover:bg-vercel-gray-50 transition-colors focus:outline-none"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <div>{header}</div>
-        </div>
-        {headerRight && <div>{headerRight}</div>}
-      </button>
+            <div className="flex items-center gap-3">
+              <svg
+                className={`w-4 h-4 text-vercel-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              {header && <div>{header}</div>}
+            </div>
+            {headerRight && <div>{headerRight}</div>}
+          </button>
+        )
+      )}
 
       {/* Table content */}
-      {expanded && (
+      {(alwaysExpanded || expanded) && (
         <div className="border-t border-vercel-gray-100">
           <table className="w-full">
             <thead className="bg-vercel-gray-50">

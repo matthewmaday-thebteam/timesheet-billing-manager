@@ -1,16 +1,14 @@
 import { useState, useMemo } from 'react';
 import {
   calculateProjectRevenue,
-  formatCurrency,
   getEffectiveRate,
   buildDbRateLookupByName,
 } from '../utils/billing';
-import { minutesToHours } from '../utils/calculations';
 import { useProjects } from '../hooks/useProjects';
 import { AccordionFlat } from './AccordionFlat';
 import { ProjectEditorModal } from './ProjectEditorModal';
 import { DropdownMenu } from './DropdownMenu';
-import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatFooterCell, AccordionFlatGroup } from './AccordionFlat';
+import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
 import type { ProjectSummary, Project } from '../types';
 
 interface BillingRatesTableProps {
@@ -66,37 +64,16 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
     });
   }, [projects, dbRateLookup]);
 
-  const totalRevenue = useMemo(() => {
-    return sortedProjects.reduce(
-      (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
-      0
-    );
-  }, [sortedProjects, dbRateLookup]);
-
-  // Define columns for AccordionFlat (no separate actions column - icon is inside revenue cell)
+  // Define columns for AccordionFlat
   const columns: AccordionFlatColumn[] = [
     { key: 'project', label: 'Project', align: 'left' },
-    { key: 'hours', label: 'Hours', align: 'right' },
     { key: 'rate', label: 'Rate ($/hr)', align: 'right' },
-    { key: 'revenue', label: 'Revenue', align: 'right' },
   ];
 
   // Helper to build a row for a project
   const buildProjectRow = (project: ProjectSummary): AccordionFlatRow => {
     const effectiveRate = getEffectiveRate(project.projectName, dbRateLookup, {});
     const hasDbRate = dbRateLookup.has(project.projectName);
-    const revenue = calculateProjectRevenue(project, {}, dbRateLookup);
-
-    // Rate cell content (display only)
-    const rateCell = hasDbRate ? (
-      <span className="text-sm text-vercel-gray-600">
-        ${effectiveRate.toFixed(2)}
-      </span>
-    ) : (
-      <span className="text-sm text-vercel-gray-300">
-        ${effectiveRate.toFixed(2)} <span className="text-2xs">(default)</span>
-      </span>
-    );
 
     // Actions dropdown
     const menuItems = [
@@ -111,19 +88,24 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
       },
     ];
 
+    // Rate cell with action dropdown - use bteam-brand for undefined rates
+    const rateContent = hasDbRate ? (
+      <span className="text-sm text-vercel-gray-600">
+        ${effectiveRate.toFixed(2)}
+      </span>
+    ) : (
+      <span className="text-sm text-bteam-brand">
+        ${effectiveRate.toFixed(2)} <span className="text-2xs">(default)</span>
+      </span>
+    );
+
     return {
       id: project.projectName,
       cells: {
-        project: <span className="text-vercel-gray-600">{project.projectName}</span>,
-        hours: <span className="text-vercel-gray-400">{minutesToHours(project.totalMinutes)}</span>,
-        rate: rateCell,
-        // Revenue cell includes the action icon with flexbox layout
-        revenue: (
+        project: <span className={hasDbRate ? "text-vercel-gray-600" : "text-bteam-brand"}>{project.projectName}</span>,
+        rate: (
           <div className="flex items-center justify-end">
-            <span className={`font-medium ${revenue > 0 ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}`}>
-              {formatCurrency(revenue)}
-            </span>
-            {/* 16px gap (ml-4) + fixed width icon (w-6 = 24px) */}
+            {rateContent}
             <div className="ml-4 w-6 shrink-0 flex justify-center" onClick={(e) => e.stopPropagation()}>
               <DropdownMenu items={menuItems} />
             </div>
@@ -153,22 +135,12 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
     const result: AccordionFlatGroup[] = [];
 
     for (const [clientName, clientProjects] of groupedByCompany) {
-      // Calculate group totals
-      const groupMinutes = clientProjects.reduce((sum, p) => sum + p.totalMinutes, 0);
-      const groupRevenue = clientProjects.reduce(
-        (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
-        0
-      );
-
       result.push({
         id: clientName,
         label: clientName,
         // Include invisible spacer (ml-4 + w-6 = 40px) to align with project row icons
         labelRight: (
           <div className="flex items-center">
-            <span className="text-vercel-gray-400">
-              {minutesToHours(groupMinutes)}h · {formatCurrency(groupRevenue)}
-            </span>
             {/* Invisible spacer matching icon container: 16px gap + 24px icon width */}
             <div className="ml-4 w-6 shrink-0" />
           </div>
@@ -191,44 +163,14 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
     });
   }, [groupedByCompany, dbRateLookup]);
 
-  // Footer cells (revenue includes spacer for alignment)
-  const footer: AccordionFlatFooterCell[] = [
-    { columnKey: 'project', content: 'Total' },
-    { columnKey: 'hours', content: minutesToHours(projects.reduce((sum, p) => sum + p.totalMinutes, 0)) },
-    { columnKey: 'rate', content: null },
-    {
-      columnKey: 'revenue',
-      content: (
-        <div className="flex items-center justify-end">
-          <span>{formatCurrency(totalRevenue)}</span>
-          {/* Invisible spacer matching icon container: 16px gap + 24px icon width */}
-          <div className="ml-4 w-6 shrink-0" />
-        </div>
-      )
-    },
-  ];
+  // No footer needed for rates-only view
 
   return (
     <>
       <AccordionFlat
-        header={
-          <>
-            <h3 className="text-lg font-semibold text-vercel-gray-600">Billing Rates & Revenue</h3>
-            <p className="text-xs font-mono text-vercel-gray-400">Projects grouped by company</p>
-          </>
-        }
-        headerRight={
-          <div className="text-right">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-success" />
-              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
-            </div>
-            <div className="text-xs font-mono text-vercel-gray-400">total revenue</div>
-          </div>
-        }
+        alwaysExpanded={true}
         columns={columns}
         groups={groups}
-        footer={footer}
       />
 
       {/* Editor Modal */}

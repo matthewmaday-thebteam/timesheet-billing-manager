@@ -7,9 +7,10 @@ import type { DateRange, DateFilterMode } from '../types';
 interface DateRangeFilterProps {
   dateRange: DateRange;
   onChange: (range: DateRange) => void;
+  hideCustomRange?: boolean;
 }
 
-export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
+export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false }: DateRangeFilterProps) {
   const [mode, setMode] = useState<DateFilterMode>('current');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
@@ -59,12 +60,14 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
         >
           Select Month
         </Button>
-        <Button
-          variant={mode === 'custom' ? 'primary' : 'secondary'}
-          onClick={() => handleModeChange('custom')}
-        >
-          Custom Range
-        </Button>
+        {!hideCustomRange && (
+          <Button
+            variant={mode === 'custom' ? 'primary' : 'secondary'}
+            onClick={() => handleModeChange('custom')}
+          >
+            Custom Range
+          </Button>
+        )}
       </div>
 
       {mode === 'month' && (
