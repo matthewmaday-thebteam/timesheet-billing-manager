@@ -8,9 +8,11 @@ interface DateRangeFilterProps {
   dateRange: DateRange;
   onChange: (range: DateRange) => void;
   hideCustomRange?: boolean;
+  /** Optional content to display on the right side (replaces date range text) */
+  rightContent?: React.ReactNode;
 }
 
-export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false }: DateRangeFilterProps) {
+export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false, rightContent }: DateRangeFilterProps) {
   const [mode, setMode] = useState<DateFilterMode>('current');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
@@ -114,8 +116,12 @@ export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false }
         </div>
       )}
 
-      <div className="ml-auto text-sm text-vercel-gray-400">
-        {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
+      <div className="ml-auto">
+        {rightContent || (
+          <span className="text-sm text-vercel-gray-400">
+            {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
+          </span>
+        )}
       </div>
     </div>
   );

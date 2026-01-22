@@ -6,6 +6,7 @@ interface MetricCardProps {
   isAlert?: boolean;
   onClick?: () => void;
   actionLabel?: string;
+  hideDot?: boolean;
 }
 
 export function MetricCard({
@@ -16,6 +17,7 @@ export function MetricCard({
   isAlert = false,
   onClick,
   actionLabel,
+  hideDot = false,
 }: MetricCardProps) {
   // Determine card styling based on alert/warning state
   const cardClasses = isAlert
@@ -44,7 +46,7 @@ export function MetricCard({
     red: 'bg-error',
   };
 
-  const showStatusDot = !isAlert && (statusColor !== 'default' || isWarning);
+  const showStatusDot = !hideDot && !isAlert && (statusColor !== 'default' || isWarning);
   const dotColor = isWarning ? dotColors.orange : dotColors[statusColor];
 
   // Button classes based on alert state
@@ -53,7 +55,7 @@ export function MetricCard({
     : 'bg-vercel-gray-100 border-vercel-gray-100 text-vercel-gray-400 hover:bg-vercel-gray-200 hover:border-vercel-gray-200';
 
   return (
-    <div className={`relative p-6 rounded-lg border ${cardClasses}`}>
+    <div className={`relative h-full p-6 rounded-lg border ${cardClasses}`}>
       <p className={`text-xs font-mono mb-1 ${titleClasses}`}>{title}</p>
 
       <div className="flex items-center gap-2 mt-1">

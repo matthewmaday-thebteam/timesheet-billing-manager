@@ -1,7 +1,13 @@
+import { useMemo } from 'react';
 import { minutesToHours } from '../utils/calculations';
 import { formatCurrency } from '../utils/billing';
+import { ANNUAL_BUDGET, TARGET_RATIO } from '../config/chartConfig';
 import { MetricCard } from './MetricCard';
 import type { ProjectSummary, ResourceSummary } from '../types';
+
+// Monthly budget and target from annual values
+const MONTHLY_BUDGET = ANNUAL_BUDGET / 12;
+const MONTHLY_TARGET = (ANNUAL_BUDGET * TARGET_RATIO) / 12;
 
 interface StatsOverviewProps {
   projects: ProjectSummary[];
@@ -21,35 +27,74 @@ export function StatsOverview({
   const totalMinutes = projects.reduce((sum, p) => sum + p.totalMinutes, 0);
   const hasUnderHours = underHoursCount > 0;
 
+  // Calculate revenue status
+  const revenueStatus = useMemo(() => {
+    if (projects.length === 0) {
+      return { label: 'No Data', color: 'default' as const };
+    }
+
+    const aboveTargetThreshold = MONTHLY_TARGET * 1.05;
+
+    if (totalRevenue >= aboveTargetThreshold) {
+      return { label: 'Above Target', color: 'green' as const };
+    }
+    if (totalRevenue >= MONTHLY_TARGET) {
+      return { label: 'On Target', color: 'green' as const };
+    }
+    if (totalRevenue >= MONTHLY_BUDGET) {
+      return { label: 'At Budget', color: 'orange' as const };
+    }
+    return { label: 'Below Budget', color: 'red' as const };
+  }, [projects.length, totalRevenue]);
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-      <MetricCard
-        title="Total Hours"
-        value={minutesToHours(totalMinutes)}
-      />
+    <div className="flex gap-4">
+      <div className="w-[15%]">
+        <MetricCard
+          title="Total Hours"
+          value={minutesToHours(totalMinutes)}
+        />
+      </div>
 
-      <MetricCard
-        title="Total Revenue"
-        value={formatCurrency(totalRevenue)}
-      />
+      <div className="w-[20%]">
+        <MetricCard
+          title="Total Revenue"
+          value={formatCurrency(totalRevenue)}
+        />
+      </div>
 
-      <MetricCard
-        title="Projects"
-        value={projects.length}
-      />
+      <div className="w-[20%]">
+        <MetricCard
+          title="Status"
+          value={revenueStatus.label}
+          statusColor={revenueStatus.color}
+          hideDot
+        />
+      </div>
 
-      <MetricCard
-        title="Resources"
-        value={resources.length}
-      />
+      <div className="w-[10%]">
+        <MetricCard
+          title="Projects"
+          value={projects.length}
+        />
+      </div>
 
-      <MetricCard
-        title="Resources Under Target"
-        value={underHoursCount}
-        isAlert={hasUnderHours}
-        onClick={onUnderHoursClick}
-        actionLabel="View"
-      />
+      <div className="w-[10%]">
+        <MetricCard
+          title="Resources"
+          value={resources.length}
+        />
+      </div>
+
+      <div className="w-[25%]">
+        <MetricCard
+          title="Resources Under Target"
+          value={underHoursCount}
+          isAlert={hasUnderHours}
+          onClick={onUnderHoursClick}
+          actionLabel="View"
+        />
+      </div>
     </div>
   );
 }
