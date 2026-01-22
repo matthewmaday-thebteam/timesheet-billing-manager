@@ -17,7 +17,7 @@ export function RevenuePage() {
     };
   });
 
-  const { projects, loading, error } = useTimesheetData(dateRange);
+  const { projects, entries, loading, error } = useTimesheetData(dateRange);
   const { projects: dbProjects } = useProjects();
 
   // Calculate total revenue
@@ -70,7 +70,7 @@ export function RevenuePage() {
         </div>
       ) : (
         <RevenueTable
-          projects={projects}
+          entries={entries}
         />
       )}
     </div>
