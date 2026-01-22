@@ -34,19 +34,17 @@ export function RevenuePage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-vercel-gray-600">Revenue</h1>
-            {!loading && (
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-success" />
-                <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
-              </div>
-            )}
-          </div>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Revenue</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
             Revenue for the month of <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
           </p>
         </div>
+        {!loading && (
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-success" />
+            <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
+          </div>
+        )}
       </div>
 
       {/* Date Range Filter */}

@@ -67,13 +67,13 @@ export function RevenueTable({ projects }: RevenueTableProps) {
     const hasDbRate = dbRateLookup.has(project.projectName);
     const revenue = calculateProjectRevenue(project, {}, dbRateLookup);
 
-    // Rate cell content (display only)
+    // Rate cell content (display only) - use gray-200 for all project row text
     const rateCell = hasDbRate ? (
-      <span className="text-sm text-vercel-gray-600">
+      <span className="text-sm text-vercel-gray-200">
         ${effectiveRate.toFixed(2)}
       </span>
     ) : (
-      <span className="text-sm text-vercel-gray-300">
+      <span className="text-sm text-vercel-gray-200">
         ${effectiveRate.toFixed(2)} <span className="text-2xs">(default)</span>
       </span>
     );
@@ -81,11 +81,11 @@ export function RevenueTable({ projects }: RevenueTableProps) {
     return {
       id: project.projectName,
       cells: {
-        project: <span className="text-vercel-gray-600">{project.projectName}</span>,
-        hours: <span className="text-vercel-gray-400">{minutesToHours(project.totalMinutes)}</span>,
+        project: <span className="text-vercel-gray-200">{project.projectName}</span>,
+        hours: <span className="text-vercel-gray-200">{minutesToHours(project.totalMinutes)}</span>,
         rate: rateCell,
         revenue: (
-          <span className={`font-medium ${revenue > 0 ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}`}>
+          <span className="text-vercel-gray-200">
             {formatCurrency(revenue)}
           </span>
         ),
@@ -114,7 +114,6 @@ export function RevenueTable({ projects }: RevenueTableProps) {
 
     for (const [clientName, clientProjects] of groupedByCompany) {
       // Calculate group totals
-      const groupMinutes = clientProjects.reduce((sum, p) => sum + p.totalMinutes, 0);
       const groupRevenue = clientProjects.reduce(
         (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
         0
@@ -124,8 +123,8 @@ export function RevenueTable({ projects }: RevenueTableProps) {
         id: clientName,
         label: clientName,
         labelRight: (
-          <span className="text-vercel-gray-400">
-            {minutesToHours(groupMinutes)}h · {formatCurrency(groupRevenue)}
+          <span className="text-black font-medium">
+            {formatCurrency(groupRevenue)}
           </span>
         ),
         rows: clientProjects.map(buildProjectRow),

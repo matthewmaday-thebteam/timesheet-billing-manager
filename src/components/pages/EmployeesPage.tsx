@@ -4,7 +4,6 @@ import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorModal } from '../EmployeeEditorModal';
 import { MetricCard } from '../MetricCard';
-import { Alert } from '../Alert';
 import type { Resource, ResourceWithGrouping } from '../../types';
 
 export function EmployeesPage() {
@@ -45,13 +44,6 @@ export function EmployeesPage() {
             Manage employee information and enrichment data
           </p>
         </div>
-        {incompleteCount > 0 && (
-          <Alert
-            message={`${incompleteCount} incomplete ${incompleteCount === 1 ? 'record' : 'records'}`}
-            icon="warning"
-            variant="warning"
-          />
-        )}
       </div>
 
       {/* Stats */}
@@ -76,7 +68,7 @@ export function EmployeesPage() {
         <MetricCard
           title="Incomplete"
           value={incompleteCount}
-          isWarning={incompleteCount > 0}
+          isAlert={incompleteCount > 0}
         />
       </div>
 
