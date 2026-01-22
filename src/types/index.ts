@@ -132,6 +132,102 @@ export interface ProjectFormData {
   rate: number | null;
 }
 
+// ============================================================================
+// Monthly Project Rates Types (Task 027)
+// ============================================================================
+
+/**
+ * A monthly rate record from the project_monthly_rates table.
+ */
+export interface ProjectMonthlyRate {
+  id: string;
+  project_id: string;
+  rate_month: string;  // ISO date string, always 1st of month (YYYY-MM-DD)
+  rate: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Month selection for the Rates page.
+ */
+export interface MonthSelection {
+  year: number;
+  month: number; // 1-12
+}
+
+/**
+ * Source of an effective rate:
+ * - 'explicit': Rate set explicitly for this month
+ * - 'inherited': Rate inherited from a previous month
+ * - 'backfill': Viewing month before project existed, using first_seen_month rate
+ * - 'default': Fallback when no rate exists (data integrity issue)
+ */
+export type RateSource = 'explicit' | 'inherited' | 'backfill' | 'default';
+
+/**
+ * Project rate display data for the Rates page.
+ * Includes "what" (rate), "why" (source), and context (existence).
+ */
+export interface ProjectRateDisplay {
+  projectId: string;
+  externalProjectId: string;
+  projectName: string;
+  clientId: string | null;
+  clientName: string | null;
+  firstSeenMonth: string | null;
+
+  // What: the effective rate for the selected month
+  effectiveRate: number;
+
+  // Why: where the rate came from
+  source: RateSource;
+  sourceMonth: string | null;  // The month the rate was set (null for 'default')
+
+  // Context
+  existedInSelectedMonth: boolean;  // true if project existed in the selected month
+
+  // Edit info
+  hasExplicitRateThisMonth: boolean;  // source === 'explicit'
+}
+
+/**
+ * Rate history entry for a project (for RateEditModal).
+ */
+export interface RateHistoryEntry {
+  rateMonth: string;
+  rate: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Result from get_all_project_rates_for_month RPC.
+ */
+export interface ProjectRatesForMonthResult {
+  project_id: string;
+  external_project_id: string;
+  project_name: string;
+  client_id: string | null;
+  client_name: string | null;
+  first_seen_month: string | null;
+  effective_rate: number;
+  source: RateSource;
+  source_month: string | null;
+  existed_in_month: boolean;
+}
+
+/**
+ * Result from get_effective_rates_for_range RPC.
+ */
+export interface EffectiveRatesForRangeResult {
+  project_id: string;
+  rate_month: string;
+  effective_rate: number;
+  source: RateSource;
+  source_month: string | null;
+}
+
 // User Management Types
 export type UserRole = 'admin' | 'user';
 

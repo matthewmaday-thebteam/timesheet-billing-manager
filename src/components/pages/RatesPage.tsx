@@ -1,75 +1,71 @@
 import { useState, useCallback, useMemo } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { useTimesheetData } from '../../hooks/useTimesheetData';
-import { useProjects } from '../../hooks/useProjects';
-import { buildDbRateLookupByName } from '../../utils/billing';
-import { DateRangeFilter } from '../DateRangeFilter';
+import { MonthPicker } from '../MonthPicker';
 import { BillingRatesTable } from '../BillingRatesTable';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';
-import type { DateRange } from '../../types';
+import type { MonthSelection } from '../../types';
+import {
+  useMonthlyRates,
+  getCurrentMonth,
+  formatMonthDisplay,
+  isFutureMonth,
+} from '../../hooks/useMonthlyRates';
 
 const TARGET_RATE_2026 = 60;
 
 export function RatesPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
 
-  // Force re-render when billing rates change
-  const [ratesVersion, setRatesVersion] = useState(0);
-  const handleRatesChange = useCallback(() => {
-    setRatesVersion(v => v + 1);
-  }, []);
+  // Fetch monthly rates using the new hook
+  const {
+    projectsWithRates,
+    isLoading,
+    error,
+    updateRate,
+    refetch,
+  } = useMonthlyRates({ selectedMonth });
 
-  const { projects, loading, error } = useTimesheetData(dateRange);
-  const { projects: dbProjects } = useProjects();
-
-  // Build rate lookup
-  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
-
-  // Use ratesVersion to ensure React sees this as a dependency
-  void ratesVersion;
-
-  // Calculate metrics
+  // Calculate metrics from monthly rates data
   const rateMetrics = useMemo(() => {
-    // Get unique project names from timesheet data
-    const projectNames = new Set(projects.map(p => p.projectName));
+    const projectsInMonth = projectsWithRates.filter(p => p.existedInSelectedMonth);
 
-    // Count projects with defined rates and calculate average
     let totalRate = 0;
     let ratedCount = 0;
-    let noRateCount = 0;
+    let noExplicitRateCount = 0;
     let atTargetRateCount = 0;
 
-    for (const projectName of projectNames) {
-      const rate = dbRateLookup.get(projectName);
-      if (rate !== undefined && rate !== null) {
-        totalRate += rate;
-        ratedCount++;
-        if (rate >= TARGET_RATE_2026) {
-          atTargetRateCount++;
-        }
-      } else {
-        noRateCount++;
+    for (const project of projectsWithRates) {
+      totalRate += project.effectiveRate;
+      ratedCount++;
+
+      if (project.effectiveRate >= TARGET_RATE_2026) {
+        atTargetRateCount++;
+      }
+
+      // Count projects without an explicit rate for this month
+      if (!project.hasExplicitRateThisMonth) {
+        noExplicitRateCount++;
       }
     }
 
     const averageRate = ratedCount > 0 ? totalRate / ratedCount : 0;
 
     return {
+      totalProjects: projectsWithRates.length,
+      projectsInMonth: projectsInMonth.length,
       averageRate,
-      noRateCount,
+      noExplicitRateCount,
       targetRate: TARGET_RATE_2026,
       atTargetRateCount,
     };
-  }, [projects, dbRateLookup]);
+  }, [projectsWithRates]);
+
+  const handleRatesChange = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const currentYear = new Date().getFullYear();
+  const isFuture = isFutureMonth(selectedMonth);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -78,13 +74,38 @@ export function RatesPage() {
         <div>
           <h1 className="text-xl font-semibold text-vercel-gray-600">Current and Historical Rates</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
-            Set Rates for the month of <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
+            {isFuture ? 'Schedule rates for' : 'Set rates for'}{' '}
+            <span className="text-bteam-brand font-medium">{formatMonthDisplay(selectedMonth)}</span>
           </p>
         </div>
       </div>
 
-      {/* Date Range Filter */}
-      <DateRangeFilter dateRange={dateRange} onChange={setDateRange} hideCustomRange={true} />
+      {/* Month Picker */}
+      <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
+        <div className="flex items-center justify-between">
+          <MonthPicker
+            selectedMonth={selectedMonth}
+            onChange={setSelectedMonth}
+            showTodayButton={true}
+          />
+
+          {/* Rate source legend */}
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span className="text-vercel-gray-400">Set this month</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span className="text-vercel-gray-400">Inherited</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-vercel-gray-300"></span>
+              <span className="text-vercel-gray-400">Default</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -93,17 +114,17 @@ export function RatesPage() {
           value={`$${rateMetrics.averageRate.toFixed(2)}`}
         />
         <MetricCard
-          title={`${currentYear} Rate`}
+          title={`${currentYear} Target`}
           value={`$${rateMetrics.targetRate.toFixed(2)}`}
         />
         <MetricCard
-          title={`At ${currentYear} Rate`}
+          title={`At ${currentYear} Target`}
           value={rateMetrics.atTargetRateCount}
         />
         <MetricCard
-          title="No Rate Assigned"
-          value={rateMetrics.noRateCount}
-          isAlert={rateMetrics.noRateCount > 0}
+          title="Inherited/Default"
+          value={rateMetrics.noExplicitRateCount}
+          isAlert={false}
         />
       </div>
 
@@ -120,14 +141,16 @@ export function RatesPage() {
       )}
 
       {/* Billing Rates Table */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner size="md" />
-          <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
+          <span className="ml-3 text-sm text-vercel-gray-400">Loading rates...</span>
         </div>
       ) : (
         <BillingRatesTable
-          projects={projects}
+          projectsWithRates={projectsWithRates}
+          selectedMonth={selectedMonth}
+          onUpdateRate={updateRate}
           onRatesChange={handleRatesChange}
         />
       )}

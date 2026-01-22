@@ -1,45 +1,67 @@
 import { useState, useMemo } from 'react';
-import {
-  calculateProjectRevenue,
-  getEffectiveRate,
-  buildDbRateLookupByName,
-} from '../utils/billing';
-import { useProjects } from '../hooks/useProjects';
 import { AccordionFlat } from './AccordionFlat';
-import { ProjectEditorModal } from './ProjectEditorModal';
+import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
+import { formatRateMonth } from '../hooks/useRateHistory';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
-import type { ProjectSummary, Project } from '../types';
+import type { ProjectRateDisplay, MonthSelection, RateSource } from '../types';
 
 interface BillingRatesTableProps {
-  projects: ProjectSummary[];
+  projectsWithRates: ProjectRateDisplay[];
+  selectedMonth: MonthSelection;
+  onUpdateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   onRatesChange: () => void;
 }
 
-export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTableProps) {
-  // Get database projects and update function
-  const { projects: dbProjects, updateProject, isOperating } = useProjects();
-  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
+/**
+ * Get color class for rate source indicator dot
+ */
+function getSourceDotColor(source: RateSource): string {
+  switch (source) {
+    case 'explicit':
+      return 'bg-green-500';
+    case 'inherited':
+    case 'backfill':
+      return 'bg-blue-500';
+    case 'default':
+      return 'bg-vercel-gray-300';
+    default:
+      return 'bg-vercel-gray-300';
+  }
+}
 
-  // Build lookup from project name to Project object
-  const projectByName = useMemo(() => {
-    const map = new Map<string, Project>();
-    for (const p of dbProjects) {
-      map.set(p.project_name, p);
-    }
-    return map;
-  }, [dbProjects]);
+/**
+ * Get secondary text for rate (source info)
+ */
+function getSourceLabel(project: ProjectRateDisplay): string | null {
+  switch (project.source) {
+    case 'explicit':
+      return null; // No label needed for explicit
+    case 'inherited':
+      return project.sourceMonth ? `from ${formatRateMonth(project.sourceMonth)}` : 'inherited';
+    case 'backfill':
+      return project.sourceMonth ? `from ${formatRateMonth(project.sourceMonth)}` : 'backfill';
+    case 'default':
+      return 'default';
+    default:
+      return null;
+  }
+}
 
+export function BillingRatesTable({
+  projectsWithRates,
+  selectedMonth,
+  onUpdateRate,
+  onRatesChange,
+}: BillingRatesTableProps) {
   // Modal state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectRateDisplay | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleEditClick = (projectName: string) => {
-    const project = projectByName.get(projectName);
-    if (project) {
-      setSelectedProject(project);
-      setIsEditorOpen(true);
-    }
+  const handleEditClick = (project: ProjectRateDisplay) => {
+    setSelectedProject(project);
+    setIsEditorOpen(true);
   };
 
   const handleCloseEditor = () => {
@@ -47,22 +69,29 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
     setSelectedProject(null);
   };
 
-  const handleSaveRate = async (id: string, data: { rate: number | null }) => {
-    const success = await updateProject(id, data);
-    if (success) {
-      onRatesChange();
+  const handleSaveRate = async (projectId: string, month: MonthSelection, rate: number) => {
+    setIsSaving(true);
+    try {
+      const success = await onUpdateRate(projectId, month, rate);
+      if (success) {
+        onRatesChange();
+      }
+      return success;
+    } finally {
+      setIsSaving(false);
     }
-    return success;
   };
 
-  // Sort projects by revenue (highest first)
+  // Sort projects by rate (highest first), then by name
   const sortedProjects = useMemo(() => {
-    return [...projects].sort((a, b) => {
-      const revenueA = calculateProjectRevenue(a, {}, dbRateLookup);
-      const revenueB = calculateProjectRevenue(b, {}, dbRateLookup);
-      return revenueB - revenueA;
+    return [...projectsWithRates].sort((a, b) => {
+      // Sort by rate descending
+      const rateDiff = b.effectiveRate - a.effectiveRate;
+      if (rateDiff !== 0) return rateDiff;
+      // Then by name ascending
+      return a.projectName.localeCompare(b.projectName);
     });
-  }, [projects, dbRateLookup]);
+  }, [projectsWithRates]);
 
   // Define columns for AccordionFlat
   const columns: AccordionFlatColumn[] = [
@@ -71,15 +100,15 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
   ];
 
   // Helper to build a row for a project
-  const buildProjectRow = (project: ProjectSummary): AccordionFlatRow => {
-    const effectiveRate = getEffectiveRate(project.projectName, dbRateLookup, {});
-    const hasDbRate = dbRateLookup.has(project.projectName);
+  const buildProjectRow = (project: ProjectRateDisplay): AccordionFlatRow => {
+    const sourceDotColor = getSourceDotColor(project.source);
+    const sourceLabel = getSourceLabel(project);
 
     // Actions dropdown
     const menuItems = [
       {
         label: 'Edit Rate',
-        onClick: () => handleEditClick(project.projectName),
+        onClick: () => handleEditClick(project),
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -88,21 +117,39 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
       },
     ];
 
-    // Rate cell with action dropdown - use bteam-brand for undefined rates
-    const rateContent = hasDbRate ? (
-      <span className="text-sm text-vercel-gray-600">
-        ${effectiveRate.toFixed(2)}
-      </span>
-    ) : (
-      <span className="text-sm text-bteam-brand">
-        ${effectiveRate.toFixed(2)} <span className="text-2xs">(default)</span>
-      </span>
+    // Project name with "not yet created" indicator if needed
+    const projectNameContent = (
+      <div className="flex items-center gap-2">
+        <span className={project.existedInSelectedMonth ? 'text-vercel-gray-600' : 'text-vercel-gray-400'}>
+          {project.projectName}
+        </span>
+        {!project.existedInSelectedMonth && (
+          <span className="text-2xs text-vercel-gray-300 px-1.5 py-0.5 bg-vercel-gray-50 rounded">
+            not yet created
+          </span>
+        )}
+      </div>
+    );
+
+    // Rate cell with source indicator
+    const rateContent = (
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${sourceDotColor}`}></span>
+        <span className="text-sm text-vercel-gray-600">
+          ${project.effectiveRate.toFixed(2)}
+        </span>
+        {sourceLabel && (
+          <span className="text-2xs text-vercel-gray-400">
+            ({sourceLabel})
+          </span>
+        )}
+      </div>
     );
 
     return {
-      id: project.projectName,
+      id: project.projectId,
       cells: {
-        project: <span className={hasDbRate ? "text-vercel-gray-600" : "text-bteam-brand"}>{project.projectName}</span>,
+        project: projectNameContent,
         rate: (
           <div className="flex items-center justify-end">
             {rateContent}
@@ -117,7 +164,7 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
 
   // Group projects by company/client
   const groupedByCompany = useMemo(() => {
-    const groupMap = new Map<string, ProjectSummary[]>();
+    const groupMap = new Map<string, ProjectRateDisplay[]>();
 
     for (const project of sortedProjects) {
       const clientName = project.clientName || 'Unassigned';
@@ -138,10 +185,9 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
       result.push({
         id: clientName,
         label: clientName,
-        // Include invisible spacer (ml-4 + w-6 = 40px) to align with project row icons
+        // Include invisible spacer to align with project row icons
         labelRight: (
           <div className="flex items-center">
-            {/* Invisible spacer matching icon container: 16px gap + 24px icon width */}
             <div className="ml-4 w-6 shrink-0" />
           </div>
         ),
@@ -149,21 +195,19 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
       });
     }
 
-    // Sort groups by revenue (highest first)
+    // Sort groups by average rate (highest first)
     return result.sort((a, b) => {
-      const revenueA = groupedByCompany.get(a.id)!.reduce(
-        (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
+      const avgA = groupedByCompany.get(a.id)!.reduce(
+        (sum, p) => sum + p.effectiveRate,
         0
-      );
-      const revenueB = groupedByCompany.get(b.id)!.reduce(
-        (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
+      ) / groupedByCompany.get(a.id)!.length;
+      const avgB = groupedByCompany.get(b.id)!.reduce(
+        (sum, p) => sum + p.effectiveRate,
         0
-      );
-      return revenueB - revenueA;
+      ) / groupedByCompany.get(b.id)!.length;
+      return avgB - avgA;
     });
-  }, [groupedByCompany, dbRateLookup]);
-
-  // No footer needed for rates-only view
+  }, [groupedByCompany]);
 
   return (
     <>
@@ -174,12 +218,13 @@ export function BillingRatesTable({ projects, onRatesChange }: BillingRatesTable
       />
 
       {/* Editor Modal */}
-      <ProjectEditorModal
+      <RateEditModal
         isOpen={isEditorOpen}
         onClose={handleCloseEditor}
         project={selectedProject}
+        initialMonth={selectedMonth}
         onSave={handleSaveRate}
-        isSaving={isOperating}
+        isSaving={isSaving}
       />
     </>
   );
