@@ -1,11 +1,9 @@
 /**
- * RateEditModal - Edit project rate for a specific month
+ * RateEditModal - Edit project rate for the selected month
  *
  * Features:
- * - Month selector (can edit any month)
  * - Rate input field
  * - Current rate display with source
- * - Warning for historical/future edits
  * - Rate history toggle
  * - Save/Cancel buttons
  *
@@ -16,14 +14,8 @@ import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import { MonthPicker } from './MonthPicker';
-import type { MonthSelection, ProjectRateDisplay, RateSource } from '../types';
+import type { MonthSelection, ProjectRateDisplay } from '../types';
 import { useRateHistory, formatRateMonth } from '../hooks/useRateHistory';
-import {
-  getCurrentMonth,
-  formatMonthDisplay,
-  isFutureMonth,
-} from '../hooks/useMonthlyRates';
 
 interface RateEditModalProps {
   isOpen: boolean;
@@ -34,24 +26,6 @@ interface RateEditModalProps {
   isSaving: boolean;
 }
 
-/**
- * Get source display label and color
- */
-function getRateSourceDisplay(source: RateSource): { label: string; colorClass: string } {
-  switch (source) {
-    case 'explicit':
-      return { label: 'Set for this month', colorClass: 'text-green-600' };
-    case 'inherited':
-      return { label: 'Inherited from earlier month', colorClass: 'text-blue-600' };
-    case 'backfill':
-      return { label: 'Backfilled from first seen month', colorClass: 'text-blue-600' };
-    case 'default':
-      return { label: 'Default rate', colorClass: 'text-vercel-gray-400' };
-    default:
-      return { label: source, colorClass: 'text-vercel-gray-400' };
-  }
-}
-
 export function RateEditModal({
   isOpen,
   onClose,
@@ -60,7 +34,6 @@ export function RateEditModal({
   onSave,
   isSaving,
 }: RateEditModalProps) {
-  const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(initialMonth);
   const [rateValue, setRateValue] = useState<string>('');
   const [showHistory, setShowHistory] = useState(false);
   const [lastResetKey, setLastResetKey] = useState<string>('');
@@ -73,11 +46,10 @@ export function RateEditModal({
   useEffect(() => {
     if (resetKey !== lastResetKey) {
       setLastResetKey(resetKey);
-      setSelectedMonth(initialMonth);
       setRateValue(project?.effectiveRate?.toString() || '');
       setShowHistory(false);
     }
-  }, [resetKey, lastResetKey, initialMonth, project?.effectiveRate]);
+  }, [resetKey, lastResetKey, project?.effectiveRate]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -86,11 +58,10 @@ export function RateEditModal({
 
     const rate = parseFloat(rateValue);
     if (isNaN(rate) || rate < 0) {
-      // Could add error state here
       return;
     }
 
-    const success = await onSave(project.projectId, selectedMonth, rate);
+    const success = await onSave(project.projectId, initialMonth, rate);
     if (success) {
       onClose();
     }
@@ -104,14 +75,6 @@ export function RateEditModal({
   };
 
   if (!project) return null;
-
-  const currentMonth = getCurrentMonth();
-  const isHistorical =
-    selectedMonth.year < currentMonth.year ||
-    (selectedMonth.year === currentMonth.year && selectedMonth.month < currentMonth.month);
-  const isFuture = isFutureMonth(selectedMonth);
-
-  const sourceDisplay = getRateSourceDisplay(project.source);
 
   const footerContent = (
     <>
@@ -139,67 +102,14 @@ export function RateEditModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Project Rate"
-      maxWidth="md"
+      title="Edit Rate"
+      maxWidth="sm"
       footer={footerContent}
     >
       <div className="space-y-6">
-        {/* Project Info */}
-        <div className="p-4 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
-          <div className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
-            Project
-          </div>
-          <div className="text-sm font-medium text-vercel-gray-600">
-            {project.projectName}
-          </div>
-          {project.clientName && (
-            <div className="text-xs text-vercel-gray-400 mt-1">
-              {project.clientName}
-            </div>
-          )}
-          {project.firstSeenMonth && (
-            <div className="text-xs text-vercel-gray-300 mt-2">
-              First seen: {formatRateMonth(project.firstSeenMonth)}
-            </div>
-          )}
-        </div>
-
-        {/* Month Selector */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Rate Month
-          </label>
-          <MonthPicker
-            selectedMonth={selectedMonth}
-            onChange={setSelectedMonth}
-            showTodayButton={true}
-          />
-          {isHistorical && (
-            <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              Editing historical rate will affect past reports
-            </p>
-          )}
-          {isFuture && (
-            <p className="mt-2 text-xs text-blue-600 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              Scheduling future rate for {formatMonthDisplay(selectedMonth)}
-            </p>
-          )}
+        {/* Project Name */}
+        <div className="text-sm font-medium text-vercel-gray-600">
+          {project.projectName}
         </div>
 
         {/* Rate Input */}
@@ -221,25 +131,6 @@ export function RateEditModal({
           <p className="mt-2 text-2xs text-vercel-gray-300">
             Enter 0 for unbillable projects.
           </p>
-        </div>
-
-        {/* Current Rate Info */}
-        <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-vercel-gray-400">Current Rate:</span>
-            <span className="text-sm font-semibold text-vercel-gray-600">
-              ${project.effectiveRate.toFixed(2)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs text-vercel-gray-400">Source:</span>
-            <span className={`text-xs ${sourceDisplay.colorClass}`}>
-              {sourceDisplay.label}
-              {project.sourceMonth && project.source !== 'explicit' && (
-                <span className="text-vercel-gray-300"> ({formatRateMonth(project.sourceMonth)})</span>
-              )}
-            </span>
-          </div>
         </div>
 
         {/* Rate History Toggle */}

@@ -16,10 +16,12 @@ function monthToDate(month: MonthSelection): Date {
 
 /**
  * Helper to format month as ISO date string (YYYY-MM-DD)
+ * Note: Manually formats to avoid timezone conversion issues with toISOString()
  */
 function formatMonthAsISO(month: MonthSelection): string {
-  const date = monthToDate(month);
-  return date.toISOString().split('T')[0];
+  const yyyy = month.year;
+  const mm = String(month.month).padStart(2, '0');
+  return `${yyyy}-${mm}-01`;
 }
 
 /**
@@ -144,7 +146,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
       try {
         const monthStr = formatMonthAsISO(month);
 
-        const { data: result, error: rpcError } = await supabase.rpc(
+        const { error: rpcError } = await supabase.rpc(
           'set_project_rate_for_month',
           {
             p_project_id: projectId,

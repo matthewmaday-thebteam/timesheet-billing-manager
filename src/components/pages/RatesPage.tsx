@@ -1,22 +1,43 @@
 import { useState, useCallback, useMemo } from 'react';
-import { MonthPicker } from '../MonthPicker';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { DateRangeFilter } from '../DateRangeFilter';
 import { BillingRatesTable } from '../BillingRatesTable';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';
-import type { MonthSelection } from '../../types';
+import { Button } from '../Button';
+import type { MonthSelection, DateRange } from '../../types';
 import {
   useMonthlyRates,
-  getCurrentMonth,
   formatMonthDisplay,
   isFutureMonth,
 } from '../../hooks/useMonthlyRates';
 
 const TARGET_RATE_2026 = 60;
+const DEFAULT_RATE = 45;
+
+/**
+ * Convert DateRange to MonthSelection (uses start date's month)
+ */
+function dateRangeToMonth(range: DateRange): MonthSelection {
+  return {
+    year: range.start.getFullYear(),
+    month: range.start.getMonth() + 1,
+  };
+}
 
 export function RatesPage() {
-  const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const now = new Date();
+    return {
+      start: startOfMonth(now),
+      end: endOfMonth(now),
+    };
+  });
 
-  // Fetch monthly rates using the new hook
+  // Convert to MonthSelection for the hook
+  const selectedMonth = useMemo(() => dateRangeToMonth(dateRange), [dateRange]);
+
+  // Fetch monthly rates using the hook
   const {
     projectsWithRates,
     isLoading,
@@ -31,20 +52,23 @@ export function RatesPage() {
 
     let totalRate = 0;
     let ratedCount = 0;
-    let noExplicitRateCount = 0;
+    let atDefaultRateCount = 0;
     let atTargetRateCount = 0;
 
     for (const project of projectsWithRates) {
-      totalRate += project.effectiveRate;
-      ratedCount++;
+      // Exclude $0 rate projects from average calculation
+      if (project.effectiveRate > 0) {
+        totalRate += project.effectiveRate;
+        ratedCount++;
+      }
 
       if (project.effectiveRate >= TARGET_RATE_2026) {
         atTargetRateCount++;
       }
 
-      // Count projects without an explicit rate for this month
-      if (!project.hasExplicitRateThisMonth) {
-        noExplicitRateCount++;
+      // Count projects at the hardcoded default rate
+      if (project.effectiveRate === DEFAULT_RATE) {
+        atDefaultRateCount++;
       }
     }
 
@@ -54,7 +78,7 @@ export function RatesPage() {
       totalProjects: projectsWithRates.length,
       projectsInMonth: projectsInMonth.length,
       averageRate,
-      noExplicitRateCount,
+      atDefaultRateCount,
       targetRate: TARGET_RATE_2026,
       atTargetRateCount,
     };
@@ -63,6 +87,47 @@ export function RatesPage() {
   const handleRatesChange = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // Export to CSV
+  const handleExportCSV = useCallback(() => {
+    const csvRows: string[][] = [];
+
+    // Header row
+    csvRows.push(['Company', 'Project', 'Rate']);
+
+    // Sort by company then project
+    const sortedProjects = [...projectsWithRates].sort((a, b) => {
+      const companyA = a.clientName || 'Unassigned';
+      const companyB = b.clientName || 'Unassigned';
+      if (companyA !== companyB) return companyA.localeCompare(companyB);
+      return a.projectName.localeCompare(b.projectName);
+    });
+
+    // Data rows
+    for (const project of sortedProjects) {
+      csvRows.push([
+        project.clientName || 'Unassigned',
+        project.projectName,
+        project.effectiveRate.toFixed(2),
+      ]);
+    }
+
+    // Convert to CSV string
+    const csvContent = csvRows
+      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `rates-${format(dateRange.start, 'yyyy-MM')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [projectsWithRates, dateRange.start]);
 
   const currentYear = new Date().getFullYear();
   const isFuture = isFutureMonth(selectedMonth);
@@ -74,41 +139,33 @@ export function RatesPage() {
         <div>
           <h1 className="text-xl font-semibold text-vercel-gray-600">Current and Historical Rates</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
-            {isFuture ? 'Schedule rates for' : 'Set rates for'}{' '}
+            {isFuture ? 'Schedule rates for' : 'Rates for'}{' '}
             <span className="text-bteam-brand font-medium">{formatMonthDisplay(selectedMonth)}</span>
           </p>
         </div>
       </div>
 
-      {/* Month Picker */}
-      <div className="p-4 bg-white rounded-lg border border-vercel-gray-100">
-        <div className="flex items-center justify-between">
-          <MonthPicker
-            selectedMonth={selectedMonth}
-            onChange={setSelectedMonth}
-            showTodayButton={true}
-          />
-
-          {/* Rate source legend */}
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-vercel-gray-400">Set this month</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              <span className="text-vercel-gray-400">Inherited</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-vercel-gray-300"></span>
-              <span className="text-vercel-gray-400">Default</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Date Range Filter with Export */}
+      <DateRangeFilter
+        dateRange={dateRange}
+        onChange={setDateRange}
+        hideCustomRange={true}
+        rightContent={
+          <Button
+            variant="secondary"
+            onClick={handleExportCSV}
+            disabled={isLoading || projectsWithRates.length === 0}
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV
+          </Button>
+        }
+      />
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard
           title="Average Rate"
           value={`$${rateMetrics.averageRate.toFixed(2)}`}
@@ -118,13 +175,16 @@ export function RatesPage() {
           value={`$${rateMetrics.targetRate.toFixed(2)}`}
         />
         <MetricCard
+          title="Base Rate"
+          value={`$${DEFAULT_RATE.toFixed(2)}`}
+        />
+        <MetricCard
           title={`At ${currentYear} Target`}
           value={rateMetrics.atTargetRateCount}
         />
         <MetricCard
-          title="Inherited/Default"
-          value={rateMetrics.noExplicitRateCount}
-          isAlert={false}
+          title="Default"
+          value={rateMetrics.atDefaultRateCount}
         />
       </div>
 

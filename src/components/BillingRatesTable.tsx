@@ -2,50 +2,14 @@ import { useState, useMemo } from 'react';
 import { AccordionFlat } from './AccordionFlat';
 import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
-import { formatRateMonth } from '../hooks/useRateHistory';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
-import type { ProjectRateDisplay, MonthSelection, RateSource } from '../types';
+import type { ProjectRateDisplay, MonthSelection } from '../types';
 
 interface BillingRatesTableProps {
   projectsWithRates: ProjectRateDisplay[];
   selectedMonth: MonthSelection;
   onUpdateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   onRatesChange: () => void;
-}
-
-/**
- * Get color class for rate source indicator dot
- */
-function getSourceDotColor(source: RateSource): string {
-  switch (source) {
-    case 'explicit':
-      return 'bg-green-500';
-    case 'inherited':
-    case 'backfill':
-      return 'bg-blue-500';
-    case 'default':
-      return 'bg-vercel-gray-300';
-    default:
-      return 'bg-vercel-gray-300';
-  }
-}
-
-/**
- * Get secondary text for rate (source info)
- */
-function getSourceLabel(project: ProjectRateDisplay): string | null {
-  switch (project.source) {
-    case 'explicit':
-      return null; // No label needed for explicit
-    case 'inherited':
-      return project.sourceMonth ? `from ${formatRateMonth(project.sourceMonth)}` : 'inherited';
-    case 'backfill':
-      return project.sourceMonth ? `from ${formatRateMonth(project.sourceMonth)}` : 'backfill';
-    case 'default':
-      return 'default';
-    default:
-      return null;
-  }
 }
 
 export function BillingRatesTable({
@@ -101,9 +65,6 @@ export function BillingRatesTable({
 
   // Helper to build a row for a project
   const buildProjectRow = (project: ProjectRateDisplay): AccordionFlatRow => {
-    const sourceDotColor = getSourceDotColor(project.source);
-    const sourceLabel = getSourceLabel(project);
-
     // Actions dropdown
     const menuItems = [
       {
@@ -131,19 +92,11 @@ export function BillingRatesTable({
       </div>
     );
 
-    // Rate cell with source indicator
+    // Rate cell
     const rateContent = (
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${sourceDotColor}`}></span>
-        <span className="text-sm text-vercel-gray-600">
-          ${project.effectiveRate.toFixed(2)}
-        </span>
-        {sourceLabel && (
-          <span className="text-2xs text-vercel-gray-400">
-            ({sourceLabel})
-          </span>
-        )}
-      </div>
+      <span className="text-sm text-vercel-gray-600">
+        ${project.effectiveRate.toFixed(2)}
+      </span>
     );
 
     return {

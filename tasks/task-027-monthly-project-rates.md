@@ -1,6 +1,6 @@
 # Task 027: Monthly Project Rates
 
-**Status:** READY FOR MIGRATION
+**Status:** COMPLETE
 
 ## 1. Problem Statement
 
@@ -1119,3 +1119,40 @@ If issues occur:
 1. Run `supabase/rollbacks/020_021_rollback.sql` in Supabase SQL Editor
 2. Revert frontend commit: `git revert 79c8132`
 3. Push reverted changes
+
+---
+
+## UI Refinements (2026-01-22)
+
+### Changes Made
+After initial deployment, the following UI refinements were made:
+
+1. **Replaced MonthPicker with DateRangeFilter** - Now uses the same month selector as Revenue page (Current Month / Select Month buttons with prev/next arrows)
+
+2. **Added Export CSV button** - Exports Company, Project, Rate for all projects in selected month
+
+3. **Removed rate source indicators** - Removed colored dots and "(from Jan 2026)" labels from inline display
+
+4. **Removed legend** - Removed rate source legend from upper-right corner
+
+5. **Simplified RateEditModal**:
+   - Title is now "Edit Rate" (not project name or "Edit Rate for Month")
+   - Project name displayed below the header line
+   - Removed grey box with "PROJECT" label and company name
+   - Removed "Current Rate and Source" recap box
+   - Kept "Show Rate History" toggle
+
+6. **Updated Metrics Row** (5 cards):
+   - Average Rate (excludes $0 rate projects)
+   - 2026 Target ($60.00)
+   - Base Rate ($45.00) - displays DEFAULT_RATE constant
+   - At 2026 Target (count)
+   - Default (count of projects at $45 rate)
+
+### Files Modified in Refinement
+| File | Changes |
+|------|---------|
+| `src/components/pages/RatesPage.tsx` | DateRangeFilter, Export CSV, updated metrics, excludes $0 from average |
+| `src/components/BillingRatesTable.tsx` | Removed source dots and labels |
+| `src/components/RateEditModal.tsx` | Simplified layout with "Edit Rate" title |
+| `src/hooks/useMonthlyRates.ts` | Fixed timezone bug in date formatting |
