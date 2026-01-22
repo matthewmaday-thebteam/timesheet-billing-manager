@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjects } from '../../hooks/useProjects';
-import { calculateProjectRevenue, formatCurrency, buildDbRateLookupByName } from '../../utils/billing';
+import { calculateProjectRevenue, formatCurrency, buildDbRateLookupByName, getEffectiveRate } from '../../utils/billing';
 import { DateRangeFilter } from '../DateRangeFilter';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
+import { Button } from '../Button';
 import type { DateRange } from '../../types';
 
 export function RevenuePage() {
@@ -29,6 +30,69 @@ export function RevenuePage() {
     );
   }, [projects, dbRateLookup]);
 
+  // Export to CSV
+  const handleExportCSV = useCallback(() => {
+    // Build CSV data from entries
+    const csvRows: string[][] = [];
+
+    // Header row
+    csvRows.push(['Company', 'Project', 'Task', 'Hours', 'Rate', 'Revenue']);
+
+    // Data rows - aggregate by company/project/task
+    const taskMap = new Map<string, { company: string; project: string; task: string; minutes: number; rate: number }>();
+
+    for (const entry of entries) {
+      const company = entry.client_name || 'Unassigned';
+      const project = entry.project_name;
+      const task = entry.task_name || 'No Task';
+      const key = `${company}|${project}|${task}`;
+
+      const rate = getEffectiveRate(project, dbRateLookup, {});
+
+      if (taskMap.has(key)) {
+        taskMap.get(key)!.minutes += entry.total_minutes;
+      } else {
+        taskMap.set(key, { company, project, task, minutes: entry.total_minutes, rate });
+      }
+    }
+
+    // Convert to CSV rows sorted by company, project, task
+    const sortedEntries = Array.from(taskMap.values()).sort((a, b) => {
+      if (a.company !== b.company) return a.company.localeCompare(b.company);
+      if (a.project !== b.project) return a.project.localeCompare(b.project);
+      return a.task.localeCompare(b.task);
+    });
+
+    for (const item of sortedEntries) {
+      const hours = (item.minutes / 60).toFixed(2);
+      const revenue = ((item.minutes / 60) * item.rate).toFixed(2);
+      csvRows.push([
+        item.company,
+        item.project,
+        item.task,
+        hours,
+        item.rate.toFixed(2),
+        revenue,
+      ]);
+    }
+
+    // Convert to CSV string
+    const csvContent = csvRows
+      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `revenue-${format(dateRange.start, 'yyyy-MM')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [entries, dbRateLookup, dateRange.start]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -47,8 +111,20 @@ export function RevenuePage() {
         )}
       </div>
 
-      {/* Date Range Filter */}
-      <DateRangeFilter dateRange={dateRange} onChange={setDateRange} hideCustomRange={true} />
+      {/* Date Range Filter with Export */}
+      <div className="flex items-center justify-between">
+        <DateRangeFilter dateRange={dateRange} onChange={setDateRange} hideCustomRange={true} />
+        <Button
+          variant="secondary"
+          onClick={handleExportCSV}
+          disabled={loading || entries.length === 0}
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export CSV
+        </Button>
+      </div>
 
       {/* Error State */}
       {error && (

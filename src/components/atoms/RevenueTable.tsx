@@ -14,7 +14,7 @@
  * - Radius: rounded-lg
  */
 
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import {
   formatCurrency,
   getEffectiveRate,
@@ -143,6 +143,13 @@ export function RevenueTable({ entries }: RevenueTableProps) {
   // Calculate totals
   const totalMinutes = companyData.reduce((sum, c) => sum + c.totalMinutes, 0);
   const totalRevenue = companyData.reduce((sum, c) => sum + c.revenue, 0);
+
+  // Default all companies to expanded (show projects - Tier 2)
+  useEffect(() => {
+    if (companyData.length > 0) {
+      setExpandedCompanies(new Set(companyData.map(c => c.companyName)));
+    }
+  }, [companyData]);
 
   const toggleCompany = (companyName: string) => {
     setExpandedCompanies(prev => {
