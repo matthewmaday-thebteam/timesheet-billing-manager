@@ -402,3 +402,105 @@ export interface ResourceWithGrouping extends Resource {
   /** All system IDs (primary + members) for display */
   all_system_ids: string[];
 }
+
+// ============================================================================
+// Company Types
+// ============================================================================
+
+/**
+ * Company record from the companies table.
+ */
+export interface Company {
+  id: string;
+  client_id: string;
+  client_name: string;
+  display_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Company form data for editing.
+ */
+export interface CompanyFormData {
+  display_name: string;
+}
+
+/**
+ * Role of a company within the Company grouping system.
+ */
+export type CompanyGroupRole = 'primary' | 'member' | 'unassociated';
+
+/**
+ * Company with grouping information for table display.
+ */
+export interface CompanyWithGrouping extends Company {
+  grouping_role: CompanyGroupRole;
+  group_id: string | null;
+  member_count: number;
+  project_count: number;
+}
+
+/**
+ * Member company display data for modal.
+ */
+export interface CompanyGroupMemberDisplay {
+  member_company_id: string;
+  client_id: string;
+  client_name: string;
+  display_name: string | null;
+  added_at: string;
+}
+
+/**
+ * Unassociated company available for grouping.
+ */
+export interface UnassociatedCompany {
+  company_id: string;
+  client_id: string;
+  client_name: string;
+  display_name: string;
+}
+
+/**
+ * Result from rpc_company_group_get RPC.
+ */
+export interface CompanyGroupGetResult {
+  success: boolean;
+  company_id: string;
+  role: CompanyGroupRole;
+  group_id: string | null;
+  primary_company_id: string | null;
+  members: CompanyGroupMemberDisplay[];
+  message?: string;
+}
+
+/**
+ * Result from company group mutation RPCs.
+ */
+export interface CompanyGroupMutationResult {
+  success: boolean;
+  group_id: string | null;
+  primary_company_id: string;
+  member_company_ids: string[];
+  group_dissolved?: boolean;
+  removed_member_company_id?: string;
+}
+
+/**
+ * Staged addition of a member company.
+ */
+export interface StagedCompanyMemberAdd {
+  company_id: string;
+  display_name: string;
+  client_id: string;
+  client_name: string;
+}
+
+/**
+ * Staged changes for company grouping.
+ */
+export interface StagedCompanyGroupChanges {
+  additions: StagedCompanyMemberAdd[];
+  removals: Set<string>;
+}

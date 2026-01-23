@@ -35,6 +35,9 @@ export function RevenuePage() {
     // Build CSV data from entries
     const csvRows: string[][] = [];
 
+    // Title row
+    csvRows.push([`Revenue for the month of ${format(dateRange.start, 'MMMM yyyy')}`]);
+
     // Header row
     csvRows.push(['Company', 'Project', 'Task', 'Hours', 'Rate', 'Revenue']);
 

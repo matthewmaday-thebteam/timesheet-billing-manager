@@ -5,9 +5,12 @@ A React-based timesheet and billing management application that integrates with 
 ## Features
 
 - **Dashboard**: Overview of timesheet hours and billing metrics
-- **Employees Page**: Manage employee information with enrichment data
+- **Employees Page**: Manage employee information with enrichment data and physical person grouping
+- **Companies Page**: View and manage companies with grouping support for multi-system entities
+- **Projects Page**: View projects organized by company
+- **Rates Page**: Manage monthly billing rates per project
+- **Revenue Page**: Track billable hours and revenue with drill-down views
 - **Timesheet View**: Detailed view of time entries with filtering
-- **Billing Integration**: Track billable hours and revenue
 
 ## Tech Stack
 
@@ -66,10 +69,38 @@ Lookup table for employment classifications.
 | name | TEXT | Type name ('Full-time', 'Part-time') |
 | created_at | TIMESTAMPTZ | Record creation timestamp |
 
+#### `companies`
+Company records auto-provisioned from projects.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| client_id | TEXT | External client ID from time tracking (unique) |
+| client_name | TEXT | Original name from time tracking system |
+| display_name | TEXT | Custom display name (nullable) |
+| created_at | TIMESTAMPTZ | Record creation timestamp |
+| updated_at | TIMESTAMPTZ | Last update timestamp |
+
+**Note**: Companies are auto-provisioned when projects are synced. A special `__UNASSIGNED__` company exists for projects without a client.
+
+#### `company_groups` / `company_group_members`
+Support grouping multiple company entities (from different time tracking systems) that represent the same organization.
+
+| Table | Key Columns | Description |
+|-------|-------------|-------------|
+| company_groups | id, primary_company_id | Group anchor record |
+| company_group_members | group_id, member_company_id | Member associations |
+
 ### Views
 
 #### `v_timesheet_entries`
 Normalized view of timesheet data for frontend consumption.
+
+#### `v_company_table_entities`
+Filtered view for Companies table (excludes member companies, shows only primary and unassociated).
+
+#### `v_company_canonical`
+Maps any company_id to its canonical (primary) company_id for grouping lookups.
 
 ### Triggers
 
@@ -118,22 +149,37 @@ vercel --prod
 src/
 ├── components/
 │   ├── pages/
-│   │   └── EmployeesPage.tsx    # Employee management page
-│   ├── EmployeeEditorDrawer.tsx # Employee edit form
-│   └── ResourceTable.tsx        # Employee data table
+│   │   ├── EmployeesPage.tsx      # Employee management page
+│   │   ├── CompaniesPage.tsx      # Company management page
+│   │   ├── ProjectsPage.tsx       # Projects view page
+│   │   ├── RatesPage.tsx          # Monthly rates management
+│   │   └── RevenuePage.tsx        # Revenue tracking page
+│   ├── EmployeeEditorDrawer.tsx   # Employee edit form
+│   ├── CompanyEditorModal.tsx     # Company edit modal
+│   ├── CompanyGroupSection.tsx    # Company grouping UI
+│   └── ResourceTable.tsx          # Employee data table
 ├── hooks/
-│   ├── useResources.ts          # Fetch/update resources
-│   ├── useEmploymentTypes.ts    # Fetch employment types
-│   └── useTimesheetData.ts      # Fetch timesheet entries
+│   ├── useResources.ts            # Fetch/update resources
+│   ├── useCompanies.ts            # Fetch companies with grouping
+│   ├── useCompanyGroup.ts         # Fetch company group data
+│   ├── useCompanyGroupMutations.ts # Company group CRUD operations
+│   ├── useMonthlyRates.ts         # Monthly rate management
+│   ├── useEmploymentTypes.ts      # Fetch employment types
+│   └── useTimesheetData.ts        # Fetch timesheet entries
 ├── types/
-│   └── index.ts                 # TypeScript interfaces
+│   └── index.ts                   # TypeScript interfaces
 └── lib/
-    └── supabase.ts              # Supabase client config
+    └── supabase.ts                # Supabase client config
 
 supabase/
 └── migrations/
     ├── 006_create_timesheet_view.sql
-    └── 007_enhance_resources_schema.sql
+    ├── 007_enhance_resources_schema.sql
+    ├── ...
+    ├── 022_create_companies_table.sql    # Companies table with auto-provisioning
+    ├── 023_company_grouping.sql          # Company grouping infrastructure
+    ├── 024_create_unassigned_company.sql # Unassigned company for NULL clients
+    └── 025_remove_company_notes.sql      # Remove notes column
 ```
 
 ## Migrations
@@ -142,3 +188,8 @@ Run migrations in order via Supabase SQL Editor:
 
 1. `006_create_timesheet_view.sql` - Creates `v_timesheet_entries` view
 2. `007_enhance_resources_schema.sql` - Adds `employment_types` table, updates `resources` schema, creates auto-insert trigger
+3. ...
+4. `022_create_companies_table.sql` - Creates companies table with FK to projects, auto-provisions from existing projects
+5. `023_company_grouping.sql` - Adds company grouping tables, views, and RPC functions for multi-system entity grouping
+6. `024_create_unassigned_company.sql` - Creates "Unassigned" company for projects with NULL client_id
+7. `025_remove_company_notes.sql` - Removes unused notes column from companies table

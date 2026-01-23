@@ -6,7 +6,7 @@ import { NavItem } from './NavItem';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'rates' | 'revenue' | 'eom-reports' | 'users';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'eom-reports' | 'users';
 
 interface NavItemConfig {
   id: NavRoute;
@@ -17,6 +17,8 @@ const navItems: NavItemConfig[] = [
   { id: 'home', label: 'Home' },
   { id: 'holidays', label: 'Holidays' },
   { id: 'employees', label: 'Employees' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'companies', label: 'Companies' },
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
   { id: 'eom-reports', label: 'EOM Reports' },

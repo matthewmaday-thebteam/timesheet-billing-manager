@@ -1,19 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { DateRangeFilter } from '../DateRangeFilter';
-import { BillingRatesTable } from '../BillingRatesTable';
-import { MetricCard } from '../MetricCard';
+import { AccordionFlat } from '../AccordionFlat';
 import { Spinner } from '../Spinner';
 import { Button } from '../Button';
+import { DropdownMenu } from '../DropdownMenu';
 import type { MonthSelection, DateRange } from '../../types';
-import {
-  useMonthlyRates,
-  formatMonthDisplay,
-  isFutureMonth,
-} from '../../hooks/useMonthlyRates';
-
-const TARGET_RATE_2026 = 60;
-const DEFAULT_RATE = 45;
+import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from '../AccordionFlat';
 
 /**
  * Convert DateRange to MonthSelection (uses start date's month)
@@ -25,8 +18,8 @@ function dateRangeToMonth(range: DateRange): MonthSelection {
   };
 }
 
-export function RatesPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
+export function ProjectsPage() {
+  const [dateRange] = useState<DateRange>(() => {
     const now = new Date();
     return {
       start: startOfMonth(now),
@@ -42,61 +35,17 @@ export function RatesPage() {
     projectsWithRates,
     isLoading,
     error,
-    updateRate,
-    refetch,
   } = useMonthlyRates({ selectedMonth });
-
-  // Calculate metrics from monthly rates data
-  const rateMetrics = useMemo(() => {
-    const projectsInMonth = projectsWithRates.filter(p => p.existedInSelectedMonth);
-
-    let totalRate = 0;
-    let ratedCount = 0;
-    let atDefaultRateCount = 0;
-    let atTargetRateCount = 0;
-
-    for (const project of projectsWithRates) {
-      // Exclude $0 rate projects from average calculation
-      if (project.effectiveRate > 0) {
-        totalRate += project.effectiveRate;
-        ratedCount++;
-      }
-
-      if (project.effectiveRate >= TARGET_RATE_2026) {
-        atTargetRateCount++;
-      }
-
-      // Count projects at the hardcoded default rate
-      if (project.effectiveRate === DEFAULT_RATE) {
-        atDefaultRateCount++;
-      }
-    }
-
-    const averageRate = ratedCount > 0 ? totalRate / ratedCount : 0;
-
-    return {
-      totalProjects: projectsWithRates.length,
-      projectsInMonth: projectsInMonth.length,
-      averageRate,
-      atDefaultRateCount,
-      targetRate: TARGET_RATE_2026,
-      atTargetRateCount,
-    };
-  }, [projectsWithRates]);
-
-  const handleRatesChange = useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
     const csvRows: string[][] = [];
 
     // Title row
-    csvRows.push([`${selectedMonth.year} Rate Card`]);
+    csvRows.push(['Project Log']);
 
     // Header row
-    csvRows.push(['Company', 'Project', 'Rate']);
+    csvRows.push(['Company', 'Project']);
 
     // Sort by company then project
     const sortedProjects = [...projectsWithRates].sort((a, b) => {
@@ -111,7 +60,6 @@ export function RatesPage() {
       csvRows.push([
         project.clientName || 'Unassigned',
         project.projectName,
-        project.effectiveRate.toFixed(2),
       ]);
     }
 
@@ -125,35 +73,108 @@ export function RatesPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `rates-${format(dateRange.start, 'yyyy-MM')}.csv`;
+    link.download = `projects-${format(dateRange.start, 'yyyy-MM')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, [projectsWithRates, dateRange.start]);
 
-  const currentYear = new Date().getFullYear();
-  const isFuture = isFutureMonth(selectedMonth);
+  // Sort projects by name
+  const sortedProjects = useMemo(() => {
+    return [...projectsWithRates].sort((a, b) => {
+      return a.projectName.localeCompare(b.projectName);
+    });
+  }, [projectsWithRates]);
+
+  // Define columns for AccordionFlat
+  const columns: AccordionFlatColumn[] = [
+    { key: 'project', label: 'Project', align: 'left' },
+    { key: 'associations', label: 'Associations', align: 'right' },
+  ];
+
+  // Helper to build a row for a project
+  const buildProjectRow = (project: typeof projectsWithRates[0]): AccordionFlatRow => {
+    const menuItems = [
+      {
+        label: 'Edit',
+        onClick: () => {
+          // TODO: Implement edit functionality
+        },
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        ),
+      },
+    ];
+
+    return {
+      id: project.projectId,
+      cells: {
+        project: (
+          <span className="text-vercel-gray-600">
+            {project.projectName}
+          </span>
+        ),
+        associations: (
+          <div className="flex items-center justify-end">
+            <span className="text-vercel-gray-400">—</span>
+            <div className="ml-4 w-6 shrink-0 flex justify-center" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu items={menuItems} />
+            </div>
+          </div>
+        ),
+      },
+    };
+  };
+
+  // Group projects by company/client
+  const groupedByCompany = useMemo(() => {
+    const groupMap = new Map<string, typeof projectsWithRates>();
+
+    for (const project of sortedProjects) {
+      const clientName = project.clientName || 'Unassigned';
+      if (!groupMap.has(clientName)) {
+        groupMap.set(clientName, []);
+      }
+      groupMap.get(clientName)!.push(project);
+    }
+
+    return groupMap;
+  }, [sortedProjects]);
+
+  // Build groups for AccordionFlat
+  const groups: AccordionFlatGroup[] = useMemo(() => {
+    const result: AccordionFlatGroup[] = [];
+
+    for (const [clientName, clientProjects] of groupedByCompany) {
+      result.push({
+        id: clientName,
+        label: clientName,
+        rows: clientProjects.map(buildProjectRow),
+      });
+    }
+
+    // Sort groups alphabetically by company name
+    return result.sort((a, b) => a.label.localeCompare(b.label));
+  }, [groupedByCompany]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-vercel-gray-600">Current and Historical Rates</h1>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Projects</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
-            {isFuture ? 'Schedule rates for' : 'Rates for'}{' '}
-            <span className="text-bteam-brand font-medium">{formatMonthDisplay(selectedMonth)}</span>
+            Below are the known projects in the system and their associations
           </p>
         </div>
       </div>
 
-      {/* Date Range Filter with Export */}
-      <DateRangeFilter
-        dateRange={dateRange}
-        onChange={setDateRange}
-        hideCustomRange={true}
-        rightContent={
+      {/* Export Button Container */}
+      <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
+        <div className="ml-auto">
           <Button
             variant="secondary"
             onClick={handleExportCSV}
@@ -164,31 +185,7 @@ export function RatesPage() {
             </svg>
             Export CSV
           </Button>
-        }
-      />
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <MetricCard
-          title="Average Rate"
-          value={`$${rateMetrics.averageRate.toFixed(2)}`}
-        />
-        <MetricCard
-          title={`${currentYear} Target`}
-          value={`$${rateMetrics.targetRate.toFixed(2)}`}
-        />
-        <MetricCard
-          title="Base Rate"
-          value={`$${DEFAULT_RATE.toFixed(2)}`}
-        />
-        <MetricCard
-          title={`At ${currentYear} Target`}
-          value={rateMetrics.atTargetRateCount}
-        />
-        <MetricCard
-          title="Default"
-          value={rateMetrics.atDefaultRateCount}
-        />
+        </div>
       </div>
 
       {/* Error State */}
@@ -203,18 +200,17 @@ export function RatesPage() {
         </div>
       )}
 
-      {/* Billing Rates Table */}
+      {/* Projects Table */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner size="md" />
-          <span className="ml-3 text-sm text-vercel-gray-400">Loading rates...</span>
+          <span className="ml-3 text-sm text-vercel-gray-400">Loading projects...</span>
         </div>
       ) : (
-        <BillingRatesTable
-          projectsWithRates={projectsWithRates}
-          selectedMonth={selectedMonth}
-          onUpdateRate={updateRate}
-          onRatesChange={handleRatesChange}
+        <AccordionFlat
+          alwaysExpanded={true}
+          columns={columns}
+          groups={groups}
         />
       )}
     </div>
