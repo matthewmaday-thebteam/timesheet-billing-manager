@@ -39,6 +39,10 @@
 | F033 | Toggle Atom | Complete | P1 | Toggle.tsx |
 | F034 | Alert Atom | Complete | P1 | Alert.tsx |
 | F035 | Employee Performance | Complete | P1 | EmployeePerformance.tsx |
+| F036 | Per-Project Monthly Rounding | Complete | P1 | RateEditModal.tsx, useMonthlyRates.ts |
+| F037 | MoM Growth Rate Chart | Complete | P1 | BarChartAtom.tsx |
+| F038 | CAGR Projection Chart | Complete | P1 | CAGRChartAtom.tsx |
+| F039 | Best/Worst Case Projections | Complete | P1 | LineGraphAtom.tsx |
 
 ---
 
@@ -273,7 +277,9 @@ App.tsx
     │   └── DatePicker.tsx
     ├── DashboardChartsRow.tsx
     │   ├── PieChartAtom.tsx
-    │   └── LineGraphAtom.tsx
+    │   ├── LineGraphAtom.tsx (with best/worst case projections)
+    │   ├── BarChartAtom.tsx (MoM Growth Rate)
+    │   └── CAGRChartAtom.tsx (CAGR Projection)
     ├── StatsOverview.tsx
     │   └── MetricCard.tsx (5 cards)
     ├── BillingRatesTable.tsx
@@ -367,7 +373,12 @@ Utils:
 | `src/components/MetricCard.tsx` | Component | 90 | Reusable metric display |
 | `src/components/AccordionNested.tsx` | Component | 160 | 3-level collapsible accordion |
 | `src/components/AccordionFlat.tsx` | Component | 130 | 2-level accordion with table |
-| `src/components/DashboardChartsRow.tsx` | Component | 85 | Charts row with pie and line graphs |
+| `src/components/DashboardChartsRow.tsx` | Component | 315 | Charts row with pie, line, bar, and CAGR charts |
+| `src/components/atoms/charts/BarChartAtom.tsx` | Component | 145 | MoM Growth Rate bar chart |
+| `src/components/atoms/charts/CAGRChartAtom.tsx` | Component | 161 | CAGR Projection line chart |
+| `src/utils/chartTransforms.ts` | Utility | 250 | Chart data transformations (MoM, CAGR, projections) |
+| `supabase/migrations/026_create_project_monthly_rounding.sql` | SQL | 150 | Project rounding configuration |
+| `supabase/migrations/027_backfill_default_roundings.sql` | SQL | 25 | Backfill default rounding values |
 | `src/design-system/style-review/StyleReviewPage.tsx` | Component | 600+ | Design system documentation |
 | `supabase/migrations/012_create_avatars_storage.sql` | SQL | 45 | Avatars storage bucket with RLS |
 
@@ -569,18 +580,21 @@ Utils:
 
 ### F027: Dashboard Charts
 **Component**: `src/components/DashboardChartsRow.tsx`
-**Description**: Responsive grid containing pie chart and line chart for dashboard visualization.
+**Description**: Multi-row responsive grid containing analytics charts for dashboard visualization.
 
 | Feature | Details |
 |---------|---------|
-| Layout | 2-column grid on desktop, single column on mobile |
+| Row 1 | 12-Month Revenue Trend (full width) |
+| Row 2 | MoM Growth Rate (left) + CAGR Projection (right) |
+| Row 3 | Hours by Resource (pie) + Top 5 By Hours + Top 5 By Revenue |
 | Position | Between DateRangeFilter and KPI stats cards |
 | Loading State | Shows Spinner in each card slot |
 | Empty State | Returns null when no data available |
 
 **Grid Configuration**:
-- Desktop (md+): `grid-cols-2`
-- Mobile: `grid-cols-1`
+- Row 1: Full width card
+- Row 2: `grid-cols-2` on desktop
+- Row 3: `grid-cols-3` on desktop
 - Gap: `gap-4` (16px)
 - Card padding: `lg` (24px)
 
@@ -610,18 +624,21 @@ Utils:
 
 ### F029: Revenue Trend Chart
 **Component**: `src/components/atoms/charts/LineGraphAtom.tsx`
-**Description**: Line chart showing 12-month cumulative revenue trend against target and budget.
+**Description**: Line chart showing 12-month cumulative revenue trend against target, budget, and projections.
 
 | Line | Description | Style |
 |------|-------------|-------|
-| Target ($1.8M) | Cumulative monthly target ($150k/month) | Solid indigo |
-| Budget ($1M) | Cumulative monthly budget (~$83k/month) | Dashed purple |
-| Revenue | Cumulative earned revenue | Solid B Team pink (#E50A73) |
+| Target ($1.8M) | Cumulative monthly target ($150k/month) | Solid indigo, 2px |
+| Budget ($1M) | Cumulative monthly budget (~$83k/month) | Dashed purple, 2px |
+| Revenue | Cumulative earned revenue | Solid B Team pink (#E50A73), 2px |
+| Best Case | +15% projection envelope | Solid dark gray, 1.5px |
+| Worst Case | -15% projection envelope | Solid dark gray, 1.5px |
 
 **Features**:
 - Full year display (Jan-Dec)
 - Cumulative/compounding values
 - Revenue line extends as flat horizontal line into future months
+- Best/Worst case lines show projection envelope for future months
 - Y-axis: Currency format ($XXk, $X.XM)
 - Horizontal grid lines only
 - Font-mono for all text elements
@@ -630,4 +647,110 @@ Utils:
 **Data Model**:
 - Target and Budget show for all 12 months
 - Revenue shows cumulative earned total, extending flat into future
+- Best/Worst Case only show for future months (null for historical)
 - Values compound monthly (e.g., March target = $450k)
+
+---
+
+### F036: Per-Project Monthly Rounding System
+**Component**: `src/components/RateEditModal.tsx`, `src/hooks/useMonthlyRates.ts`
+**Description**: Configurable per-project, per-month time rounding increments (law firm billing style).
+
+| Feature | Details |
+|---------|---------|
+| Rounding Options | Actual (0), 5 min, 15 min (default), 30 min |
+| Per-Task Rounding | Each task rounded individually before summing |
+| Database Table | `project_monthly_rounding` with inheritance |
+| UI Location | Rounding dropdown in Rate Edit Modal |
+| History | Shows rounding history like rate history |
+
+**Rounding Logic (Law Firm Style)**:
+- Each individual task is rounded up by the increment
+- Project total = sum of individually rounded tasks
+- Example: Two 8-min tasks with 15-min rounding = 15 + 15 = 30 mins (not 16 → 30)
+
+**Database Functions**:
+- `get_effective_project_rounding(project_id, month)` - Returns increment with source tracking
+- `get_all_project_roundings_for_month(month)` - Bulk fetch for all projects
+- `set_project_rounding_for_month(project_id, month, increment)` - Upsert rounding
+
+**Billing Utility**:
+```typescript
+function applyRounding(minutes: number, increment: RoundingIncrement): number {
+  if (increment === 0) return minutes;
+  return Math.ceil(minutes / increment) * increment;
+}
+```
+
+---
+
+### F037: MoM Growth Rate Chart
+**Component**: `src/components/atoms/charts/BarChartAtom.tsx`
+**Description**: Bar chart showing month-over-month revenue growth percentage.
+
+| Feature | Details |
+|---------|---------|
+| Chart Type | Vertical bar chart |
+| Data | Monthly percentage change: (current - previous) / previous × 100 |
+| Colors | Green for positive growth, red for negative |
+| Header Stat | Shows average MoM growth rate |
+| Position | Below 12-Month Revenue Trend, left column |
+| Height | 250px |
+
+**Formula**: `MoM% = ((Month[n] - Month[n-1]) / Month[n-1]) × 100`
+
+**Display**:
+- First month shows null (no prior month for comparison)
+- Tooltip shows exact percentage and revenue amount
+- Y-axis formatted as percentage
+
+---
+
+### F038: CAGR Projection Chart
+**Component**: `src/components/atoms/charts/CAGRChartAtom.tsx`
+**Description**: Line chart showing actual cumulative revenue vs CAGR-based projection.
+
+| Feature | Details |
+|---------|---------|
+| Chart Type | Dual-line chart |
+| Actual Line | Solid B Team pink - cumulative revenue to date |
+| Projected Line | Dashed gray - CAGR extrapolation |
+| Header Stat | Shows projected annual revenue |
+| Position | Below 12-Month Revenue Trend, right column |
+| Height | 250px |
+
+**CAGR Formula**:
+```
+Projected[n] = CurrentRevenue × (1 + avgMoMGrowth)^monthsRemaining
+```
+
+**Display**:
+- Actual line ends at current month
+- Projected line continues to December
+- Tooltip shows both actual and projected values
+
+---
+
+### F039: Best/Worst Case Projection Lines
+**Component**: `src/components/atoms/charts/LineGraphAtom.tsx`
+**Description**: Two additional grey lines on the 12-Month Revenue Trend showing projection scenarios.
+
+| Line | Description | Style |
+|------|-------------|-------|
+| Best Case | Revenue × 1.15 projection | Solid dark gray, 1.5px |
+| Worst Case | Revenue × 0.85 projection | Solid dark gray, 1.5px |
+
+**Features**:
+- Lines begin from last month with actual data
+- Extend to December showing projection envelope
+- Use `chartColors.axisText` for consistent gray styling
+- Lighter stroke width (1.5px) to not compete with main lines
+- Only visible for future months (null for historical data)
+
+**Data Transformation** (`chartTransforms.ts`):
+```typescript
+// Best case: +15% growth
+bestCase: isFutureMonth ? lastRevenue * 1.15 : null
+// Worst case: -15% growth
+worstCase: isFutureMonth ? lastRevenue * 0.85 : null
+```
