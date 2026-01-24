@@ -4,14 +4,10 @@
 // CHANGES FROM ORIGINAL:
 //   - Add sync_run_id and sync_run_at to each row
 //   - Output _meta object for conditional cleanup in Node 6
+//   - Store ACTUAL minutes (rounding is now applied per-project at calculation time)
 // =============================================================================
 
 var CLICKUP_TEAM_ID = "90151498763";
-
-function roundUpMinutesTo15FromSeconds(seconds) {
-  var minutes = seconds / 60;
-  return Math.ceil(minutes / 15) * 15;
-}
 
 // Get sync metadata from first item
 var syncMeta = items[0]?.json?._syncMeta || {};
@@ -29,8 +25,9 @@ for (var i = 0; i < items.length; i++) {
   var seconds = Number(e.duration_seconds || 0);
   if (!isFinite(seconds) || seconds <= 0) continue;
 
-  var minutesRoundedUp = roundUpMinutesTo15FromSeconds(seconds);
-  if (minutesRoundedUp <= 0) continue;
+  // Store actual minutes (round up to whole minutes only)
+  var actualMinutes = Math.ceil(seconds / 60);
+  if (actualMinutes <= 0) continue;
 
   rows.push({
     clockify_workspace_id: CLICKUP_TEAM_ID,
@@ -46,7 +43,7 @@ for (var i = 0; i < items.length; i++) {
     client_id: e.space_id ? String(e.space_id) : null,
     client_name: e.space_name || null,
 
-    total_minutes: minutesRoundedUp,
+    total_minutes: actualMinutes,
     synced_at: syncRunAt,
 
     // NEW: sync run tracking for deletion detection

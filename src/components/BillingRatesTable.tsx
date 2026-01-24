@@ -3,12 +3,13 @@ import { AccordionFlat } from './AccordionFlat';
 import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
-import type { ProjectRateDisplay, MonthSelection } from '../types';
+import type { ProjectRateDisplay, MonthSelection, RoundingIncrement } from '../types';
 
 interface BillingRatesTableProps {
   projectsWithRates: ProjectRateDisplay[];
   selectedMonth: MonthSelection;
   onUpdateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
+  onUpdateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
   onRatesChange: () => void;
 }
 
@@ -16,6 +17,7 @@ export function BillingRatesTable({
   projectsWithRates,
   selectedMonth,
   onUpdateRate,
+  onUpdateRounding,
   onRatesChange,
 }: BillingRatesTableProps) {
   // Modal state
@@ -46,6 +48,19 @@ export function BillingRatesTable({
     }
   };
 
+  const handleSaveRounding = async (projectId: string, month: MonthSelection, increment: RoundingIncrement) => {
+    setIsSaving(true);
+    try {
+      const success = await onUpdateRounding(projectId, month, increment);
+      if (success) {
+        onRatesChange();
+      }
+      return success;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Sort projects by rate (highest first), then by name
   const sortedProjects = useMemo(() => {
     return [...projectsWithRates].sort((a, b) => {
@@ -60,6 +75,7 @@ export function BillingRatesTable({
   // Define columns for AccordionFlat
   const columns: AccordionFlatColumn[] = [
     { key: 'project', label: 'Project', align: 'left' },
+    { key: 'rounding', label: 'Rounding', align: 'right' },
     { key: 'rate', label: 'Rate ($/hr)', align: 'right' },
   ];
 
@@ -92,6 +108,13 @@ export function BillingRatesTable({
       </div>
     );
 
+    // Rounding cell
+    const roundingContent = (
+      <span className={`text-sm ${project.effectiveRounding !== 15 ? 'text-bteam-brand' : 'text-vercel-gray-600'}`}>
+        {project.effectiveRounding === 0 ? 'Actual' : `${project.effectiveRounding}m`}
+      </span>
+    );
+
     // Rate cell
     const rateContent = (
       <span className="text-sm text-vercel-gray-600">
@@ -103,6 +126,7 @@ export function BillingRatesTable({
       id: project.projectId,
       cells: {
         project: projectNameContent,
+        rounding: roundingContent,
         rate: (
           <div className="flex items-center justify-end">
             {rateContent}
@@ -177,6 +201,7 @@ export function BillingRatesTable({
         project={selectedProject}
         initialMonth={selectedMonth}
         onSave={handleSaveRate}
+        onSaveRounding={handleSaveRounding}
         isSaving={isSaving}
       />
     </>

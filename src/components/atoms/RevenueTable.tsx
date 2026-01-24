@@ -19,22 +19,28 @@ import {
   formatCurrency,
   getEffectiveRate,
   buildDbRateLookupByName,
+  applyRounding,
+  DEFAULT_ROUNDING_INCREMENT,
 } from '../../utils/billing';
 import { minutesToHours } from '../../utils/calculations';
 import { useProjects } from '../../hooks/useProjects';
-import type { TimesheetEntry } from '../../types';
+import type { TimesheetEntry, RoundingIncrement } from '../../types';
 
 interface TaskData {
   taskName: string;
-  totalMinutes: number;
-  revenue: number;
+  totalMinutes: number;      // Actual minutes
+  roundedMinutes: number;    // Minutes after rounding
+  revenue: number;           // Revenue based on rounded minutes
 }
 
 interface ProjectData {
+  projectId: string | null;
   projectName: string;
   totalMinutes: number;
+  roundedMinutes: number;
   revenue: number;
   rate: number;
+  rounding: RoundingIncrement;
   hasDbRate: boolean;
   tasks: TaskData[];
 }
@@ -42,15 +48,18 @@ interface ProjectData {
 interface CompanyData {
   companyName: string;
   totalMinutes: number;
+  roundedMinutes: number;
   revenue: number;
   projects: ProjectData[];
 }
 
 interface RevenueTableProps {
   entries: TimesheetEntry[];
+  /** Map of projectId -> rounding increment for the selected month */
+  roundingByProjectId?: Map<string, RoundingIncrement>;
 }
 
-export function RevenueTable({ entries }: RevenueTableProps) {
+export function RevenueTable({ entries, roundingByProjectId }: RevenueTableProps) {
   // Get database projects for rate lookup
   const { projects: dbProjects } = useProjects();
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
@@ -62,11 +71,13 @@ export function RevenueTable({ entries }: RevenueTableProps) {
   // Build 3-level hierarchy from entries
   const companyData = useMemo(() => {
     // First, aggregate entries by company -> project -> task
-    const companyMap = new Map<string, Map<string, Map<string, number>>>();
+    // Also track project_id for rounding lookup
+    const companyMap = new Map<string, Map<string, { projectId: string | null; tasks: Map<string, number> }>>();
 
     for (const entry of entries) {
       const companyName = entry.client_name || 'Unassigned';
       const projectName = entry.project_name;
+      const projectId = entry.project_id;
       const taskName = entry.task_name || 'No Task';
 
       if (!companyMap.has(companyName)) {
@@ -75,11 +86,11 @@ export function RevenueTable({ entries }: RevenueTableProps) {
       const projectMap = companyMap.get(companyName)!;
 
       if (!projectMap.has(projectName)) {
-        projectMap.set(projectName, new Map());
+        projectMap.set(projectName, { projectId, tasks: new Map() });
       }
-      const taskMap = projectMap.get(projectName)!;
+      const projectData = projectMap.get(projectName)!;
 
-      taskMap.set(taskName, (taskMap.get(taskName) || 0) + entry.total_minutes);
+      projectData.tasks.set(taskName, (projectData.tasks.get(taskName) || 0) + entry.total_minutes);
     }
 
     // Convert to structured data with revenue calculations
@@ -88,38 +99,62 @@ export function RevenueTable({ entries }: RevenueTableProps) {
     for (const [companyName, projectMap] of companyMap) {
       const companyProjects: ProjectData[] = [];
       let companyMinutes = 0;
+      let companyRoundedMinutes = 0;
       let companyRevenue = 0;
 
-      for (const [projectName, taskMap] of projectMap) {
+      for (const [projectName, projectInfo] of projectMap) {
         const rate = getEffectiveRate(projectName, dbRateLookup, {});
         const hasDbRate = dbRateLookup.has(projectName);
+
+        // Get rounding for this project (use project_id to look up)
+        // The map key is the external project ID (Clockify/ClickUp ID) which matches entry.project_id
+        let rounding: RoundingIncrement = DEFAULT_ROUNDING_INCREMENT;
+        if (projectInfo.projectId && roundingByProjectId) {
+          const lookupValue = roundingByProjectId.get(projectInfo.projectId);
+          // Ensure we got a valid rounding value (could be 0 for "Actual")
+          if (lookupValue !== undefined && [0, 5, 15, 30].includes(lookupValue)) {
+            rounding = lookupValue as RoundingIncrement;
+          }
+        }
+
         const tasks: TaskData[] = [];
         let projectMinutes = 0;
+        let roundedProjectMinutes = 0;
 
-        for (const [taskName, minutes] of taskMap) {
-          const taskRevenue = (minutes / 60) * rate;
+        for (const [taskName, minutes] of projectInfo.tasks) {
+          // Apply rounding to each task individually
+          const roundedTaskMinutes = applyRounding(minutes, rounding);
+          const taskRevenue = (roundedTaskMinutes / 60) * rate;
           tasks.push({
             taskName,
             totalMinutes: minutes,
+            roundedMinutes: roundedTaskMinutes,
             revenue: taskRevenue,
           });
           projectMinutes += minutes;
+          roundedProjectMinutes += roundedTaskMinutes;
         }
 
         // Sort tasks by revenue (highest first)
         tasks.sort((a, b) => b.revenue - a.revenue);
 
-        const projectRevenue = (projectMinutes / 60) * rate;
+        // Project revenue is sum of rounded task revenues
+        const projectRevenue = (roundedProjectMinutes / 60) * rate;
+
         companyProjects.push({
+          projectId: projectInfo.projectId,
           projectName,
           totalMinutes: projectMinutes,
+          roundedMinutes: roundedProjectMinutes,
           revenue: projectRevenue,
           rate,
+          rounding,
           hasDbRate,
           tasks,
         });
 
         companyMinutes += projectMinutes;
+        companyRoundedMinutes += roundedProjectMinutes;
         companyRevenue += projectRevenue;
       }
 
@@ -129,6 +164,7 @@ export function RevenueTable({ entries }: RevenueTableProps) {
       result.push({
         companyName,
         totalMinutes: companyMinutes,
+        roundedMinutes: companyRoundedMinutes,
         revenue: companyRevenue,
         projects: companyProjects,
       });
@@ -138,10 +174,11 @@ export function RevenueTable({ entries }: RevenueTableProps) {
     result.sort((a, b) => b.revenue - a.revenue);
 
     return result;
-  }, [entries, dbRateLookup]);
+  }, [entries, dbRateLookup, roundingByProjectId]);
 
   // Calculate totals
-  const totalMinutes = companyData.reduce((sum, c) => sum + c.totalMinutes, 0);
+  const totalActualMinutes = companyData.reduce((sum, c) => sum + c.totalMinutes, 0);
+  const totalRoundedMinutes = companyData.reduce((sum, c) => sum + c.roundedMinutes, 0);
   const totalRevenue = companyData.reduce((sum, c) => sum + c.revenue, 0);
 
   // Default all companies to expanded (show projects - Tier 2)
@@ -184,7 +221,13 @@ export function RevenueTable({ entries }: RevenueTableProps) {
               Name
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+              Actual
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Hours
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+              Rounding
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Rate ($/hr)
@@ -219,7 +262,13 @@ export function RevenueTable({ entries }: RevenueTableProps) {
                     </div>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-sm text-black">{minutesToHours(company.totalMinutes)}</span>
+                    <span className="text-sm text-vercel-gray-300">{minutesToHours(company.totalMinutes)}</span>
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    <span className="text-sm text-black">{minutesToHours(company.roundedMinutes)}</span>
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    <span className="text-sm text-vercel-gray-300">—</span>
                   </td>
                   <td className="px-6 py-3 text-right">
                     <span className="text-sm text-vercel-gray-300">—</span>
@@ -254,7 +303,15 @@ export function RevenueTable({ entries }: RevenueTableProps) {
                           </div>
                         </td>
                         <td className="px-6 py-3 text-right">
-                          <span className="text-sm text-vercel-gray-200">{minutesToHours(project.totalMinutes)}</span>
+                          <span className="text-sm text-vercel-gray-300">{minutesToHours(project.totalMinutes)}</span>
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <span className="text-sm text-vercel-gray-200">{minutesToHours(project.roundedMinutes)}</span>
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <span className={`text-sm ${project.rounding !== DEFAULT_ROUNDING_INCREMENT ? 'text-bteam-brand' : 'text-vercel-gray-200'}`}>
+                            {project.rounding === 0 ? '—' : `${project.rounding}m`}
+                          </span>
                         </td>
                         <td className="px-6 py-3 text-right">
                           <span className="text-sm text-vercel-gray-200">
@@ -277,6 +334,12 @@ export function RevenueTable({ entries }: RevenueTableProps) {
                             <span className="text-sm text-vercel-gray-300">{minutesToHours(task.totalMinutes)}</span>
                           </td>
                           <td className="px-6 py-2 text-right">
+                            <span className="text-sm text-vercel-gray-300">{minutesToHours(task.roundedMinutes)}</span>
+                          </td>
+                          <td className="px-6 py-2 text-right">
+                            <span className="text-sm text-vercel-gray-300">—</span>
+                          </td>
+                          <td className="px-6 py-2 text-right">
                             <span className="text-sm text-vercel-gray-300">—</span>
                           </td>
                           <td className="px-6 py-2 text-right">
@@ -296,8 +359,14 @@ export function RevenueTable({ entries }: RevenueTableProps) {
             <td className="px-6 py-4 text-sm font-semibold text-vercel-gray-600">
               Total
             </td>
+            <td className="px-6 py-4 text-right text-sm text-vercel-gray-400">
+              {minutesToHours(totalActualMinutes)}
+            </td>
             <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-              {minutesToHours(totalMinutes)}
+              {minutesToHours(totalRoundedMinutes)}
+            </td>
+            <td className="px-6 py-4 text-right">
+              {/* Empty increment column */}
             </td>
             <td className="px-6 py-4 text-right">
               {/* Empty rate column */}

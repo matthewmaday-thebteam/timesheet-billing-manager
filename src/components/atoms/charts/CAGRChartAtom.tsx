@@ -1,15 +1,16 @@
 /**
- * LineGraphAtom - Official Design System Atom
+ * CAGRChartAtom - Official Design System Atom
  *
- * Displays monthly time series with Target, Budget, and Revenue lines.
+ * Displays CAGR (Compound Annual Growth Rate) projection chart.
+ * Shows actual cumulative revenue and projected revenue based on growth rate.
  * Presentational only - receives data via props.
  *
- * @official 2026-01-11
+ * @official 2026-01-24
  * @category Atom
  *
  * Token Usage:
  * - Font: font-mono for axes, tooltips, legend
- * - Colors: brand-indigo (target), brand-purple (budget), success (revenue)
+ * - Colors: bteam-brand (actual), vercel-gray (projected)
  */
 
 import { forwardRef } from 'react';
@@ -23,10 +24,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { LineGraphAtomProps } from '../../../types/charts';
+import type { CAGRProjectionDataPoint } from '../../../types/charts';
 import { CHART_HEIGHT } from '../../../config/chartConfig';
 import {
-  lineGraphLines,
   axisTickStyle,
   axisLineStyle,
   tooltipStyle,
@@ -35,8 +35,22 @@ import {
   chartFontFamily,
   formatChartCurrency,
 } from './chartTheme';
+import type { HTMLAttributes } from 'react';
 
-// Formatter functions extracted outside component (no props dependencies)
+export interface CAGRChartAtomProps extends HTMLAttributes<HTMLDivElement> {
+  /** Array of data points to display */
+  data: CAGRProjectionDataPoint[];
+  /** Chart height in pixels */
+  height?: number;
+  /** Whether to show legend */
+  showLegend?: boolean;
+  /** Whether to show tooltip on hover */
+  showTooltip?: boolean;
+  /** Whether to show grid lines */
+  showGrid?: boolean;
+}
+
+// Formatter functions
 const tooltipFormatter = (value: number | undefined, name: string | undefined) => [
   formatChartCurrency(value ?? 0),
   name ?? '',
@@ -53,10 +67,10 @@ const yAxisFormatter = (value: number) => formatChartCurrency(value);
 // Chart margin configuration
 const chartMargin = { top: 5, right: 30, left: 20, bottom: 5 };
 
-// Shared line configuration - no stroke on active dot
+// Shared line configuration
 const activeDotConfig = { r: 4, stroke: 'none' };
 
-export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
+export const CAGRChartAtom = forwardRef<HTMLDivElement, CAGRChartAtomProps>(
   (
     {
       data,
@@ -74,7 +88,7 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
         ref={ref}
         className={`w-full ${className}`}
         role="img"
-        aria-label={`Line chart showing ${data.length} months of revenue data`}
+        aria-label={`CAGR projection chart showing ${data.length} months`}
         {...props}
       >
         <ResponsiveContainer width="100%" height={height}>
@@ -111,57 +125,25 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
                 formatter={legendFormatter}
               />
             )}
-            {/* Target Line */}
+            {/* Actual Revenue Line */}
             <Line
               type="monotone"
-              dataKey={lineGraphLines.target.dataKey}
-              name={lineGraphLines.target.name}
-              stroke={lineGraphLines.target.color}
-              strokeWidth={lineGraphLines.target.strokeWidth}
-              dot={false}
-              activeDot={activeDotConfig}
-            />
-            {/* Budget Line (dashed) */}
-            <Line
-              type="monotone"
-              dataKey={lineGraphLines.budget.dataKey}
-              name={lineGraphLines.budget.name}
-              stroke={lineGraphLines.budget.color}
-              strokeWidth={lineGraphLines.budget.strokeWidth}
-              strokeDasharray={lineGraphLines.budget.strokeDasharray}
-              dot={false}
-              activeDot={activeDotConfig}
-            />
-            {/* Revenue Line */}
-            <Line
-              type="monotone"
-              dataKey={lineGraphLines.revenue.dataKey}
-              name={lineGraphLines.revenue.name}
-              stroke={lineGraphLines.revenue.color}
-              strokeWidth={lineGraphLines.revenue.strokeWidth}
-              dot={false}
-              activeDot={activeDotConfig}
-            />
-            {/* Best Case Projection Line */}
-            <Line
-              type="monotone"
-              dataKey={lineGraphLines.bestCase.dataKey}
-              name={lineGraphLines.bestCase.name}
-              stroke={lineGraphLines.bestCase.color}
-              strokeWidth={lineGraphLines.bestCase.strokeWidth}
-              strokeDasharray={lineGraphLines.bestCase.strokeDasharray}
+              dataKey="actual"
+              name="Actual"
+              stroke={chartColors.bteamBrand}
+              strokeWidth={2}
               dot={false}
               activeDot={activeDotConfig}
               connectNulls={false}
             />
-            {/* Worst Case Projection Line */}
+            {/* Projected Revenue Line */}
             <Line
               type="monotone"
-              dataKey={lineGraphLines.worstCase.dataKey}
-              name={lineGraphLines.worstCase.name}
-              stroke={lineGraphLines.worstCase.color}
-              strokeWidth={lineGraphLines.worstCase.strokeWidth}
-              strokeDasharray={lineGraphLines.worstCase.strokeDasharray}
+              dataKey="projected"
+              name="CAGR Projection"
+              stroke={chartColors.axisText}
+              strokeWidth={2}
+              strokeDasharray="5 5"
               dot={false}
               activeDot={activeDotConfig}
               connectNulls={false}
@@ -173,6 +155,6 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
   }
 );
 
-LineGraphAtom.displayName = 'LineGraphAtom';
+CAGRChartAtom.displayName = 'CAGRChartAtom';
 
-export default LineGraphAtom;
+export default CAGRChartAtom;

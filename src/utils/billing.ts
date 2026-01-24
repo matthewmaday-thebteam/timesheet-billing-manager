@@ -1,4 +1,4 @@
-import type { ProjectSummary, Project, BillingMode } from '../types';
+import type { ProjectSummary, Project, BillingMode, RoundingIncrement } from '../types';
 
 // ============================================================================
 // Employee Billing Constants & Utilities
@@ -39,6 +39,47 @@ export function formatHours(value: number | null): string {
     return value.toString();
   }
   return value.toFixed(2);
+}
+
+// ============================================================================
+// Time Rounding Utilities
+// ============================================================================
+
+/**
+ * Default rounding increment (15 minutes)
+ */
+export const DEFAULT_ROUNDING_INCREMENT: RoundingIncrement = 15;
+
+/**
+ * Apply rounding to minutes based on the specified increment.
+ * - 0 (Actual): No rounding, returns exact minutes
+ * - 5, 15, 30: Rounds up to the nearest increment
+ *
+ * @param minutes - The actual minutes to round
+ * @param increment - The rounding increment (0, 5, 15, or 30)
+ * @returns The rounded minutes
+ */
+export function applyRounding(minutes: number, increment: RoundingIncrement): number {
+  if (increment === 0) return minutes;
+  return Math.ceil(minutes / increment) * increment;
+}
+
+/**
+ * Get display label for a rounding increment.
+ */
+export function getRoundingDisplayLabel(increment: RoundingIncrement): string {
+  switch (increment) {
+    case 0:
+      return 'Actual';
+    case 5:
+      return '5 min';
+    case 15:
+      return '15 min';
+    case 30:
+      return '30 min';
+    default:
+      return `${increment} min`;
+  }
 }
 
 // ============================================================================
@@ -172,13 +213,22 @@ export function setProjectRate(projectName: string, rate: number): void {
 /**
  * Calculate revenue for a single project
  * Uses database rates with $45 fallback, then legacy localStorage rates
+ * Applies per-task rounding: each task is rounded individually, then summed
  */
 export function calculateProjectRevenue(
   project: ProjectSummary,
   rates: Record<string, number>,
-  dbRateLookup?: Map<string, number>
+  dbRateLookup?: Map<string, number>,
+  roundingIncrement: RoundingIncrement = DEFAULT_ROUNDING_INCREMENT
 ): number {
-  const hours = project.totalMinutes / 60;
+  // Apply rounding to each task individually, then sum
+  let roundedMinutes = 0;
+  for (const resource of project.resources) {
+    for (const task of resource.tasks) {
+      roundedMinutes += applyRounding(task.totalMinutes, roundingIncrement);
+    }
+  }
+  const hours = roundedMinutes / 60;
   const rate = getEffectiveRate(project.projectName, dbRateLookup, rates);
   return hours * rate;
 }

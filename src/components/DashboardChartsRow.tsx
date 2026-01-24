@@ -19,7 +19,15 @@ import { Card } from './Card';
 import { Spinner } from './Spinner';
 import { PieChartAtom } from './atoms/charts/PieChartAtom';
 import { LineGraphAtom } from './atoms/charts/LineGraphAtom';
-import { transformResourcesToPieData, transformToLineChartData } from '../utils/chartTransforms';
+import { BarChartAtom } from './atoms/charts/BarChartAtom';
+import { CAGRChartAtom } from './atoms/charts/CAGRChartAtom';
+import {
+  transformResourcesToPieData,
+  transformToLineChartData,
+  transformToMoMGrowthData,
+  transformToCAGRProjectionData,
+  calculateGrowthStats,
+} from '../utils/chartTransforms';
 import { formatCurrency } from '../utils/billing';
 import type { ResourceSummary, TimesheetEntry } from '../types';
 import type { MonthlyAggregate } from '../types/charts';
@@ -105,6 +113,24 @@ export function DashboardChartsRow({
     [monthlyAggregates]
   );
 
+  // MoM Growth Rate data
+  const momGrowthData = useMemo(
+    () => transformToMoMGrowthData(monthlyAggregates),
+    [monthlyAggregates]
+  );
+
+  // CAGR Projection data
+  const cagrData = useMemo(
+    () => transformToCAGRProjectionData(monthlyAggregates),
+    [monthlyAggregates]
+  );
+
+  // Growth statistics for display
+  const growthStats = useMemo(
+    () => calculateGrowthStats(monthlyAggregates),
+    [monthlyAggregates]
+  );
+
   // Top 5 by hours for the selected month
   const topFiveByHours = useMemo(
     () => transformEntriesToTopList(entries, projectRates, 5, 'hours'),
@@ -167,6 +193,51 @@ export function DashboardChartsRow({
           </div>
         )}
       </Card>
+
+      {/* Row 1.5: MoM Growth Rate and CAGR Projection - Two columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* MoM Growth Rate Chart */}
+        <Card variant="default" padding="lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-vercel-gray-600">
+              MoM Growth Rate
+            </h3>
+            {growthStats.avgMoMGrowth !== null && (
+              <span className={`text-sm font-mono ${growthStats.avgMoMGrowth >= 0 ? 'text-success' : 'text-error'}`}>
+                Avg: {growthStats.avgMoMGrowth >= 0 ? '+' : ''}{growthStats.avgMoMGrowth.toFixed(1)}%
+              </span>
+            )}
+          </div>
+          {momGrowthData.some(d => d.value !== null) ? (
+            <BarChartAtom data={momGrowthData} />
+          ) : (
+            <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+              Need 2+ months for MoM growth
+            </div>
+          )}
+        </Card>
+
+        {/* CAGR Projection Chart */}
+        <Card variant="default" padding="lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-vercel-gray-600">
+              CAGR Projection
+            </h3>
+            {growthStats.projectedAnnualRevenue !== null && (
+              <span className="text-sm font-mono text-vercel-gray-600">
+                Projected: {formatCurrency(growthStats.projectedAnnualRevenue)}
+              </span>
+            )}
+          </div>
+          {cagrData.some(d => d.actual !== null || d.projected !== null) ? (
+            <CAGRChartAtom data={cagrData} />
+          ) : (
+            <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+              No data available for projection
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* Row 2: Three pie charts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

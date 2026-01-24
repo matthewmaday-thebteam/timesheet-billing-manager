@@ -43,6 +43,7 @@ export function RatesPage() {
     isLoading,
     error,
     updateRate,
+    updateRounding,
     refetch,
   } = useMonthlyRates({ selectedMonth });
 
@@ -214,6 +215,7 @@ export function RatesPage() {
           projectsWithRates={projectsWithRates}
           selectedMonth={selectedMonth}
           onUpdateRate={updateRate}
+          onUpdateRounding={updateRounding}
           onRatesChange={handleRatesChange}
         />
       )}

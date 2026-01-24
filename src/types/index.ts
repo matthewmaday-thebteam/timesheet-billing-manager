@@ -148,6 +148,41 @@ export interface ProjectMonthlyRate {
   updated_at: string;
 }
 
+// ============================================================================
+// Monthly Project Rounding Types
+// ============================================================================
+
+/**
+ * Valid rounding increment values (in minutes):
+ * - 0: Actual (no rounding, use exact minutes)
+ * - 5: Round up to nearest 5 minutes
+ * - 15: Round up to nearest 15 minutes (default)
+ * - 30: Round up to nearest 30 minutes
+ */
+export type RoundingIncrement = 0 | 5 | 15 | 30;
+
+/**
+ * A monthly rounding record from the project_monthly_rounding table.
+ */
+export interface ProjectMonthlyRounding {
+  id: string;
+  project_id: string;
+  rounding_month: string;  // ISO date string, always 1st of month (YYYY-MM-DD)
+  rounding_increment: RoundingIncrement;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Rounding history entry for a project (for RateEditModal).
+ */
+export interface RoundingHistoryEntry {
+  roundingMonth: string;
+  roundingIncrement: RoundingIncrement;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Month selection for the Rates page.
  */
@@ -167,7 +202,7 @@ export type RateSource = 'explicit' | 'inherited' | 'backfill' | 'default';
 
 /**
  * Project rate display data for the Rates page.
- * Includes "what" (rate), "why" (source), and context (existence).
+ * Includes "what" (rate/rounding), "why" (source), and context (existence).
  */
 export interface ProjectRateDisplay {
   projectId: string;
@@ -189,6 +224,12 @@ export interface ProjectRateDisplay {
 
   // Edit info
   hasExplicitRateThisMonth: boolean;  // source === 'explicit'
+
+  // Rounding fields
+  effectiveRounding: RoundingIncrement;
+  roundingSource: RateSource;
+  roundingSourceMonth: string | null;
+  hasExplicitRoundingThisMonth: boolean;
 }
 
 /**
@@ -215,6 +256,10 @@ export interface ProjectRatesForMonthResult {
   source: RateSource;
   source_month: string | null;
   existed_in_month: boolean;
+  // Rounding fields
+  effective_rounding: RoundingIncrement;
+  rounding_source: RateSource;
+  rounding_source_month: string | null;
 }
 
 /**

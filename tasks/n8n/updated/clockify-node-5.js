@@ -4,14 +4,10 @@
 // CHANGES FROM ORIGINAL:
 //   - Add sync_run_id and sync_run_at to each row
 //   - Output _meta object for conditional cleanup in Node 6
+//   - Store ACTUAL minutes (rounding is now applied per-project at calculation time)
 // =============================================================================
 
 const CLOCKIFY_WORKSPACE_ID = "683ee2051325f11af65497bd";
-
-function roundUpMinutesTo15FromSeconds(seconds) {
-  const minutes = seconds / 60;
-  return Math.ceil(minutes / 15) * 15; // always round up
-}
 
 // Get sync metadata from first item
 const syncMeta = items[0]?.json?._syncMeta || {};
@@ -29,8 +25,9 @@ for (const item of items) {
   const seconds = Number(e.duration_seconds || 0);
   if (!Number.isFinite(seconds) || seconds <= 0) continue;
 
-  const minutesRoundedUp = roundUpMinutesTo15FromSeconds(seconds);
-  if (!Number.isFinite(minutesRoundedUp) || minutesRoundedUp <= 0) continue;
+  // Store actual minutes (round up to whole minutes only)
+  const actualMinutes = Math.ceil(seconds / 60);
+  if (!Number.isFinite(actualMinutes) || actualMinutes <= 0) continue;
 
   rows.push({
     clockify_workspace_id: CLOCKIFY_WORKSPACE_ID,
@@ -50,7 +47,7 @@ for (const item of items) {
     client_id: e.client_id ?? null,
     client_name: e.client_name || null,
 
-    total_minutes: minutesRoundedUp,
+    total_minutes: actualMinutes,
     synced_at: syncRunAt,
 
     // NEW: sync run tracking for deletion detection

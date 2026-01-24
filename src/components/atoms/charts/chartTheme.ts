@@ -79,6 +79,20 @@ export const lineGraphLines = {
     strokeDasharray: undefined,
     strokeWidth: 2,
   },
+  bestCase: {
+    dataKey: 'bestCase' as const,
+    name: 'Best Case',
+    color: chartColors.axisText,
+    strokeDasharray: undefined,
+    strokeWidth: 1.5,
+  },
+  worstCase: {
+    dataKey: 'worstCase' as const,
+    name: 'Worst Case',
+    color: chartColors.axisText,
+    strokeDasharray: undefined,
+    strokeWidth: 1.5,
+  },
 } as const;
 
 /**

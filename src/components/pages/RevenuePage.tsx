@@ -2,12 +2,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjects } from '../../hooks/useProjects';
-import { calculateProjectRevenue, formatCurrency, buildDbRateLookupByName, getEffectiveRate } from '../../utils/billing';
+import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import { calculateProjectRevenue, formatCurrency, buildDbRateLookupByName, getEffectiveRate, applyRounding, DEFAULT_ROUNDING_INCREMENT } from '../../utils/billing';
 import { DateRangeFilter } from '../DateRangeFilter';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Button } from '../Button';
-import type { DateRange } from '../../types';
+import type { DateRange, MonthSelection, RoundingIncrement } from '../../types';
 
 export function RevenuePage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -21,14 +22,46 @@ export function RevenuePage() {
   const { projects, entries, loading, error } = useTimesheetData(dateRange);
   const { projects: dbProjects } = useProjects();
 
+  // Convert dateRange to MonthSelection for the rates hook
+  const selectedMonth = useMemo<MonthSelection>(() => ({
+    year: dateRange.start.getFullYear(),
+    month: dateRange.start.getMonth() + 1,
+  }), [dateRange.start]);
+
+  // Fetch monthly rates (which now includes rounding data)
+  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
+
+  // Build rounding lookup by EXTERNAL project ID (Clockify/ClickUp ID)
+  // This matches the project_id in timesheet entries
+  const roundingByProjectId = useMemo(() => {
+    const map = new Map<string, RoundingIncrement>();
+
+    for (const p of projectsWithRates) {
+      // Use externalProjectId, not projectId (UUID)
+      if (p.externalProjectId) {
+        const roundingValue = typeof p.effectiveRounding === 'number'
+          ? p.effectiveRounding
+          : Number(p.effectiveRounding);
+        if ([0, 5, 15, 30].includes(roundingValue)) {
+          map.set(p.externalProjectId, roundingValue as RoundingIncrement);
+        }
+      }
+    }
+
+    return map;
+  }, [projectsWithRates]);
+
   // Calculate total revenue
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
   const totalRevenue = useMemo(() => {
-    return projects.reduce(
-      (sum, p) => sum + calculateProjectRevenue(p, {}, dbRateLookup),
-      0
-    );
-  }, [projects, dbRateLookup]);
+    // Get rounding for each project and apply it
+    return projects.reduce((sum, p) => {
+      // Find the project in projectsWithRates by name to get its rounding
+      const projectData = projectsWithRates.find(pr => pr.projectName === p.projectName);
+      const rounding = projectData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
+      return sum + calculateProjectRevenue(p, {}, dbRateLookup, rounding);
+    }, 0);
+  }, [projects, dbRateLookup, projectsWithRates]);
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
@@ -39,14 +72,15 @@ export function RevenuePage() {
     csvRows.push([`Revenue for the month of ${format(dateRange.start, 'MMMM yyyy')}`]);
 
     // Header row
-    csvRows.push(['Company', 'Project', 'Task', 'Hours', 'Rate', 'Revenue']);
+    csvRows.push(['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Revenue']);
 
     // Data rows - aggregate by company/project/task
-    const taskMap = new Map<string, { company: string; project: string; task: string; minutes: number; rate: number }>();
+    const taskMap = new Map<string, { company: string; project: string; projectId: string | null; task: string; minutes: number; rate: number }>();
 
     for (const entry of entries) {
       const company = entry.client_name || 'Unassigned';
       const project = entry.project_name;
+      const projectId = entry.project_id;
       const task = entry.task_name || 'No Task';
       const key = `${company}|${project}|${task}`;
 
@@ -55,28 +89,65 @@ export function RevenuePage() {
       if (taskMap.has(key)) {
         taskMap.get(key)!.minutes += entry.total_minutes;
       } else {
-        taskMap.set(key, { company, project, task, minutes: entry.total_minutes, rate });
+        taskMap.set(key, { company, project, projectId, task, minutes: entry.total_minutes, rate });
       }
     }
 
+    // Group tasks by project to apply rounding at project level
+    const projectMap = new Map<string, { company: string; project: string; projectId: string | null; tasks: { task: string; minutes: number }[]; rate: number; totalMinutes: number }>();
+
+    for (const item of taskMap.values()) {
+      const projectKey = `${item.company}|${item.project}`;
+      if (!projectMap.has(projectKey)) {
+        projectMap.set(projectKey, {
+          company: item.company,
+          project: item.project,
+          projectId: item.projectId,
+          tasks: [],
+          rate: item.rate,
+          totalMinutes: 0,
+        });
+      }
+      const proj = projectMap.get(projectKey)!;
+      proj.tasks.push({ task: item.task, minutes: item.minutes });
+      proj.totalMinutes += item.minutes;
+    }
+
     // Convert to CSV rows sorted by company, project, task
-    const sortedEntries = Array.from(taskMap.values()).sort((a, b) => {
+    const sortedProjects = Array.from(projectMap.values()).sort((a, b) => {
       if (a.company !== b.company) return a.company.localeCompare(b.company);
-      if (a.project !== b.project) return a.project.localeCompare(b.project);
-      return a.task.localeCompare(b.task);
+      return a.project.localeCompare(b.project);
     });
 
-    for (const item of sortedEntries) {
-      const hours = (item.minutes / 60).toFixed(2);
-      const revenue = ((item.minutes / 60) * item.rate).toFixed(2);
-      csvRows.push([
-        item.company,
-        item.project,
-        item.task,
-        hours,
-        item.rate.toFixed(2),
-        revenue,
-      ]);
+    for (const proj of sortedProjects) {
+      // Get rounding for this project
+      const rounding = proj.projectId && roundingByProjectId.has(proj.projectId)
+        ? roundingByProjectId.get(proj.projectId)!
+        : DEFAULT_ROUNDING_INCREMENT;
+
+      const incLabel = rounding === 0 ? '—' : `${rounding}m`;
+
+      // Sort tasks by minutes
+      proj.tasks.sort((a, b) => b.minutes - a.minutes);
+
+      for (const task of proj.tasks) {
+        // Apply rounding to each task individually
+        const roundedTaskMinutes = applyRounding(task.minutes, rounding);
+        const actualHours = (task.minutes / 60).toFixed(2);
+        const roundedHours = (roundedTaskMinutes / 60).toFixed(2);
+        const taskRevenue = ((roundedTaskMinutes / 60) * proj.rate).toFixed(2);
+
+        csvRows.push([
+          proj.company,
+          proj.project,
+          task.task,
+          actualHours,
+          roundedHours,
+          incLabel,
+          proj.rate.toFixed(2),
+          taskRevenue,
+        ]);
+      }
     }
 
     // Convert to CSV string
@@ -94,7 +165,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dbRateLookup, dateRange.start]);
+  }, [entries, dbRateLookup, roundingByProjectId, dateRange.start]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -154,6 +225,7 @@ export function RevenuePage() {
       ) : (
         <RevenueTable
           entries={entries}
+          roundingByProjectId={roundingByProjectId}
         />
       )}
     </div>

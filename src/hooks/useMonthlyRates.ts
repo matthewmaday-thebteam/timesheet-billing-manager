@@ -5,6 +5,7 @@ import type {
   ProjectRateDisplay,
   ProjectRatesForMonthResult,
   RateSource,
+  RoundingIncrement,
 } from '../types';
 
 /**
@@ -82,6 +83,7 @@ interface UseMonthlyRatesReturn {
   isLoading: boolean;
   error: string | null;
   updateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
+  updateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
   refetch: () => void;
 }
 
@@ -125,19 +127,38 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
 
   // Transform raw data to ProjectRateDisplay
   const projectsWithRates = useMemo<ProjectRateDisplay[]>(() => {
-    return data.map((row) => ({
-      projectId: row.project_id,
-      externalProjectId: row.external_project_id,
-      projectName: row.project_name,
-      clientId: row.client_id,
-      clientName: row.client_name,
-      firstSeenMonth: row.first_seen_month,
-      effectiveRate: row.effective_rate,
-      source: row.source as RateSource,
-      sourceMonth: row.source_month,
-      existedInSelectedMonth: row.existed_in_month,
-      hasExplicitRateThisMonth: row.source === 'explicit',
-    }));
+    return data.map((row) => {
+      // Ensure effectiveRounding is a valid number (RPC returns INTEGER, but be defensive)
+      // Default to 15 if the value is missing or invalid
+      let effectiveRounding: RoundingIncrement = 15;
+      if (row.effective_rounding !== null && row.effective_rounding !== undefined) {
+        const numValue = typeof row.effective_rounding === 'number'
+          ? row.effective_rounding
+          : Number(row.effective_rounding);
+        if ([0, 5, 15, 30].includes(numValue)) {
+          effectiveRounding = numValue as RoundingIncrement;
+        }
+      }
+
+      return {
+        projectId: row.project_id,
+        externalProjectId: row.external_project_id,
+        projectName: row.project_name,
+        clientId: row.client_id,
+        clientName: row.client_name,
+        firstSeenMonth: row.first_seen_month,
+        effectiveRate: row.effective_rate,
+        source: row.source as RateSource,
+        sourceMonth: row.source_month,
+        existedInSelectedMonth: row.existed_in_month,
+        hasExplicitRateThisMonth: row.source === 'explicit',
+        // Rounding fields - use validated effectiveRounding
+        effectiveRounding,
+        roundingSource: (row.rounding_source ?? 'default') as RateSource,
+        roundingSourceMonth: row.rounding_source_month,
+        hasExplicitRoundingThisMonth: row.rounding_source === 'explicit',
+      };
+    });
   }, [data]);
 
   // Update rate for a project in a specific month
@@ -170,11 +191,42 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
     [fetchRates]
   );
 
+  // Update rounding for a project in a specific month
+  const updateRounding = useCallback(
+    async (projectId: string, month: MonthSelection, increment: RoundingIncrement): Promise<boolean> => {
+      try {
+        const monthStr = formatMonthAsISO(month);
+
+        const { error: rpcError } = await supabase.rpc(
+          'set_project_rounding_for_month',
+          {
+            p_project_id: projectId,
+            p_month: monthStr,
+            p_increment: increment,
+          }
+        );
+
+        if (rpcError) throw rpcError;
+
+        // Refetch to get updated data
+        await fetchRates();
+
+        return true;
+      } catch (err) {
+        console.error('Error updating rounding:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update rounding');
+        return false;
+      }
+    },
+    [fetchRates]
+  );
+
   return {
     projectsWithRates,
     isLoading,
     error,
     updateRate,
+    updateRounding,
     refetch: fetchRates,
   };
 }

@@ -51,6 +51,10 @@ export interface LineGraphDataPoint {
   budget: number;
   /** Revenue line value (actual revenue, null for future months) */
   revenue: number | null;
+  /** Best case projection (null for months with actual data) */
+  bestCase: number | null;
+  /** Worst case projection (null for months with actual data) */
+  worstCase: number | null;
 }
 
 /**
@@ -79,4 +83,28 @@ export interface MonthlyAggregate {
   totalMinutes: number;
   /** Total revenue calculated from hours * rates */
   totalRevenue: number;
+}
+
+/**
+ * Data point for MoM Growth Rate chart
+ */
+export interface MoMGrowthDataPoint {
+  /** Month label (e.g., "Jan", "Feb") */
+  month: string;
+  /** Growth rate as percentage (null if no prior month) */
+  value: number | null;
+  /** Actual revenue for reference */
+  revenue: number;
+}
+
+/**
+ * Data point for CAGR Projection chart
+ */
+export interface CAGRProjectionDataPoint {
+  /** Month label (e.g., "Jan", "Feb") */
+  month: string;
+  /** Actual cumulative revenue (null for future months) */
+  actual: number | null;
+  /** Projected cumulative revenue based on CAGR */
+  projected: number | null;
 }
