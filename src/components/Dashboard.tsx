@@ -98,7 +98,17 @@ export function Dashboard() {
           />
         )}
 
-        {/* Charts */}
+        {/* Resources Charts: Hours by Resource + Top 5 lists */}
+        <DashboardChartsRow
+          resources={resources}
+          entries={entries}
+          monthlyAggregates={monthlyAggregates}
+          projectRates={dbRateLookup}
+          loading={loading}
+          section="resources"
+        />
+
+        {/* Trend Charts: Revenue Trend + MoM + CAGR */}
         <div className="space-y-3">
           <DashboardChartsRow
             resources={resources}
@@ -106,6 +116,7 @@ export function Dashboard() {
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
             loading={loading}
+            section="trends"
           />
 
           {error && (

@@ -50,6 +50,8 @@ export interface DashboardChartsRowProps {
   projectRates: Map<string, number>;
   /** Loading state */
   loading?: boolean;
+  /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
+  section?: 'resources' | 'trends' | 'all';
 }
 
 /**
@@ -101,7 +103,10 @@ export function DashboardChartsRow({
   monthlyAggregates,
   projectRates,
   loading = false,
+  section = 'all',
 }: DashboardChartsRowProps) {
+  const showResources = section === 'resources' || section === 'all';
+  const showTrends = section === 'trends' || section === 'all';
   // Transform data for charts
   const pieData = useMemo(
     () => transformResourcesToPieData(resources),
@@ -147,28 +152,46 @@ export function DashboardChartsRow({
   if (loading) {
     return (
       <section className="space-y-4">
-        <Card variant="default" padding="lg">
-          <div className="flex items-center justify-center h-[250px]">
-            <Spinner size="lg" />
+        {showResources && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="lg" />
+              </div>
+            </Card>
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="lg" />
+              </div>
+            </Card>
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="lg" />
+              </div>
+            </Card>
           </div>
-        </Card>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card variant="default" padding="lg">
-            <div className="flex items-center justify-center h-[250px]">
-              <Spinner size="lg" />
+        )}
+        {showTrends && (
+          <>
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="lg" />
+              </div>
+            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card variant="default" padding="lg">
+                <div className="flex items-center justify-center h-[250px]">
+                  <Spinner size="lg" />
+                </div>
+              </Card>
+              <Card variant="default" padding="lg">
+                <div className="flex items-center justify-center h-[250px]">
+                  <Spinner size="lg" />
+                </div>
+              </Card>
             </div>
-          </Card>
-          <Card variant="default" padding="lg">
-            <div className="flex items-center justify-center h-[250px]">
-              <Spinner size="lg" />
-            </div>
-          </Card>
-          <Card variant="default" padding="lg">
-            <div className="flex items-center justify-center h-[250px]">
-              <Spinner size="lg" />
-            </div>
-          </Card>
-        </div>
+          </>
+        )}
       </section>
     );
   }
@@ -180,67 +203,9 @@ export function DashboardChartsRow({
 
   return (
     <section className="space-y-4">
-      {/* Row 1: 12-Month Revenue Trend - Full Width */}
-      <Card variant="default" padding="lg">
-        <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
-          12-Month Revenue Trend
-        </h3>
-        {lineData.length > 0 ? (
-          <LineGraphAtom data={lineData} />
-        ) : (
-          <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
-            No revenue data available
-          </div>
-        )}
-      </Card>
-
-      {/* Row 1.5: MoM Growth Rate and CAGR Projection - Two columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* MoM Growth Rate Chart */}
-        <Card variant="default" padding="lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-vercel-gray-600">
-              MoM Growth Rate
-            </h3>
-            {growthStats.avgMoMGrowth !== null && (
-              <span className={`text-sm font-mono ${growthStats.avgMoMGrowth >= 0 ? 'text-success' : 'text-error'}`}>
-                Avg: {growthStats.avgMoMGrowth >= 0 ? '+' : ''}{growthStats.avgMoMGrowth.toFixed(1)}%
-              </span>
-            )}
-          </div>
-          {momGrowthData.some(d => d.value !== null) ? (
-            <BarChartAtom data={momGrowthData} />
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
-              Need 2+ months for MoM growth
-            </div>
-          )}
-        </Card>
-
-        {/* CAGR Projection Chart */}
-        <Card variant="default" padding="lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-vercel-gray-600">
-              CAGR Projection
-            </h3>
-            {growthStats.projectedAnnualRevenue !== null && (
-              <span className="text-sm font-mono text-vercel-gray-600">
-                Projected: {formatCurrency(growthStats.projectedAnnualRevenue)}
-              </span>
-            )}
-          </div>
-          {cagrData.some(d => d.actual !== null || d.projected !== null) ? (
-            <CAGRChartAtom data={cagrData} />
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
-              No data available for projection
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Row 2: Three pie charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Resources section: Hours by Resource + Top 5 lists */}
+      {showResources && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Hours by Resource - Pie Chart */}
         <Card variant="default" padding="lg">
           <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
@@ -308,7 +273,72 @@ export function DashboardChartsRow({
             </div>
           )}
         </Card>
-      </div>
+        </div>
+      )}
+
+      {/* Trends section: 12-Month Revenue Trend + MoM + CAGR */}
+      {showTrends && (
+        <>
+          {/* 12-Month Revenue Trend - Full Width */}
+          <Card variant="default" padding="lg">
+            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+              12-Month Revenue Trend
+            </h3>
+            {lineData.length > 0 ? (
+              <LineGraphAtom data={lineData} />
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No revenue data available
+              </div>
+            )}
+          </Card>
+
+          {/* MoM Growth Rate and CAGR Projection - Two columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* MoM Growth Rate Chart */}
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-vercel-gray-600">
+                  MoM Growth Rate
+                </h3>
+                {growthStats.avgMoMGrowth !== null && (
+                  <span className={`text-sm font-mono ${growthStats.avgMoMGrowth >= 0 ? 'text-success' : 'text-error'}`}>
+                    Avg: {growthStats.avgMoMGrowth >= 0 ? '+' : ''}{growthStats.avgMoMGrowth.toFixed(1)}%
+                  </span>
+                )}
+              </div>
+              {momGrowthData.some(d => d.value !== null) ? (
+                <BarChartAtom data={momGrowthData} />
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                  Need 2+ months for MoM growth
+                </div>
+              )}
+            </Card>
+
+            {/* CAGR Projection Chart */}
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-vercel-gray-600">
+                  CAGR Projection
+                </h3>
+                {growthStats.projectedAnnualRevenue !== null && (
+                  <span className="text-sm font-mono text-vercel-gray-600">
+                    Projected: {formatCurrency(growthStats.projectedAnnualRevenue)}
+                  </span>
+                )}
+              </div>
+              {cagrData.some(d => d.actual !== null || d.projected !== null) ? (
+                <CAGRChartAtom data={cagrData} />
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                  No data available for projection
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </section>
   );
 }
