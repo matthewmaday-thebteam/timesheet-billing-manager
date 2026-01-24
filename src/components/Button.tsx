@@ -20,10 +20,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
+  /** Icon-only button (square with equal padding) */
+  iconOnly?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'md', children, disabled, ...props }, ref) => {
+  ({ className = '', variant = 'primary', size = 'md', iconOnly = false, children, disabled, ...props }, ref) => {
     const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none disabled:cursor-not-allowed';
 
     const variantClasses = {
@@ -60,10 +62,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-6 py-3 text-base',
     };
 
+    // Icon-only buttons match height of text buttons but with square proportions
+    const iconOnlySizeClasses = {
+      sm: 'p-1.5 text-xs',
+      md: 'p-2.5 text-sm',
+      lg: 'p-3.5 text-base',
+    };
+
     return (
       <button
         ref={ref}
-        className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={`${baseClasses} ${variantClasses[variant]} ${iconOnly ? iconOnlySizeClasses[size] : sizeClasses[size]} ${className}`}
         disabled={disabled}
         {...props}
       >

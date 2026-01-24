@@ -25,7 +25,11 @@ export const chartColors = {
   brandPurple: 'var(--color-brand-purple)',      // #764ba2
   bteamBrand: 'var(--color-bteam-brand)',        // #E50A73 (The B Team pink)
   success: 'var(--color-success)',               // #50E3C2 (mesh-3)
+  successMedium: 'var(--color-success-medium)',  // #C5F0E2
+  successLight: 'var(--color-success-light)',    // #F0FDF4
   warning: 'var(--color-warning)',               // #F5A623 (mesh-4)
+  warningMedium: 'var(--color-warning-medium)',  // #F1D4A3
+  warningLight: 'var(--color-warning-light)',    // #FFF7ED
 
   // Extended palette for pie chart segments
   info: 'var(--color-info)',                     // #4338CA
@@ -81,15 +85,15 @@ export const lineGraphLines = {
   },
   bestCase: {
     dataKey: 'bestCase' as const,
-    name: 'Best Case',
-    color: chartColors.axisText,
+    name: 'Optimistic',
+    color: chartColors.successMedium,
     strokeDasharray: undefined,
     strokeWidth: 1.5,
   },
   worstCase: {
     dataKey: 'worstCase' as const,
-    name: 'Worst Case',
-    color: chartColors.axisText,
+    name: 'Pessimistic',
+    color: chartColors.warningMedium,
     strokeDasharray: undefined,
     strokeWidth: 1.5,
   },

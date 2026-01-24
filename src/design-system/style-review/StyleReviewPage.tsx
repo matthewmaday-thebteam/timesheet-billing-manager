@@ -21,6 +21,8 @@ import { Toggle } from '../../components/Toggle';
 import { Alert } from '../../components/Alert';
 import { Card } from '../../components/Card';
 import { Badge } from '../../components/Badge';
+import { Icon } from '../../components/Icon';
+import { TypingIndicator } from '../../components/TypingIndicator';
 import { DatePicker } from '../../components/DatePicker';
 import { HolidayCalendar } from '../../components/HolidayCalendar';
 import { AccordionNested } from '../../components/AccordionNested';
@@ -133,10 +135,12 @@ function TokensSection() {
     ],
     'Semantic - Success': [
       { name: 'Success', value: '#50E3C2', token: '--color-success' },
+      { name: 'Success Medium', value: '#C5F0E2', token: '--color-success-medium' },
       { name: 'Success Light', value: '#F0FDF4', token: '--color-success-light' },
     ],
     'Semantic - Warning': [
       { name: 'Warning', value: '#F5A623', token: '--color-warning' },
+      { name: 'Warning Medium', value: '#F1D4A3', token: '--color-warning-medium' },
       { name: 'Warning Light', value: '#FFF7ED', token: '--color-warning-light' },
     ],
     'Brand Accent': [
@@ -399,14 +403,66 @@ function AtomsSection() {
             <h3 className="text-sm font-medium text-vercel-gray-600">Button</h3>
             <p className="text-xs text-vercel-gray-400">Component: src/components/Button.tsx</p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="primary">Primary</Button>
-            <Button variant="secondary">Secondary</Button>
-            <Button variant="ghost">Ghost</Button>
-            <Button variant="danger">Danger</Button>
-            <Button variant="primary" size="sm">Small</Button>
-            <Button variant="primary" size="lg">Large</Button>
-            <Button variant="primary" disabled>Disabled</Button>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Variants</p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="primary">Primary</Button>
+                <Button variant="secondary">Secondary</Button>
+                <Button variant="ghost">Ghost</Button>
+                <Button variant="danger">Danger</Button>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Sizes</p>
+              <div className="flex flex-wrap gap-3 items-center">
+                <Button variant="primary" size="sm">Small</Button>
+                <Button variant="primary" size="md">Medium</Button>
+                <Button variant="primary" size="lg">Large</Button>
+                <Button variant="primary" disabled>Disabled</Button>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Icon-Only Buttons</p>
+              <div className="flex flex-wrap gap-3 items-center">
+                <Button variant="primary" size="sm" iconOnly aria-label="Send">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </Button>
+                <Button variant="primary" size="md" iconOnly aria-label="Send">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </Button>
+                <Button variant="primary" size="lg" iconOnly aria-label="Send">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </Button>
+                <Button variant="ghost" size="md" iconOnly aria-label="Delete">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </Button>
+                <Button variant="danger" size="md" iconOnly aria-label="Delete">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </Button>
+                <Button variant="secondary" size="md" iconOnly aria-label="Settings">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Props:</span> variant (primary|secondary|ghost|danger), size (sm|md|lg), iconOnly (boolean for square icon buttons)
+            </p>
           </div>
         </div>
 
@@ -540,6 +596,93 @@ function AtomsSection() {
           <div className="flex flex-wrap gap-2 mt-4">
             <Badge variant="default" size="md">Medium Default</Badge>
             <Badge variant="success" size="md">Medium Success</Badge>
+          </div>
+        </div>
+
+        {/* Icon */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Icon</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Icon.tsx</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Sizes</p>
+              <div className="flex gap-4 items-center">
+                <div className="text-center">
+                  <Icon type="chat" size="sm" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Small</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="chat" size="md" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Medium</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="chat" size="lg" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Large</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Variants</p>
+              <div className="flex gap-4 items-center">
+                <div className="text-center">
+                  <Icon type="chat" variant="default" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Default</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="chat" variant="primary" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Primary</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="chat" variant="brand" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Brand</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Preset Icon Types</p>
+              <div className="flex gap-4 items-center">
+                <div className="text-center">
+                  <Icon type="chat" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Chat</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="user" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">User</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="settings" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Settings</p>
+                </div>
+                <div className="text-center">
+                  <Icon type="search" />
+                  <p className="text-[10px] text-vercel-gray-400 mt-1">Search</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Circular container for icons. Supports preset types (chat, user, settings, search) or custom SVG children. Three sizes (sm, md, lg) and three variants (default, primary, brand).
+            </p>
+          </div>
+        </div>
+
+        {/* TypingIndicator */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">TypingIndicator</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/TypingIndicator.tsx</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <TypingIndicator />
+            <span className="text-sm text-vercel-gray-400">AI is thinking...</span>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Messenger-style 3-dot animation using bteam-brand color. Wave pattern with staggered delays. Scale-up entrance animation from bottom-left.
+            </p>
           </div>
         </div>
 

@@ -3,15 +3,16 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjects } from '../../hooks/useProjects';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import {
   formatCurrency,
   buildDbRateLookupByName,
   getEffectiveRate,
-  applyRounding,
-  DEFAULT_ROUNDING_INCREMENT,
-  calculateBilledHours,
   formatHours,
+  applyRounding,
+  calculateBilledHours,
+  DEFAULT_ROUNDING_INCREMENT,
 } from '../../utils/billing';
 import { DateRangeFilter } from '../DateRangeFilter';
 import { RevenueTable } from '../atoms/RevenueTable';
@@ -29,7 +30,7 @@ export function RevenuePage() {
     };
   });
 
-  const { projects, entries, loading, error } = useTimesheetData(dateRange);
+  const { entries, loading, error } = useTimesheetData(dateRange);
   const { projects: dbProjects } = useProjects();
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
@@ -73,49 +74,22 @@ export function RevenuePage() {
     return map;
   }, [projectsWithRates]);
 
-  // Calculate total revenue using monthly rates
+  // Build database rate lookup (fallback for projects not in monthly rates)
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
-  const totalRevenue = useMemo(() => {
-    // Calculate revenue for each project using monthly rates
-    return projects.reduce((sum, p) => {
-      // Find the project in projectsWithRates by name to get its rate and rounding
-      const projectData = projectsWithRates.find(pr => pr.projectName === p.projectName);
-      const rate = projectData?.effectiveRate ?? getEffectiveRate(p.projectName, dbRateLookup, {});
-      const rounding = projectData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
 
-      // Calculate rounded minutes for this project
-      let roundedMinutes = 0;
-      for (const resource of p.resources) {
-        for (const task of resource.tasks) {
-          roundedMinutes += applyRounding(task.totalMinutes, rounding);
-        }
-      }
+  // Helper to get canonical company name
+  const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
+    const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
+    return canonicalInfo?.canonicalDisplayName || clientName || 'Unassigned';
+  }, [getCanonicalCompany]);
 
-      // Calculate base revenue
-      let revenue = (roundedMinutes / 60) * rate;
-
-      // Apply billing limits if they exist
-      if (projectData && (projectData.minimumHours !== null || projectData.maximumHours !== null || projectData.carryoverHoursIn > 0)) {
-        const limits = {
-          minimumHours: projectData.minimumHours,
-          maximumHours: projectData.maximumHours,
-          carryoverEnabled: projectData.carryoverEnabled,
-          carryoverMaxHours: projectData.carryoverMaxHours,
-          carryoverExpiryMonths: projectData.carryoverExpiryMonths,
-        };
-        const billingResult = calculateBilledHours(
-          roundedMinutes,
-          limits,
-          projectData.carryoverHoursIn || 0,
-          rate,
-          projectData.isActive
-        );
-        revenue = billingResult.revenue;
-      }
-
-      return sum + revenue;
-    }, 0);
-  }, [projects, dbRateLookup, projectsWithRates]);
+  // Use unified billing calculation - single source of truth
+  const { totalRevenue, billingResult } = useUnifiedBilling({
+    entries,
+    projectsWithRates,
+    fallbackRateLookup: dbRateLookup,
+    getCanonicalCompanyName,
+  });
 
   // Check if any projects have billing limits for CSV export
   const hasBillingLimitsForExport = useMemo(() => {
@@ -351,9 +325,7 @@ export function RevenuePage() {
         </div>
       ) : (
         <RevenueTable
-          entries={entries}
-          roundingByProjectId={roundingByProjectId}
-          billingDataByProjectId={billingDataByProjectId}
+          billingResult={billingResult}
         />
       )}
     </div>

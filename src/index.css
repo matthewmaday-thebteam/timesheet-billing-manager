@@ -39,6 +39,7 @@
      COLOR TOKENS - Semantic: Success
      --------------------------------------------------------------------------- */
   --color-success: #50E3C2;
+  --color-success-medium: #C5F0E2;
   --color-success-light: #F0FDF4;
   --color-success-border: #BBF7D0;
   --color-success-text: #166534;
@@ -47,6 +48,7 @@
      COLOR TOKENS - Semantic: Warning
      --------------------------------------------------------------------------- */
   --color-warning: #F5A623;
+  --color-warning-medium: #F1D4A3;
   --color-warning-alt: #F97316;
   --color-warning-light: #FFF7ED;
   --color-warning-border: #FFEDD5;
@@ -128,4 +130,16 @@
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: #A3A3A3;
+}
+
+/* Hide scrollbar completely */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
 }

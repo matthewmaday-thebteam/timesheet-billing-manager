@@ -4,6 +4,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  titleIcon?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   stickyHeader?: React.ReactNode;
@@ -24,6 +25,7 @@ export function Modal({
   isOpen,
   onClose,
   title,
+  titleIcon,
   children,
   maxWidth = '2xl',
   stickyHeader,
@@ -88,7 +90,10 @@ export function Modal({
                 </svg>
               </button>
             )}
-            <h2 className="text-lg font-semibold text-vercel-gray-600">{title}</h2>
+            <div className="flex items-center gap-3">
+              {titleIcon}
+              <h2 className="text-lg font-semibold text-vercel-gray-600">{title}</h2>
+            </div>
             {!centerTitle && (
               <button
                 onClick={onClose}

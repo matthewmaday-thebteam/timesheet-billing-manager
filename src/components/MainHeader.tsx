@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from './Avatar';
 import { ProfileEditorModal } from './ProfileEditorModal';
 import { NavItem } from './NavItem';
+import { AIChatWindow } from './chat';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
@@ -35,6 +36,7 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDocsMenuOpen, setIsDocsMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const docsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -106,9 +108,25 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
 
         {/* Right: Links and Avatar */}
         <div className="flex items-center gap-4">
-          {/* Feedback Link */}
-          <button className="text-sm text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors focus:outline-none focus:ring-1 focus:ring-black rounded px-2 py-1">
-            Feedback
+          {/* Ask the Accountant - AI Chat */}
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="text-sm text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors focus:outline-none focus:ring-1 focus:ring-black rounded px-2 py-1 flex items-center gap-1.5"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            Ask the Accountant
           </button>
 
           {/* Docs Dropdown */}
@@ -227,6 +245,12 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
       <ProfileEditorModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      {/* AI Chat Window */}
+      <AIChatWindow
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
       />
     </header>
   );

@@ -31,6 +31,7 @@ import {
 import { formatCurrency } from '../utils/billing';
 import type { ResourceSummary, TimesheetEntry } from '../types';
 import type { MonthlyAggregate } from '../types/charts';
+import type { MonthlyBillingResult } from '../utils/billingCalculations';
 
 /** Data for top resources list display */
 interface TopResourceItem {
@@ -46,8 +47,12 @@ export interface DashboardChartsRowProps {
   entries: TimesheetEntry[];
   /** Monthly aggregates for line chart */
   monthlyAggregates: MonthlyAggregate[];
-  /** Project rates lookup by project name */
+  /** Project rates lookup by project name (fallback) */
   projectRates: Map<string, number>;
+  /** Unified billing result from useUnifiedBilling */
+  billingResult?: MonthlyBillingResult;
+  /** Pre-calculated total revenue for the current month (with billing limits applied) */
+  currentMonthRevenue?: number;
   /** Loading state */
   loading?: boolean;
   /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
@@ -56,26 +61,56 @@ export interface DashboardChartsRowProps {
 
 /**
  * Transform timesheet entries into top N resource list with hours and revenue.
+ * Uses the unified billing result for accurate revenue calculations.
  * @param sortBy - 'hours' or 'revenue' - determines sort order
  */
 function transformEntriesToTopList(
   entries: TimesheetEntry[],
+  billingResult: MonthlyBillingResult | undefined,
   projectRates: Map<string, number>,
   topN: number = 5,
   sortBy: 'hours' | 'revenue' = 'hours'
 ): TopResourceItem[] {
-  // Aggregate minutes and revenue by user
+  // Build project revenue lookup from billing result
+  const projectRevenues = new Map<string, number>();
+  const projectMinutes = new Map<string, number>();
+
+  if (billingResult) {
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        projectRevenues.set(project.projectName, project.billedRevenue);
+        projectMinutes.set(project.projectName, project.actualMinutes);
+      }
+    }
+  }
+
+  // If no billing result, fall back to simple calculation
+  if (!billingResult) {
+    for (const entry of entries) {
+      const current = projectMinutes.get(entry.project_name) || 0;
+      projectMinutes.set(entry.project_name, current + entry.total_minutes);
+
+      const rate = projectRates.get(entry.project_name) ?? 0;
+      const currentRevenue = projectRevenues.get(entry.project_name) || 0;
+      projectRevenues.set(entry.project_name, currentRevenue + (entry.total_minutes / 60) * rate);
+    }
+  }
+
+  // Aggregate by user, distributing project revenue proportionally
   const userStats = new Map<string, { minutes: number; revenue: number }>();
 
   for (const entry of entries) {
     const userName = entry.user_name;
     const current = userStats.get(userName) || { minutes: 0, revenue: 0 };
-    const rate = projectRates.get(entry.project_name) ?? 0;
-    const hours = entry.total_minutes / 60;
+
+    // Calculate user's share of project revenue based on their contribution
+    const totalProjectMinutes = projectMinutes.get(entry.project_name) || 1;
+    const projectRevenue = projectRevenues.get(entry.project_name) || 0;
+    const userShare = (entry.total_minutes / totalProjectMinutes) * projectRevenue;
 
     userStats.set(userName, {
       minutes: current.minutes + entry.total_minutes,
-      revenue: current.revenue + (hours * rate),
+      revenue: current.revenue + userShare,
     });
   }
 
@@ -102,6 +137,8 @@ export function DashboardChartsRow({
   entries,
   monthlyAggregates,
   projectRates,
+  billingResult,
+  currentMonthRevenue,
   loading = false,
   section = 'all',
 }: DashboardChartsRowProps) {
@@ -113,10 +150,50 @@ export function DashboardChartsRow({
     [resources]
   );
 
-  const lineData = useMemo(
-    () => transformToLineChartData(monthlyAggregates),
-    [monthlyAggregates]
-  );
+  // Transform line data, then override current month with accurate revenue if provided
+  const lineData = useMemo(() => {
+    const baseData = transformToLineChartData(monthlyAggregates);
+
+    // If we have an accurate current month revenue, update the line data
+    if (currentMonthRevenue !== undefined && monthlyAggregates.length > 0) {
+      const currentMonthIndex = new Date().getMonth(); // 0-11
+      const currentYear = new Date().getFullYear();
+
+      // Find the current month in aggregates to calculate cumulative
+      let cumulativeBeforeCurrent = 0;
+      for (const agg of monthlyAggregates) {
+        const [aggYear, aggMonth] = agg.month.split('-').map(Number);
+        if (aggYear === currentYear && aggMonth - 1 < currentMonthIndex) {
+          cumulativeBeforeCurrent += agg.totalRevenue;
+        }
+      }
+
+      // Update current month's cumulative revenue
+      if (baseData[currentMonthIndex]) {
+        const newCumulative = Math.round(cumulativeBeforeCurrent + currentMonthRevenue);
+        baseData[currentMonthIndex] = {
+          ...baseData[currentMonthIndex],
+          revenue: newCumulative,
+        };
+
+        // Update future months to extend from the correct base
+        for (let i = currentMonthIndex + 1; i < 12; i++) {
+          if (baseData[i].bestCase !== null) {
+            const monthsAhead = i - currentMonthIndex;
+            const avgMonthlyRevenue = currentMonthRevenue; // Use current month as baseline
+            baseData[i] = {
+              ...baseData[i],
+              revenue: newCumulative, // Flat line extends current cumulative
+              bestCase: Math.round(newCumulative + (monthsAhead * avgMonthlyRevenue * 1.2)),
+              worstCase: Math.round(newCumulative + (monthsAhead * avgMonthlyRevenue * 0.8)),
+            };
+          }
+        }
+      }
+    }
+
+    return baseData;
+  }, [monthlyAggregates, currentMonthRevenue]);
 
   // MoM Growth Rate data
   const momGrowthData = useMemo(
@@ -138,14 +215,14 @@ export function DashboardChartsRow({
 
   // Top 5 by hours for the selected month
   const topFiveByHours = useMemo(
-    () => transformEntriesToTopList(entries, projectRates, 5, 'hours'),
-    [entries, projectRates]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, 5, 'hours'),
+    [entries, billingResult, projectRates]
   );
 
   // Top 5 by revenue for the selected month
   const topFiveByRevenue = useMemo(
-    () => transformEntriesToTopList(entries, projectRates, 5, 'revenue'),
-    [entries, projectRates]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, 5, 'revenue'),
+    [entries, billingResult, projectRates]
   );
 
   // Loading state
@@ -320,16 +397,35 @@ export function DashboardChartsRow({
             <Card variant="default" padding="lg">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-vercel-gray-600">
-                  CAGR Projection
+                  Annual Revenue (CAGR)
                 </h3>
-                {growthStats.projectedAnnualRevenue !== null && (
-                  <span className="text-sm font-mono text-vercel-gray-600">
-                    Projected: {formatCurrency(growthStats.projectedAnnualRevenue)}
+                {growthStats.cagr !== null && (
+                  <span className={`text-sm font-mono ${growthStats.cagr >= 0 ? 'text-success' : 'text-error'}`}>
+                    CAGR: {growthStats.cagr >= 0 ? '+' : ''}{growthStats.cagr.toFixed(1)}%
                   </span>
                 )}
               </div>
               {cagrData.some(d => d.actual !== null || d.projected !== null) ? (
-                <CAGRChartAtom data={cagrData} />
+                <>
+                  <CAGRChartAtom data={cagrData} />
+                  {/* YoY Growth Rates */}
+                  {growthStats.yoyGrowthRates.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-vercel-gray-100">
+                      <div className="flex items-center gap-6 justify-center">
+                        {growthStats.yoyGrowthRates.map((yoy) => (
+                          <div key={`${yoy.fromYear}-${yoy.toYear}`} className="text-center">
+                            <div className="text-xs text-vercel-gray-400 mb-1">
+                              {yoy.fromYear}→{yoy.toYear}
+                            </div>
+                            <div className={`text-sm font-mono font-medium ${yoy.rate >= 0 ? 'text-success' : 'text-error'}`}>
+                              {yoy.rate >= 0 ? '+' : ''}{yoy.rate.toFixed(1)}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
                   No data available for projection

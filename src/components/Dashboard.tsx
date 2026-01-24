@@ -1,17 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
+import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
+import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
-import {
-  buildDbRateLookupByName,
-  getEffectiveRate,
-  applyRounding,
-  DEFAULT_ROUNDING_INCREMENT,
-  calculateBilledHours,
-} from '../utils/billing';
+import { buildDbRateLookupByName } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
@@ -63,6 +59,9 @@ export function Dashboard() {
   // Fetch monthly rates
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
+  // Get canonical company mapping
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
+
   // Use the earlier of: end of selected range or today
   const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
@@ -72,47 +71,19 @@ export function Dashboard() {
   // Build database rate lookup (fallback for projects not in monthly rates)
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
 
-  // Calculate revenue using monthly rates
-  const totalRevenue = useMemo(() => {
-    return projects.reduce((sum, p) => {
-      // Find the project in projectsWithRates by name to get its rate and rounding
-      const projectData = projectsWithRates.find(pr => pr.projectName === p.projectName);
-      const rate = projectData?.effectiveRate ?? getEffectiveRate(p.projectName, dbRateLookup, {});
-      const rounding = projectData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
+  // Helper to get canonical company name
+  const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
+    const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
+    return canonicalInfo?.canonicalDisplayName || clientName || 'Unassigned';
+  }, [getCanonicalCompany]);
 
-      // Calculate rounded minutes for this project
-      let roundedMinutes = 0;
-      for (const resource of p.resources) {
-        for (const task of resource.tasks) {
-          roundedMinutes += applyRounding(task.totalMinutes, rounding);
-        }
-      }
-
-      // Calculate base revenue
-      let revenue = (roundedMinutes / 60) * rate;
-
-      // Apply billing limits if they exist
-      if (projectData && (projectData.minimumHours !== null || projectData.maximumHours !== null || projectData.carryoverHoursIn > 0)) {
-        const limits = {
-          minimumHours: projectData.minimumHours,
-          maximumHours: projectData.maximumHours,
-          carryoverEnabled: projectData.carryoverEnabled,
-          carryoverMaxHours: projectData.carryoverMaxHours,
-          carryoverExpiryMonths: projectData.carryoverExpiryMonths,
-        };
-        const billingResult = calculateBilledHours(
-          roundedMinutes,
-          limits,
-          projectData.carryoverHoursIn || 0,
-          rate,
-          projectData.isActive
-        );
-        revenue = billingResult.revenue;
-      }
-
-      return sum + revenue;
-    }, 0);
-  }, [projects, dbRateLookup, projectsWithRates]);
+  // Use unified billing calculation - single source of truth
+  const { totalRevenue, billingResult } = useUnifiedBilling({
+    entries,
+    projectsWithRates,
+    fallbackRateLookup: dbRateLookup,
+    getCanonicalCompanyName,
+  });
 
   return (
     <>
@@ -152,23 +123,28 @@ export function Dashboard() {
           />
         )}
 
-        {/* Resources Charts: Hours by Resource + Top 5 lists */}
-        <DashboardChartsRow
-          resources={resources}
-          entries={entries}
-          monthlyAggregates={monthlyAggregates}
-          projectRates={dbRateLookup}
-          loading={loading}
-          section="resources"
-        />
-
-        {/* Trend Charts: Revenue Trend + MoM + CAGR */}
-        <div className="space-y-3">
+        {/* Charts Section: Resources + Trends with consistent internal spacing */}
+        <div className="space-y-4">
+          {/* Resources Charts: Hours by Resource + Top 5 lists */}
           <DashboardChartsRow
             resources={resources}
             entries={entries}
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
+            billingResult={billingResult}
+            currentMonthRevenue={totalRevenue}
+            loading={loading}
+            section="resources"
+          />
+
+          {/* Trend Charts: Revenue Trend + MoM + CAGR */}
+          <DashboardChartsRow
+            resources={resources}
+            entries={entries}
+            monthlyAggregates={monthlyAggregates}
+            projectRates={dbRateLookup}
+            billingResult={billingResult}
+            currentMonthRevenue={totalRevenue}
             loading={loading}
             section="trends"
           />

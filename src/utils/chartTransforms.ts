@@ -18,6 +18,17 @@ import type {
 import { TARGET_RATIO, ANNUAL_BUDGET, TOP_N_RESOURCES } from '../config/chartConfig';
 
 /**
+ * Historical annual revenue data (hardcoded).
+ * Used for CAGR calculation and projection.
+ */
+export const HISTORICAL_ANNUAL_REVENUE: Record<number, number> = {
+  2022: 846852,
+  2023: 1187720,
+  2024: 1245857,
+  2025: 1580000,
+};
+
+/**
  * Transform resource summaries into pie chart data.
  * Shows top N resources by hours, groups remainder into "Other".
  *
@@ -311,126 +322,118 @@ export function transformToMoMGrowthData(
 }
 
 /**
- * Transform monthly aggregates into CAGR projection data.
- * Projects future revenue based on compound growth of current average MoM rate.
- * Formula: Final = Current × (1 + MoM%)^months
+ * Transform historical annual revenue into CAGR projection data.
+ * Uses hardcoded annual revenue (2022-2025) and projects future years.
+ * Formula: CAGR = (End/Start)^(1/n) - 1
  *
- * @param monthlyAggregates - Array of monthly aggregate data
- * @returns Array of 12 CAGR projection data points
+ * @param _monthlyAggregates - Unused, kept for API compatibility
+ * @param projectYears - Number of years to project forward (default: 2)
+ * @returns Array of CAGR projection data points by year
  */
 export function transformToCAGRProjectionData(
-  monthlyAggregates: MonthlyAggregate[]
+  _monthlyAggregates: MonthlyAggregate[],
+  projectYears: number = 2
 ): CAGRProjectionDataPoint[] {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const historicalYears = Object.keys(HISTORICAL_ANNUAL_REVENUE)
+    .map(Number)
+    .sort((a, b) => a - b);
 
-  // Build a map of month index (0-11) to monthly revenue
-  const revenueByMonth = new Map<number, number>();
-  for (const aggregate of monthlyAggregates) {
-    const monthIndex = parseInt(aggregate.month.split('-')[1]) - 1;
-    revenueByMonth.set(monthIndex, aggregate.totalRevenue);
+  if (historicalYears.length < 2) {
+    return [];
   }
 
-  // Find months with data and calculate average MoM growth rate
-  const monthIndicesWithData: number[] = [];
-  for (let i = 0; i < 12; i++) {
-    if (revenueByMonth.has(i)) {
-      monthIndicesWithData.push(i);
-    }
-  }
+  // Calculate CAGR from first to last historical year
+  const startYear = historicalYears[0];
+  const endYear = historicalYears[historicalYears.length - 1];
+  const startValue = HISTORICAL_ANNUAL_REVENUE[startYear];
+  const endValue = HISTORICAL_ANNUAL_REVENUE[endYear];
+  const numYears = endYear - startYear;
 
-  // Calculate MoM growth rates for consecutive months
-  const growthRates: number[] = [];
-  for (let i = 1; i < monthIndicesWithData.length; i++) {
-    const prevIndex = monthIndicesWithData[i - 1];
-    const currIndex = monthIndicesWithData[i];
-    // Only consider consecutive months
-    if (currIndex === prevIndex + 1) {
-      const prevRevenue = revenueByMonth.get(prevIndex)!;
-      const currRevenue = revenueByMonth.get(currIndex)!;
-      if (prevRevenue > 0) {
-        growthRates.push((currRevenue - prevRevenue) / prevRevenue);
-      }
-    }
-  }
+  // CAGR = (End/Start)^(1/n) - 1
+  const cagr = Math.pow(endValue / startValue, 1 / numYears) - 1;
 
-  // Calculate average MoM growth rate (as decimal, e.g., 0.15 for 15%)
-  const avgMoMGrowth = growthRates.length > 0
-    ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
-    : 0;
+  const result: CAGRProjectionDataPoint[] = [];
 
-  // Find last month with data and its cumulative revenue
-  const lastMonthWithData = monthIndicesWithData.length > 0
-    ? monthIndicesWithData[monthIndicesWithData.length - 1]
-    : -1;
-
-  // Calculate cumulative revenue up to last month with data
-  let cumulativeRevenue = 0;
-  for (const idx of monthIndicesWithData) {
-    cumulativeRevenue += revenueByMonth.get(idx) ?? 0;
-  }
-
-  // Get the last month's revenue for projection base
-  const lastMonthRevenue = lastMonthWithData >= 0
-    ? revenueByMonth.get(lastMonthWithData) ?? 0
-    : 0;
-
-  return months.map((monthName, index) => {
-    const hasData = revenueByMonth.has(index);
-
-    // Calculate actual cumulative revenue up to this month
-    let actualCumulative = 0;
-    for (let i = 0; i <= index && i <= lastMonthWithData; i++) {
-      actualCumulative += revenueByMonth.get(i) ?? 0;
-    }
-
-    // For months with data, show actual; for future months, show projection
-    if (hasData) {
-      return {
-        month: monthName,
-        actual: Math.round(actualCumulative),
-        projected: null,
-      };
-    } else if (index > lastMonthWithData && lastMonthWithData >= 0) {
-      // Project using CAGR formula: cumulative + projected monthly growth
-      // Each future month compounds on the previous
-      const monthsAhead = index - lastMonthWithData;
-
-      // Project each future month's revenue using compound growth
-      let projectedCumulative = cumulativeRevenue;
-      let projectedMonthlyRevenue = lastMonthRevenue;
-      for (let m = 1; m <= monthsAhead; m++) {
-        projectedMonthlyRevenue = projectedMonthlyRevenue * (1 + avgMoMGrowth);
-        projectedCumulative += projectedMonthlyRevenue;
-      }
-
-      return {
-        month: monthName,
-        actual: null,
-        projected: Math.round(projectedCumulative),
-      };
-    }
-
-    return {
-      month: monthName,
-      actual: null,
+  // Add historical years as actual data
+  for (const year of historicalYears) {
+    result.push({
+      month: String(year), // Using 'month' field for year label
+      actual: HISTORICAL_ANNUAL_REVENUE[year],
       projected: null,
-    };
-  });
+    });
+  }
+
+  // Project future years using CAGR
+  let lastValue = endValue;
+  for (let i = 1; i <= projectYears; i++) {
+    const projectedYear = endYear + i;
+    lastValue = lastValue * (1 + cagr);
+    result.push({
+      month: String(projectedYear),
+      actual: null,
+      projected: Math.round(lastValue),
+    });
+  }
+
+  return result;
+}
+
+/** Year-over-year growth rate data */
+export interface YoYGrowthRate {
+  fromYear: number;
+  toYear: number;
+  rate: number; // Percentage (e.g., 40.3 for 40.3%)
 }
 
 /**
- * Calculate summary statistics for MoM growth display.
+ * Calculate summary statistics for growth display.
+ * Uses hardcoded historical annual revenue for CAGR calculation.
  *
- * @param monthlyAggregates - Array of monthly aggregate data
- * @returns Object with average MoM growth rate and projected annual revenue
+ * @param monthlyAggregates - Array of monthly aggregate data (used for MoM stats)
+ * @returns Object with CAGR, projected revenue, and current stats
  */
 export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
   avgMoMGrowth: number | null;
   projectedAnnualRevenue: number | null;
   currentCumulativeRevenue: number;
   monthsWithData: number;
+  cagr: number | null;
+  yoyGrowthRates: YoYGrowthRate[];
 } {
-  // Build a map of month index (0-11) to monthly revenue
+  // Calculate CAGR and YoY growth rates from historical annual data
+  const historicalYears = Object.keys(HISTORICAL_ANNUAL_REVENUE)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  let cagr: number | null = null;
+  let projectedAnnualRevenue: number | null = null;
+  const yoyGrowthRates: YoYGrowthRate[] = [];
+
+  if (historicalYears.length >= 2) {
+    const startYear = historicalYears[0];
+    const endYear = historicalYears[historicalYears.length - 1];
+    const startValue = HISTORICAL_ANNUAL_REVENUE[startYear];
+    const endValue = HISTORICAL_ANNUAL_REVENUE[endYear];
+    const numYears = endYear - startYear;
+
+    // CAGR = (End/Start)^(1/n) - 1
+    cagr = (Math.pow(endValue / startValue, 1 / numYears) - 1) * 100;
+
+    // Project next year
+    projectedAnnualRevenue = endValue * (1 + cagr / 100);
+
+    // Calculate YoY growth rates for each consecutive year pair
+    for (let i = 1; i < historicalYears.length; i++) {
+      const fromYear = historicalYears[i - 1];
+      const toYear = historicalYears[i];
+      const fromValue = HISTORICAL_ANNUAL_REVENUE[fromYear];
+      const toValue = HISTORICAL_ANNUAL_REVENUE[toYear];
+      const rate = ((toValue - fromValue) / fromValue) * 100;
+      yoyGrowthRates.push({ fromYear, toYear, rate });
+    }
+  }
+
+  // Build a map of month index (0-11) to monthly revenue for MoM stats
   const revenueByMonth = new Map<number, number>();
   for (const aggregate of monthlyAggregates) {
     const monthIndex = parseInt(aggregate.month.split('-')[1]) - 1;
@@ -450,9 +453,11 @@ export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
   if (monthIndicesWithData.length === 0) {
     return {
       avgMoMGrowth: null,
-      projectedAnnualRevenue: null,
+      projectedAnnualRevenue,
       currentCumulativeRevenue: 0,
       monthsWithData: 0,
+      cagr,
+      yoyGrowthRates,
     };
   }
 
@@ -474,29 +479,12 @@ export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
     ? (growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length) * 100
     : null;
 
-  // Project annual revenue using CAGR
-  let projectedAnnualRevenue: number | null = null;
-  if (avgMoMGrowth !== null && monthIndicesWithData.length > 0) {
-    const lastMonthWithData = monthIndicesWithData[monthIndicesWithData.length - 1];
-    const lastMonthRevenue = revenueByMonth.get(lastMonthWithData) ?? 0;
-    const remainingMonths = 11 - lastMonthWithData;
-
-    let projected = cumulativeRevenue;
-    let monthlyRevenue = lastMonthRevenue;
-    const growthRate = avgMoMGrowth / 100;
-
-    for (let m = 0; m < remainingMonths; m++) {
-      monthlyRevenue = monthlyRevenue * (1 + growthRate);
-      projected += monthlyRevenue;
-    }
-
-    projectedAnnualRevenue = projected;
-  }
-
   return {
     avgMoMGrowth,
     projectedAnnualRevenue,
     currentCumulativeRevenue: cumulativeRevenue,
     monthsWithData: monthIndicesWithData.length,
+    cagr,
+    yoyGrowthRates,
   };
 }
