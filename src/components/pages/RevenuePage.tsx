@@ -3,12 +3,21 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjects } from '../../hooks/useProjects';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
-import { calculateProjectRevenue, formatCurrency, buildDbRateLookupByName, getEffectiveRate, applyRounding, DEFAULT_ROUNDING_INCREMENT } from '../../utils/billing';
+import {
+  formatCurrency,
+  buildDbRateLookupByName,
+  getEffectiveRate,
+  applyRounding,
+  DEFAULT_ROUNDING_INCREMENT,
+  calculateBilledHours,
+  formatHours,
+} from '../../utils/billing';
 import { DateRangeFilter } from '../DateRangeFilter';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Button } from '../Button';
-import type { DateRange, MonthSelection, RoundingIncrement } from '../../types';
+import { Alert } from '../Alert';
+import type { DateRange, MonthSelection, RoundingIncrement, ProjectRateDisplayWithBilling } from '../../types';
 
 export function RevenuePage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -51,17 +60,70 @@ export function RevenuePage() {
     return map;
   }, [projectsWithRates]);
 
-  // Calculate total revenue
+  // Build billing data lookup by EXTERNAL project ID
+  const billingDataByProjectId = useMemo(() => {
+    const map = new Map<string, ProjectRateDisplayWithBilling>();
+    for (const p of projectsWithRates) {
+      if (p.externalProjectId) {
+        map.set(p.externalProjectId, p);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
+  // Calculate total revenue using monthly rates
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
   const totalRevenue = useMemo(() => {
-    // Get rounding for each project and apply it
+    // Calculate revenue for each project using monthly rates
     return projects.reduce((sum, p) => {
-      // Find the project in projectsWithRates by name to get its rounding
+      // Find the project in projectsWithRates by name to get its rate and rounding
       const projectData = projectsWithRates.find(pr => pr.projectName === p.projectName);
+      const rate = projectData?.effectiveRate ?? getEffectiveRate(p.projectName, dbRateLookup, {});
       const rounding = projectData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
-      return sum + calculateProjectRevenue(p, {}, dbRateLookup, rounding);
+
+      // Calculate rounded minutes for this project
+      let roundedMinutes = 0;
+      for (const resource of p.resources) {
+        for (const task of resource.tasks) {
+          roundedMinutes += applyRounding(task.totalMinutes, rounding);
+        }
+      }
+
+      // Calculate base revenue
+      let revenue = (roundedMinutes / 60) * rate;
+
+      // Apply billing limits if they exist
+      if (projectData && (projectData.minimumHours !== null || projectData.maximumHours !== null || projectData.carryoverHoursIn > 0)) {
+        const limits = {
+          minimumHours: projectData.minimumHours,
+          maximumHours: projectData.maximumHours,
+          carryoverEnabled: projectData.carryoverEnabled,
+          carryoverMaxHours: projectData.carryoverMaxHours,
+          carryoverExpiryMonths: projectData.carryoverExpiryMonths,
+        };
+        const billingResult = calculateBilledHours(
+          roundedMinutes,
+          limits,
+          projectData.carryoverHoursIn || 0,
+          rate,
+          projectData.isActive
+        );
+        revenue = billingResult.revenue;
+      }
+
+      return sum + revenue;
     }, 0);
   }, [projects, dbRateLookup, projectsWithRates]);
+
+  // Check if any projects have billing limits for CSV export
+  const hasBillingLimitsForExport = useMemo(() => {
+    for (const data of billingDataByProjectId.values()) {
+      if (data.minimumHours !== null || data.maximumHours !== null || data.carryoverHoursIn > 0) {
+        return true;
+      }
+    }
+    return false;
+  }, [billingDataByProjectId]);
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
@@ -71,8 +133,11 @@ export function RevenuePage() {
     // Title row
     csvRows.push([`Revenue for the month of ${format(dateRange.start, 'MMMM yyyy')}`]);
 
-    // Header row
-    csvRows.push(['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Revenue']);
+    // Header row - conditionally include billing columns
+    const headerRow = hasBillingLimitsForExport
+      ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Revenue']
+      : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Revenue'];
+    csvRows.push(headerRow);
 
     // Data rows - aggregate by company/project/task
     const taskMap = new Map<string, { company: string; project: string; projectId: string | null; task: string; minutes: number; rate: number }>();
@@ -120,33 +185,100 @@ export function RevenuePage() {
     });
 
     for (const proj of sortedProjects) {
-      // Get rounding for this project
-      const rounding = proj.projectId && roundingByProjectId.has(proj.projectId)
-        ? roundingByProjectId.get(proj.projectId)!
-        : DEFAULT_ROUNDING_INCREMENT;
+      // Get billing data for this project
+      const billingData = proj.projectId ? billingDataByProjectId.get(proj.projectId) : null;
+
+      // Use monthly rate from billingData if available, otherwise fall back to project table rate
+      const effectiveRate = billingData?.effectiveRate ?? proj.rate;
+
+      // Get rounding - prefer billingData, then roundingByProjectId map
+      let rounding = billingData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
+      if (rounding === DEFAULT_ROUNDING_INCREMENT && proj.projectId && roundingByProjectId.has(proj.projectId)) {
+        rounding = roundingByProjectId.get(proj.projectId)!;
+      }
 
       const incLabel = rounding === 0 ? '—' : `${rounding}m`;
 
+      // Calculate project-level rounded minutes (for billing calc)
+      let projectRoundedMinutes = 0;
+      for (const task of proj.tasks) {
+        projectRoundedMinutes += applyRounding(task.minutes, rounding);
+      }
+
+      // Calculate billing result for the project (if limits exist)
+      let carryoverIn = 0;
+      let adjustedHours = projectRoundedMinutes / 60;
+      let billedHours = adjustedHours;
+      let unbillableHours = 0;
+      let billedRevenue = billedHours * effectiveRate;
+
+      if (billingData && (billingData.minimumHours !== null || billingData.maximumHours !== null || billingData.carryoverHoursIn > 0)) {
+        carryoverIn = billingData.carryoverHoursIn || 0;
+        const limits = {
+          minimumHours: billingData.minimumHours,
+          maximumHours: billingData.maximumHours,
+          carryoverEnabled: billingData.carryoverEnabled,
+          carryoverMaxHours: billingData.carryoverMaxHours,
+          carryoverExpiryMonths: billingData.carryoverExpiryMonths,
+        };
+
+        const billingResult = calculateBilledHours(
+          projectRoundedMinutes,
+          limits,
+          carryoverIn,
+          effectiveRate,
+          billingData.isActive
+        );
+
+        adjustedHours = billingResult.adjustedHours;
+        billedHours = billingResult.billedHours;
+        unbillableHours = billingResult.unbillableHours;
+        billedRevenue = billingResult.revenue;
+      }
+
       // Sort tasks by minutes
       proj.tasks.sort((a, b) => b.minutes - a.minutes);
+
+      // Track if this is the first task for the project (to add project-level billing)
+      let isFirstTask = true;
 
       for (const task of proj.tasks) {
         // Apply rounding to each task individually
         const roundedTaskMinutes = applyRounding(task.minutes, rounding);
         const actualHours = (task.minutes / 60).toFixed(2);
         const roundedHours = (roundedTaskMinutes / 60).toFixed(2);
-        const taskRevenue = ((roundedTaskMinutes / 60) * proj.rate).toFixed(2);
+        const taskRevenue = ((roundedTaskMinutes / 60) * effectiveRate).toFixed(2);
 
-        csvRows.push([
-          proj.company,
-          proj.project,
-          task.task,
-          actualHours,
-          roundedHours,
-          incLabel,
-          proj.rate.toFixed(2),
-          taskRevenue,
-        ]);
+        if (hasBillingLimitsForExport) {
+          // Include billing columns - only show project-level billing on first task
+          csvRows.push([
+            proj.company,
+            proj.project,
+            task.task,
+            actualHours,
+            roundedHours,
+            isFirstTask ? formatHours(carryoverIn) : '',
+            isFirstTask ? formatHours(adjustedHours) : '',
+            isFirstTask ? formatHours(billedHours) : '',
+            isFirstTask && unbillableHours > 0 ? formatHours(unbillableHours) : '',
+            incLabel,
+            effectiveRate.toFixed(2),
+            isFirstTask ? billedRevenue.toFixed(2) : taskRevenue,
+          ]);
+          isFirstTask = false;
+        } else {
+          // Standard export without billing columns
+          csvRows.push([
+            proj.company,
+            proj.project,
+            task.task,
+            actualHours,
+            roundedHours,
+            incLabel,
+            effectiveRate.toFixed(2),
+            taskRevenue,
+          ]);
+        }
       }
     }
 
@@ -165,7 +297,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dbRateLookup, roundingByProjectId, dateRange.start]);
+  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -205,16 +337,7 @@ export function RevenuePage() {
       />
 
       {/* Error State */}
-      {error && (
-        <div className="p-4 bg-error-light border border-error rounded-lg">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm text-error">{error}</span>
-          </div>
-        </div>
-      )}
+      {error && <Alert message={error} icon="error" variant="error" />}
 
       {/* Billing Rates Table */}
       {loading ? (
@@ -226,6 +349,7 @@ export function RevenuePage() {
         <RevenueTable
           entries={entries}
           roundingByProjectId={roundingByProjectId}
+          billingDataByProjectId={billingDataByProjectId}
         />
       )}
     </div>

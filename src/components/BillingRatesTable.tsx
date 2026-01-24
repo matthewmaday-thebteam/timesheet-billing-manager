@@ -3,13 +3,15 @@ import { AccordionFlat } from './AccordionFlat';
 import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
-import type { ProjectRateDisplay, MonthSelection, RoundingIncrement } from '../types';
+import type { ProjectRateDisplayWithBilling, MonthSelection, RoundingIncrement, ProjectBillingLimits } from '../types';
 
 interface BillingRatesTableProps {
-  projectsWithRates: ProjectRateDisplay[];
+  projectsWithRates: ProjectRateDisplayWithBilling[];
   selectedMonth: MonthSelection;
   onUpdateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   onUpdateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  onUpdateBillingLimits: (projectId: string, month: MonthSelection, limits: Partial<ProjectBillingLimits>) => Promise<boolean>;
+  onUpdateActiveStatus: (projectId: string, month: MonthSelection, isActive: boolean) => Promise<boolean>;
   onRatesChange: () => void;
 }
 
@@ -18,14 +20,16 @@ export function BillingRatesTable({
   selectedMonth,
   onUpdateRate,
   onUpdateRounding,
+  onUpdateBillingLimits,
+  onUpdateActiveStatus,
   onRatesChange,
 }: BillingRatesTableProps) {
   // Modal state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectRateDisplay | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectRateDisplayWithBilling | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleEditClick = (project: ProjectRateDisplay) => {
+  const handleEditClick = (project: ProjectRateDisplayWithBilling) => {
     setSelectedProject(project);
     setIsEditorOpen(true);
   };
@@ -61,6 +65,32 @@ export function BillingRatesTable({
     }
   };
 
+  const handleSaveBillingLimits = async (projectId: string, month: MonthSelection, limits: Partial<ProjectBillingLimits>) => {
+    setIsSaving(true);
+    try {
+      const success = await onUpdateBillingLimits(projectId, month, limits);
+      if (success) {
+        onRatesChange();
+      }
+      return success;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveActiveStatus = async (projectId: string, month: MonthSelection, isActive: boolean) => {
+    setIsSaving(true);
+    try {
+      const success = await onUpdateActiveStatus(projectId, month, isActive);
+      if (success) {
+        onRatesChange();
+      }
+      return success;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Sort projects by rate (highest first), then by name
   const sortedProjects = useMemo(() => {
     return [...projectsWithRates].sort((a, b) => {
@@ -75,12 +105,15 @@ export function BillingRatesTable({
   // Define columns for AccordionFlat
   const columns: AccordionFlatColumn[] = [
     { key: 'project', label: 'Project', align: 'left' },
+    { key: 'minHr', label: 'Min Hr', align: 'right' },
+    { key: 'maxHr', label: 'Max Hr', align: 'right' },
+    { key: 'rollover', label: 'Rollover', align: 'center' },
     { key: 'rounding', label: 'Rounding', align: 'right' },
-    { key: 'rate', label: 'Rate ($/hr)', align: 'right' },
+    { key: 'rate', label: 'Rate ($USD/hr)', align: 'right' },
   ];
 
   // Helper to build a row for a project
-  const buildProjectRow = (project: ProjectRateDisplay): AccordionFlatRow => {
+  const buildProjectRow = (project: ProjectRateDisplayWithBilling): AccordionFlatRow => {
     // Actions dropdown
     const menuItems = [
       {
@@ -108,6 +141,27 @@ export function BillingRatesTable({
       </div>
     );
 
+    // Min Hr cell
+    const minHrContent = (
+      <span className="text-sm text-vercel-gray-600">
+        {project.minimumHours !== null ? project.minimumHours : '—'}
+      </span>
+    );
+
+    // Max Hr cell
+    const maxHrContent = (
+      <span className="text-sm text-vercel-gray-600">
+        {project.maximumHours !== null ? project.maximumHours : '—'}
+      </span>
+    );
+
+    // Rollover cell
+    const rolloverContent = (
+      <span className="text-sm text-vercel-gray-600">
+        {project.carryoverEnabled ? 'Yes' : 'No'}
+      </span>
+    );
+
     // Rounding cell
     const roundingContent = (
       <span className={`text-sm ${project.effectiveRounding !== 15 ? 'text-bteam-brand' : 'text-vercel-gray-600'}`}>
@@ -126,6 +180,9 @@ export function BillingRatesTable({
       id: project.projectId,
       cells: {
         project: projectNameContent,
+        minHr: minHrContent,
+        maxHr: maxHrContent,
+        rollover: rolloverContent,
         rounding: roundingContent,
         rate: (
           <div className="flex items-center justify-end">
@@ -141,7 +198,7 @@ export function BillingRatesTable({
 
   // Group projects by company/client
   const groupedByCompany = useMemo(() => {
-    const groupMap = new Map<string, ProjectRateDisplay[]>();
+    const groupMap = new Map<string, ProjectRateDisplayWithBilling[]>();
 
     for (const project of sortedProjects) {
       const clientName = project.clientName || 'Unassigned';
@@ -202,6 +259,8 @@ export function BillingRatesTable({
         initialMonth={selectedMonth}
         onSave={handleSaveRate}
         onSaveRounding={handleSaveRounding}
+        onSaveBillingLimits={handleSaveBillingLimits}
+        onSaveActiveStatus={handleSaveActiveStatus}
         isSaving={isSaving}
       />
     </>

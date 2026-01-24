@@ -23,7 +23,7 @@ interface AlertProps {
   /** Optional icon type */
   icon?: 'error' | 'info' | 'warning';
   /** Visual variant */
-  variant?: 'default' | 'warning';
+  variant?: 'default' | 'warning' | 'error';
 }
 
 export function Alert({ message, icon = 'error', variant = 'default' }: AlertProps) {
@@ -54,17 +54,23 @@ export function Alert({ message, icon = 'error', variant = 'default' }: AlertPro
     ),
   };
 
-  const containerClasses = variant === 'warning'
-    ? 'bg-warning-light border-warning'
-    : 'bg-vercel-gray-50 border-vercel-gray-200';
+  const containerClasses = {
+    default: 'bg-vercel-gray-50 border-vercel-gray-200',
+    warning: 'bg-warning-light border-warning',
+    error: 'bg-error-light border-error',
+  }[variant];
 
-  const iconClasses = variant === 'warning'
-    ? 'text-warning'
-    : 'text-vercel-gray-200';
+  const iconClasses = {
+    default: 'text-vercel-gray-200',
+    warning: 'text-warning',
+    error: 'text-error',
+  }[variant];
 
-  const textClasses = variant === 'warning'
-    ? 'text-warning font-medium'
-    : 'text-vercel-gray-200';
+  const textClasses = {
+    default: 'text-vercel-gray-200',
+    warning: 'text-warning font-medium',
+    error: 'text-error',
+  }[variant];
 
   return (
     <div className={`p-3 border rounded-lg ${containerClasses}`}>

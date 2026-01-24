@@ -2,9 +2,16 @@ import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
+import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
-import { getBillingRates, calculateTotalRevenue, buildDbRateLookupByName } from '../utils/billing';
+import {
+  buildDbRateLookupByName,
+  getEffectiveRate,
+  applyRounding,
+  DEFAULT_ROUNDING_INCREMENT,
+  calculateBilledHours,
+} from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
@@ -13,7 +20,7 @@ import { EmployeePerformance } from './EmployeePerformance';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
-import type { DateRange } from '../types';
+import type { DateRange, MonthSelection } from '../types';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
 function getGreeting(): string {
@@ -47,18 +54,65 @@ export function Dashboard() {
   );
   const { projects: dbProjects } = useProjects();
 
+  // Convert dateRange to MonthSelection for the rates hook
+  const selectedMonth = useMemo<MonthSelection>(() => ({
+    year: dateRange.start.getFullYear(),
+    month: dateRange.start.getMonth() + 1,
+  }), [dateRange.start]);
+
+  // Fetch monthly rates
+  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
+
   // Use the earlier of: end of selected range or today
   const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
   const underHoursItems = getUnderHoursResources(resources, effectiveEndDate);
 
-  // Build database rate lookup
+  // Build database rate lookup (fallback for projects not in monthly rates)
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
 
-  // Calculate revenue
-  const rates = getBillingRates();
-  const totalRevenue = calculateTotalRevenue(projects, rates, dbRateLookup);
+  // Calculate revenue using monthly rates
+  const totalRevenue = useMemo(() => {
+    return projects.reduce((sum, p) => {
+      // Find the project in projectsWithRates by name to get its rate and rounding
+      const projectData = projectsWithRates.find(pr => pr.projectName === p.projectName);
+      const rate = projectData?.effectiveRate ?? getEffectiveRate(p.projectName, dbRateLookup, {});
+      const rounding = projectData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
+
+      // Calculate rounded minutes for this project
+      let roundedMinutes = 0;
+      for (const resource of p.resources) {
+        for (const task of resource.tasks) {
+          roundedMinutes += applyRounding(task.totalMinutes, rounding);
+        }
+      }
+
+      // Calculate base revenue
+      let revenue = (roundedMinutes / 60) * rate;
+
+      // Apply billing limits if they exist
+      if (projectData && (projectData.minimumHours !== null || projectData.maximumHours !== null || projectData.carryoverHoursIn > 0)) {
+        const limits = {
+          minimumHours: projectData.minimumHours,
+          maximumHours: projectData.maximumHours,
+          carryoverEnabled: projectData.carryoverEnabled,
+          carryoverMaxHours: projectData.carryoverMaxHours,
+          carryoverExpiryMonths: projectData.carryoverExpiryMonths,
+        };
+        const billingResult = calculateBilledHours(
+          roundedMinutes,
+          limits,
+          projectData.carryoverHoursIn || 0,
+          rate,
+          projectData.isActive
+        );
+        revenue = billingResult.revenue;
+      }
+
+      return sum + revenue;
+    }, 0);
+  }, [projects, dbRateLookup, projectsWithRates]);
 
   return (
     <>

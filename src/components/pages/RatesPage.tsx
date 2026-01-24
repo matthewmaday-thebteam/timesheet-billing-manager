@@ -5,6 +5,7 @@ import { BillingRatesTable } from '../BillingRatesTable';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';
 import { Button } from '../Button';
+import { Alert } from '../Alert';
 import type { MonthSelection, DateRange } from '../../types';
 import {
   useMonthlyRates,
@@ -44,6 +45,8 @@ export function RatesPage() {
     error,
     updateRate,
     updateRounding,
+    updateBillingLimits,
+    updateActiveStatus,
     refetch,
   } = useMonthlyRates({ selectedMonth });
 
@@ -193,16 +196,7 @@ export function RatesPage() {
       </div>
 
       {/* Error State */}
-      {error && (
-        <div className="p-4 bg-error-light border border-error rounded-lg">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm text-error">{error}</span>
-          </div>
-        </div>
-      )}
+      {error && <Alert message={error} icon="error" variant="error" />}
 
       {/* Billing Rates Table */}
       {isLoading ? (
@@ -216,6 +210,8 @@ export function RatesPage() {
           selectedMonth={selectedMonth}
           onUpdateRate={updateRate}
           onUpdateRounding={updateRounding}
+          onUpdateBillingLimits={updateBillingLimits}
+          onUpdateActiveStatus={updateActiveStatus}
           onRatesChange={handleRatesChange}
         />
       )}

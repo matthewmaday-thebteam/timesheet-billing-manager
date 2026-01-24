@@ -1,11 +1,11 @@
 /**
- * RateEditModal - Edit project rate and rounding for the selected month
+ * RateEditModal - Edit project rate, rounding, billing limits, and active status
  *
  * Features:
  * - Rate input field
  * - Rounding increment select
- * - Current rate/rounding display with source
- * - Rate and rounding history toggles
+ * - Billing limits (minimum/maximum hours, carryover)
+ * - Active status toggle (controls minimum billing)
  * - Save/Cancel buttons
  *
  * @category Component
@@ -15,25 +15,27 @@ import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import type { MonthSelection, ProjectRateDisplay, RoundingIncrement } from '../types';
-import { useRateHistory, formatRateMonth } from '../hooks/useRateHistory';
-import { useRoundingHistory, formatRoundingMonth, getRoundingLabel, getRoundingLabelFull } from '../hooks/useRoundingHistory';
+import { Toggle } from './Toggle';
+import { Select } from './Select';
+import type { MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement, ProjectBillingLimits } from '../types';
 
 interface RateEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project: ProjectRateDisplay | null;
+  project: ProjectRateDisplayWithBilling | null;
   initialMonth: MonthSelection;
   onSave: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   onSaveRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  onSaveBillingLimits: (projectId: string, month: MonthSelection, limits: Partial<ProjectBillingLimits>) => Promise<boolean>;
+  onSaveActiveStatus: (projectId: string, month: MonthSelection, isActive: boolean) => Promise<boolean>;
   isSaving: boolean;
 }
 
-const ROUNDING_OPTIONS: { value: RoundingIncrement; label: string }[] = [
-  { value: 0, label: 'Actual (no rounding)' },
-  { value: 5, label: '5 minutes' },
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
+const ROUNDING_OPTIONS = [
+  { value: '0', label: 'Actual (no rounding)' },
+  { value: '5', label: '5 minutes' },
+  { value: '15', label: '15 minutes' },
+  { value: '30', label: '30 minutes' },
 ];
 
 export function RateEditModal({
@@ -43,31 +45,40 @@ export function RateEditModal({
   initialMonth,
   onSave,
   onSaveRounding,
+  onSaveBillingLimits,
+  onSaveActiveStatus,
   isSaving,
 }: RateEditModalProps) {
+  // Rate and rounding state
   const [rateValue, setRateValue] = useState<string>('');
   const [roundingValue, setRoundingValue] = useState<RoundingIncrement>(15);
-  const [showRateHistory, setShowRateHistory] = useState(false);
-  const [showRoundingHistory, setShowRoundingHistory] = useState(false);
+
+  // Billing limits state
+  const [minHoursValue, setMinHoursValue] = useState<string>('');
+  const [maxHoursValue, setMaxHoursValue] = useState<string>('');
+  const [carryoverEnabled, setCarryoverEnabled] = useState(false);
+
+  // Active status state
+  const [isActiveValue, setIsActiveValue] = useState(true);
+
   const [lastResetKey, setLastResetKey] = useState<string>('');
-
-  // Fetch rate history for the project
-  const { history: rateHistory, isLoading: rateHistoryLoading } = useRateHistory(project?.projectId || null);
-
-  // Fetch rounding history for the project
-  const { history: roundingHistory, isLoading: roundingHistoryLoading } = useRoundingHistory(project?.projectId || null);
 
   // Reset form when project/isOpen changes
   const resetKey = `${project?.projectId ?? 'none'}-${isOpen}`;
   useEffect(() => {
     if (resetKey !== lastResetKey) {
       setLastResetKey(resetKey);
+      // Rate and rounding
       setRateValue(project?.effectiveRate?.toString() || '');
       setRoundingValue(project?.effectiveRounding ?? 15);
-      setShowRateHistory(false);
-      setShowRoundingHistory(false);
+      // Billing limits
+      setMinHoursValue(project?.minimumHours?.toString() || '');
+      setMaxHoursValue(project?.maximumHours?.toString() || '');
+      setCarryoverEnabled(project?.carryoverEnabled ?? false);
+      // Active status
+      setIsActiveValue(project?.isActive ?? true);
     }
-  }, [resetKey, lastResetKey, project?.effectiveRate, project?.effectiveRounding]);
+  }, [resetKey, lastResetKey, project]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -79,10 +90,23 @@ export function RateEditModal({
       return;
     }
 
-    // Check if rate changed
+    // Parse billing limits
+    const minHours = minHoursValue === '' ? null : parseFloat(minHoursValue);
+    const maxHours = maxHoursValue === '' ? null : parseFloat(maxHoursValue);
+
+    // Validate min <= max
+    if (minHours !== null && maxHours !== null && minHours > maxHours) {
+      return; // Invalid configuration
+    }
+
+    // Check what changed
     const rateChanged = rate !== project.effectiveRate;
-    // Check if rounding changed
     const roundingChanged = roundingValue !== project.effectiveRounding;
+    const limitsChanged =
+      minHours !== project.minimumHours ||
+      maxHours !== project.maximumHours ||
+      carryoverEnabled !== project.carryoverEnabled;
+    const activeChanged = isActiveValue !== project.isActive;
 
     let success = true;
 
@@ -96,6 +120,20 @@ export function RateEditModal({
       success = await onSaveRounding(project.projectId, initialMonth, roundingValue);
     }
 
+    // Save billing limits if changed
+    if (success && limitsChanged) {
+      success = await onSaveBillingLimits(project.projectId, initialMonth, {
+        minimumHours: minHours,
+        maximumHours: maxHours,
+        carryoverEnabled,
+      });
+    }
+
+    // Save active status if changed
+    if (success && activeChanged) {
+      success = await onSaveActiveStatus(project.projectId, initialMonth, isActiveValue);
+    }
+
     if (success) {
       onClose();
     }
@@ -105,6 +143,13 @@ export function RateEditModal({
     // Allow empty string, numbers, and decimal
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setRateValue(value);
+    }
+  };
+
+  const handleHoursChange = (value: string, setter: (v: string) => void) => {
+    // Allow empty string, numbers, and decimal
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setter(value);
     }
   };
 
@@ -137,7 +182,7 @@ export function RateEditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Rate"
-      maxWidth="sm"
+      maxWidth="xl"
       footer={footerContent}
     >
       <div className="space-y-6">
@@ -162,70 +207,6 @@ export function RateEditModal({
               placeholder="45.00"
             />
           </div>
-          <p className="mt-2 text-2xs text-vercel-gray-300">
-            Enter 0 for unbillable projects.
-          </p>
-        </div>
-
-        {/* Rate History Toggle */}
-        <div>
-          <button
-            type="button"
-            className="text-xs text-vercel-gray-400 hover:text-vercel-gray-600 flex items-center gap-1"
-            onClick={() => setShowRateHistory(!showRateHistory)}
-          >
-            <svg
-              className={`w-3 h-3 transition-transform ${showRateHistory ? 'rotate-90' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            {showRateHistory ? 'Hide rate history' : 'Show rate history'}
-          </button>
-
-          {showRateHistory && (
-            <div className="mt-2 border border-vercel-gray-100 rounded-md overflow-hidden">
-              {rateHistoryLoading ? (
-                <div className="p-4 text-center">
-                  <Spinner size="sm" />
-                </div>
-              ) : rateHistory.length === 0 ? (
-                <div className="p-4 text-xs text-vercel-gray-400 text-center">
-                  No rate history found
-                </div>
-              ) : (
-                <table className="w-full text-xs">
-                  <thead className="bg-vercel-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-vercel-gray-400 font-medium">Month</th>
-                      <th className="px-3 py-2 text-right text-vercel-gray-400 font-medium">Rate</th>
-                      <th className="px-3 py-2 text-right text-vercel-gray-400 font-medium">Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-vercel-gray-100">
-                    {rateHistory.slice(0, 12).map((entry) => (
-                      <tr key={entry.rateMonth} className="hover:bg-vercel-gray-50">
-                        <td className="px-3 py-2 text-vercel-gray-600">
-                          {formatRateMonth(entry.rateMonth)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-vercel-gray-600 font-medium">
-                          ${entry.rate.toFixed(2)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-vercel-gray-400">
-                          {new Date(entry.updatedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Divider */}
@@ -236,81 +217,82 @@ export function RateEditModal({
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Time Rounding
           </label>
-          <select
-            value={roundingValue}
-            onChange={(e) => setRoundingValue(Number(e.target.value) as RoundingIncrement)}
-            className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
-          >
-            {ROUNDING_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-2xs text-vercel-gray-300">
-            Current: {getRoundingLabelFull(project?.effectiveRounding ?? 15)} ({project?.roundingSource || 'default'})
-          </p>
+          <Select
+            value={String(roundingValue)}
+            onChange={(value) => setRoundingValue(Number(value) as RoundingIncrement)}
+            options={ROUNDING_OPTIONS}
+            className="w-full"
+          />
         </div>
 
-        {/* Rounding History Toggle */}
-        <div>
-          <button
-            type="button"
-            className="text-xs text-vercel-gray-400 hover:text-vercel-gray-600 flex items-center gap-1"
-            onClick={() => setShowRoundingHistory(!showRoundingHistory)}
-          >
-            <svg
-              className={`w-3 h-3 transition-transform ${showRoundingHistory ? 'rotate-90' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            {showRoundingHistory ? 'Hide rounding history' : 'Show rounding history'}
-          </button>
+        {/* Divider */}
+        <div className="border-t border-vercel-gray-100" />
 
-          {showRoundingHistory && (
-            <div className="mt-2 border border-vercel-gray-100 rounded-md overflow-hidden">
-              {roundingHistoryLoading ? (
-                <div className="p-4 text-center">
-                  <Spinner size="sm" />
-                </div>
-              ) : roundingHistory.length === 0 ? (
-                <div className="p-4 text-xs text-vercel-gray-400 text-center">
-                  No rounding history found
-                </div>
-              ) : (
-                <table className="w-full text-xs">
-                  <thead className="bg-vercel-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-vercel-gray-400 font-medium">Month</th>
-                      <th className="px-3 py-2 text-right text-vercel-gray-400 font-medium">Rounding</th>
-                      <th className="px-3 py-2 text-right text-vercel-gray-400 font-medium">Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-vercel-gray-100">
-                    {roundingHistory.slice(0, 12).map((entry) => (
-                      <tr key={entry.roundingMonth} className="hover:bg-vercel-gray-50">
-                        <td className="px-3 py-2 text-vercel-gray-600">
-                          {formatRoundingMonth(entry.roundingMonth)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-vercel-gray-600 font-medium">
-                          {getRoundingLabel(entry.roundingIncrement)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-vercel-gray-400">
-                          {new Date(entry.updatedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+        {/* Active Status Section */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            Minimum Billing Status
+          </label>
+          <Toggle
+            label="Apply minimum billing"
+            description="When off, only bill actual hours worked (no minimum padding)"
+            checked={isActiveValue}
+            onChange={setIsActiveValue}
+          />
+        </div>
+
+        {/* Billing Limits Section (always visible) */}
+        <div className="space-y-4">
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+            Billing Limits
+          </label>
+
+          {/* Min/Max Hours Inputs */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+                Minimum Hours
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={minHoursValue}
+                onChange={(e) => handleHoursChange(e.target.value, setMinHoursValue)}
+                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
+                placeholder="0"
+              />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+                Maximum Hours
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={maxHoursValue}
+                onChange={(e) => handleHoursChange(e.target.value, setMaxHoursValue)}
+                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {/* Validation warning */}
+          {minHoursValue !== '' && maxHoursValue !== '' &&
+            parseFloat(minHoursValue) > parseFloat(maxHoursValue) && (
+            <p className="text-xs text-error">
+              Minimum hours cannot exceed maximum hours
+            </p>
           )}
+
+          {/* Carryover Toggle */}
+          <Toggle
+            label="Enable carry-over"
+            description="Excess hours roll to next month when maximum is set"
+            checked={carryoverEnabled}
+            onChange={setCarryoverEnabled}
+            disabled={maxHoursValue === ''}
+          />
         </div>
       </div>
     </Modal>

@@ -19,7 +19,7 @@ import { forwardRef, type HTMLAttributes } from 'react';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** Badge style variant */
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'brand';
   /** Badge size */
   size?: 'sm' | 'md';
 }
@@ -32,6 +32,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       warning: 'bg-warning-light text-warning-text',
       error: 'bg-error-light text-error-text',
       info: 'bg-info-light text-info-text',
+      brand: 'bg-bteam-brand-light text-bteam-brand',
     };
 
     const sizeClasses = {

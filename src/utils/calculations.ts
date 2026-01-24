@@ -4,7 +4,8 @@ import type { TimesheetEntry, ProjectSummary, ResourceSummary, TaskSummary } fro
 
 export function minutesToHours(minutes: number): string {
   const hours = minutes / 60;
-  return hours.toFixed(1);
+  // Use 2 decimal places for consistency with formatHours
+  return hours.toFixed(2);
 }
 
 export function getWeekKey(dateStr: string): string {

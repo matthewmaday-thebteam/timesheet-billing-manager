@@ -549,3 +549,162 @@ export interface StagedCompanyGroupChanges {
   additions: StagedCompanyMemberAdd[];
   removals: Set<string>;
 }
+
+// ============================================================================
+// Monthly Billing Rules Types (Task 028)
+// ============================================================================
+
+/**
+ * Billing limits configuration for a project.
+ */
+export interface ProjectBillingLimits {
+  minimumHours: number | null;      // NULL = no minimum (retainer hours)
+  maximumHours: number | null;      // NULL = unlimited (cap on billable hours)
+  carryoverEnabled: boolean;        // When true, excess hours carry to next month
+  carryoverMaxHours: number | null; // Maximum carryover accumulation (prevents unbounded liability)
+  carryoverExpiryMonths: number | null; // Months until carryover expires (FIFO)
+}
+
+/**
+ * Billing month lifecycle status.
+ */
+export type BillingMonthStatusType = 'open' | 'calculating' | 'closed' | 'reopened';
+
+/**
+ * Billing month status record.
+ */
+export interface BillingMonthStatus {
+  projectId: string;
+  billingMonth: string;
+  status: BillingMonthStatusType;
+  totalHoursWorked: number | null;
+  totalBilledHours: number | null;
+  carryoverGenerated: number | null;
+  closedAt: string | null;
+  closedBy: string | null;
+  reopenedAt: string | null;
+  reopenedBy: string | null;
+  reopenReason: string | null;
+}
+
+/**
+ * Source of carryover hours (for audit trail).
+ */
+export interface CarryoverSource {
+  sourceMonth: string;
+  hours: number;
+  calculatedAt: string;
+}
+
+/**
+ * Discriminated union for billing adjustment types.
+ * Ensures type safety by preventing invalid states.
+ */
+export type BillingAdjustment =
+  | { type: 'none' }
+  | { type: 'minimum_applied'; minimumHours: number; paddingHours: number }
+  | { type: 'maximum_applied'; maximumHours: number; carryoverOut: number }
+  | { type: 'maximum_applied_unbillable'; maximumHours: number; unbillableHours: number };
+
+/**
+ * Complete result from billing hours calculation.
+ * Includes all stages of the calculation for audit/display.
+ */
+export interface BilledHoursResult {
+  // Input values
+  actualHours: number;          // Raw hours worked (before rounding)
+  roundedHours: number;         // After per-task rounding
+  carryoverIn: number;          // Carryover hours from previous months
+
+  // Calculated values
+  adjustedHours: number;        // roundedHours + carryoverIn
+  billedHours: number;          // After min/max applied (final billable)
+
+  // Output values
+  carryoverOut: number;         // Hours to carry to next month (when max exceeded with carryover enabled)
+  unbillableHours: number;      // Hours that won't be billed (when max exceeded without carryover)
+  carryoverConsumed: number;    // How much of carryoverIn was used (FIFO consumption)
+  minimumPadding: number;       // Hours added due to minimum (billedHours - adjustedHours when min applied)
+
+  // Flags for display indicators
+  minimumApplied: boolean;
+  maximumApplied: boolean;
+
+  // Discriminated union for type-safe adjustment handling
+  adjustment: BillingAdjustment;
+
+  // Revenue (calculated from billedHours * rate)
+  revenue: number;
+}
+
+/**
+ * Billing limits history entry for a project (for RateEditModal).
+ */
+export interface BillingLimitsHistoryEntry {
+  limitsMonth: string;
+  minimumHours: number | null;
+  maximumHours: number | null;
+  carryoverEnabled: boolean;
+  carryoverMaxHours: number | null;
+  carryoverExpiryMonths: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Active status history entry for a project (for RateEditModal).
+ */
+export interface ActiveStatusHistoryEntry {
+  statusMonth: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Extended ProjectRateDisplay with billing limits and active status.
+ * Used for the Rates page display with all project configuration.
+ */
+export interface ProjectRateDisplayWithBilling extends ProjectRateDisplay {
+  // Billing limits
+  minimumHours: number | null;
+  maximumHours: number | null;
+  carryoverEnabled: boolean;
+  carryoverMaxHours: number | null;
+  carryoverExpiryMonths: number | null;
+  limitsSource: RateSource;
+  limitsSourceMonth: string | null;
+  hasExplicitLimitsThisMonth: boolean;
+
+  // Active status (controls whether minimum applies)
+  isActive: boolean;
+  activeSource: RateSource;
+  activeSourceMonth: string | null;
+  hasExplicitActiveThisMonth: boolean;
+
+  // Carryover available for this month
+  carryoverHoursIn: number;
+  carryoverSources: CarryoverSource[];
+}
+
+/**
+ * Extended result from get_all_project_rates_for_month RPC (includes billing fields).
+ */
+export interface ProjectRatesForMonthResultWithBilling extends ProjectRatesForMonthResult {
+  // Billing limits fields
+  minimum_hours: number | null;
+  maximum_hours: number | null;
+  carryover_enabled: boolean;
+  carryover_max_hours: number | null;
+  carryover_expiry_months: number | null;
+  limits_source: RateSource;
+  limits_source_month: string | null;
+
+  // Active status fields
+  is_active: boolean;
+  active_source: RateSource;
+  active_source_month: string | null;
+
+  // Carryover available
+  carryover_hours_in: number;
+}

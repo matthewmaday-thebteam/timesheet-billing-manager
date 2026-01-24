@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type {
   MonthSelection,
-  ProjectRateDisplay,
-  ProjectRatesForMonthResult,
+  ProjectRateDisplayWithBilling,
+  ProjectRatesForMonthResultWithBilling,
+  ProjectBillingLimits,
   RateSource,
   RoundingIncrement,
 } from '../types';
@@ -79,11 +80,17 @@ interface UseMonthlyRatesOptions {
 }
 
 interface UseMonthlyRatesReturn {
-  projectsWithRates: ProjectRateDisplay[];
+  projectsWithRates: ProjectRateDisplayWithBilling[];
   isLoading: boolean;
   error: string | null;
   updateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   updateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  updateBillingLimits: (
+    projectId: string,
+    month: MonthSelection,
+    limits: Partial<ProjectBillingLimits>
+  ) => Promise<boolean>;
+  updateActiveStatus: (projectId: string, month: MonthSelection, isActive: boolean) => Promise<boolean>;
   refetch: () => void;
 }
 
@@ -92,7 +99,7 @@ interface UseMonthlyRatesReturn {
  * Calls get_all_project_rates_for_month RPC function.
  */
 export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseMonthlyRatesReturn {
-  const [data, setData] = useState<ProjectRatesForMonthResult[]>([]);
+  const [data, setData] = useState<ProjectRatesForMonthResultWithBilling[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,8 +132,8 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
     fetchRates();
   }, [fetchRates]);
 
-  // Transform raw data to ProjectRateDisplay
-  const projectsWithRates = useMemo<ProjectRateDisplay[]>(() => {
+  // Transform raw data to ProjectRateDisplayWithBilling
+  const projectsWithRates = useMemo<ProjectRateDisplayWithBilling[]>(() => {
     return data.map((row) => {
       // Ensure effectiveRounding is a valid number (RPC returns INTEGER, but be defensive)
       // Default to 15 if the value is missing or invalid
@@ -141,6 +148,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
       }
 
       return {
+        // Base ProjectRateDisplay fields
         projectId: row.project_id,
         externalProjectId: row.external_project_id,
         projectName: row.project_name,
@@ -157,6 +165,26 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         roundingSource: (row.rounding_source ?? 'default') as RateSource,
         roundingSourceMonth: row.rounding_source_month,
         hasExplicitRoundingThisMonth: row.rounding_source === 'explicit',
+
+        // Billing limits fields
+        minimumHours: row.minimum_hours ?? null,
+        maximumHours: row.maximum_hours ?? null,
+        carryoverEnabled: row.carryover_enabled ?? false,
+        carryoverMaxHours: row.carryover_max_hours ?? null,
+        carryoverExpiryMonths: row.carryover_expiry_months ?? null,
+        limitsSource: (row.limits_source ?? 'default') as RateSource,
+        limitsSourceMonth: row.limits_source_month ?? null,
+        hasExplicitLimitsThisMonth: row.limits_source === 'explicit',
+
+        // Active status fields
+        isActive: row.is_active ?? true,
+        activeSource: (row.active_source ?? 'default') as RateSource,
+        activeSourceMonth: row.active_source_month ?? null,
+        hasExplicitActiveThisMonth: row.active_source === 'explicit',
+
+        // Carryover available
+        carryoverHoursIn: row.carryover_hours_in ?? 0,
+        carryoverSources: [], // Will be populated separately if needed
       };
     });
   }, [data]);
@@ -221,12 +249,82 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
     [fetchRates]
   );
 
+  // Update billing limits for a project in a specific month
+  const updateBillingLimits = useCallback(
+    async (
+      projectId: string,
+      month: MonthSelection,
+      limits: Partial<ProjectBillingLimits>
+    ): Promise<boolean> => {
+      try {
+        const monthStr = formatMonthAsISO(month);
+
+        const { error: rpcError } = await supabase.rpc(
+          'set_project_billing_limits_for_month',
+          {
+            p_project_id: projectId,
+            p_month: monthStr,
+            p_minimum_hours: limits.minimumHours ?? null,
+            p_maximum_hours: limits.maximumHours ?? null,
+            p_carryover_enabled: limits.carryoverEnabled ?? false,
+            p_carryover_max_hours: limits.carryoverMaxHours ?? null,
+            p_carryover_expiry_months: limits.carryoverExpiryMonths ?? null,
+          }
+        );
+
+        if (rpcError) throw rpcError;
+
+        // Refetch to get updated data
+        await fetchRates();
+
+        return true;
+      } catch (err) {
+        console.error('Error updating billing limits:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update billing limits');
+        return false;
+      }
+    },
+    [fetchRates]
+  );
+
+  // Update active status for a project in a specific month
+  const updateActiveStatus = useCallback(
+    async (projectId: string, month: MonthSelection, isActive: boolean): Promise<boolean> => {
+      try {
+        const monthStr = formatMonthAsISO(month);
+
+        const { error: rpcError } = await supabase.rpc(
+          'set_project_active_status_for_month',
+          {
+            p_project_id: projectId,
+            p_month: monthStr,
+            p_is_active: isActive,
+          }
+        );
+
+        if (rpcError) throw rpcError;
+
+        // Refetch to get updated data
+        await fetchRates();
+
+        return true;
+      } catch (err) {
+        console.error('Error updating active status:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update active status');
+        return false;
+      }
+    },
+    [fetchRates]
+  );
+
   return {
     projectsWithRates,
     isLoading,
     error,
     updateRate,
     updateRounding,
+    updateBillingLimits,
+    updateActiveStatus,
     refetch: fetchRates,
   };
 }
