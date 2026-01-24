@@ -6,6 +6,7 @@ import { Button } from '../Button';
 import { DropdownMenu } from '../DropdownMenu';
 import type { MonthSelection, DateRange } from '../../types';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from '../AccordionFlat';
 
 /**
@@ -37,6 +38,9 @@ export function ProjectsPage() {
     error,
   } = useMonthlyRates({ selectedMonth });
 
+  // Get canonical company mapping for CSV export and table grouping
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
+
   // Export to CSV
   const handleExportCSV = useCallback(() => {
     const csvRows: string[][] = [];
@@ -47,18 +51,23 @@ export function ProjectsPage() {
     // Header row
     csvRows.push(['Company', 'Project']);
 
-    // Sort by company then project
-    const sortedProjects = [...projectsWithRates].sort((a, b) => {
-      const companyA = a.clientName || 'Unassigned';
-      const companyB = b.clientName || 'Unassigned';
+    // Sort by company then project (using canonical company names)
+    const sortedProjectsForExport = [...projectsWithRates].sort((a, b) => {
+      const canonicalA = a.clientId ? getCanonicalCompany(a.clientId) : null;
+      const canonicalB = b.clientId ? getCanonicalCompany(b.clientId) : null;
+      const companyA = canonicalA?.canonicalDisplayName || a.clientName || 'Unassigned';
+      const companyB = canonicalB?.canonicalDisplayName || b.clientName || 'Unassigned';
       if (companyA !== companyB) return companyA.localeCompare(companyB);
       return a.projectName.localeCompare(b.projectName);
     });
 
     // Data rows
-    for (const project of sortedProjects) {
+    for (const project of sortedProjectsForExport) {
+      // Use canonical company name if available
+      const canonicalInfo = project.clientId ? getCanonicalCompany(project.clientId) : null;
+      const companyName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
       csvRows.push([
-        project.clientName || 'Unassigned',
+        companyName,
         project.projectName,
       ]);
     }
@@ -78,7 +87,7 @@ export function ProjectsPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [projectsWithRates, dateRange.start]);
+  }, [projectsWithRates, dateRange.start, getCanonicalCompany]);
 
   // Sort projects by name
   const sortedProjects = useMemo(() => {
@@ -129,12 +138,14 @@ export function ProjectsPage() {
     };
   };
 
-  // Group projects by company/client
+  // Group projects by company/client (using canonical company names)
   const groupedByCompany = useMemo(() => {
     const groupMap = new Map<string, typeof projectsWithRates>();
 
     for (const project of sortedProjects) {
-      const clientName = project.clientName || 'Unassigned';
+      // Use canonical company name if available
+      const canonicalInfo = project.clientId ? getCanonicalCompany(project.clientId) : null;
+      const clientName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
       if (!groupMap.has(clientName)) {
         groupMap.set(clientName, []);
       }
@@ -142,7 +153,7 @@ export function ProjectsPage() {
     }
 
     return groupMap;
-  }, [sortedProjects]);
+  }, [sortedProjects, getCanonicalCompany]);
 
   // Build groups for AccordionFlat
   const groups: AccordionFlatGroup[] = useMemo(() => {

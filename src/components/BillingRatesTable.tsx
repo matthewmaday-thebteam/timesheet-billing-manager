@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { AccordionFlat } from './AccordionFlat';
 import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
+import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
 import type { ProjectRateDisplayWithBilling, MonthSelection, RoundingIncrement, ProjectBillingLimits } from '../types';
 
@@ -24,6 +25,9 @@ export function BillingRatesTable({
   onUpdateActiveStatus,
   onRatesChange,
 }: BillingRatesTableProps) {
+  // Get canonical company mapping for grouping
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
+
   // Modal state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectRateDisplayWithBilling | null>(null);
@@ -109,7 +113,7 @@ export function BillingRatesTable({
     { key: 'maxHr', label: 'Max Hr', align: 'right' },
     { key: 'rollover', label: 'Rollover', align: 'center' },
     { key: 'rounding', label: 'Rounding', align: 'right' },
-    { key: 'rate', label: 'Rate ($USD/hr)', align: 'right' },
+    { key: 'rate', label: 'Rate', align: 'right' },
   ];
 
   // Helper to build a row for a project
@@ -196,12 +200,14 @@ export function BillingRatesTable({
     };
   };
 
-  // Group projects by company/client
+  // Group projects by company/client (using canonical company for grouping)
   const groupedByCompany = useMemo(() => {
     const groupMap = new Map<string, ProjectRateDisplayWithBilling[]>();
 
     for (const project of sortedProjects) {
-      const clientName = project.clientName || 'Unassigned';
+      // Get canonical company name (uses primary company name if part of a group)
+      const canonicalInfo = getCanonicalCompany(project.clientId);
+      const clientName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
       if (!groupMap.has(clientName)) {
         groupMap.set(clientName, []);
       }
@@ -209,7 +215,7 @@ export function BillingRatesTable({
     }
 
     return groupMap;
-  }, [sortedProjects]);
+  }, [sortedProjects, getCanonicalCompany]);
 
   // Build groups for AccordionFlat
   const groups: AccordionFlatGroup[] = useMemo(() => {

@@ -30,6 +30,19 @@ interface CanonicalMappingRecord {
   role: string;
 }
 
+interface CompanyCanonicalRecord {
+  company_id: string;
+  canonical_company_id: string;
+  role: string;
+}
+
+interface CompanyRecord {
+  id: string;
+  client_id: string;
+  client_name: string;
+  display_name: string | null;
+}
+
 interface UseTimesheetDataOptions {
   /** Number of months before start date to fetch for historical charts */
   extendedMonths?: number;
@@ -56,6 +69,8 @@ export function useTimesheetData(
   const [resourceRecords, setResourceRecords] = useState<ResourceRecord[]>([]);
   const [associationRecords, setAssociationRecords] = useState<AssociationRecord[]>([]);
   const [canonicalMappings, setCanonicalMappings] = useState<CanonicalMappingRecord[]>([]);
+  const [companyCanonicalRecords, setCompanyCanonicalRecords] = useState<CompanyCanonicalRecord[]>([]);
+  const [companyRecords, setCompanyRecords] = useState<CompanyRecord[]>([]);
   const [projectRates, setProjectRates] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +120,16 @@ export function useTimesheetData(
         .from('v_entity_canonical')
         .select('entity_id, canonical_entity_id, role');
 
+      // Fetch company canonical mapping for company grouping (fetched separately, joined in JS)
+      const companyCanonicalPromise = supabase
+        .from('v_company_canonical')
+        .select('company_id, canonical_company_id, role');
+
+      // Fetch all companies for joining with company canonical mapping
+      const companiesPromise = supabase
+        .from('companies')
+        .select('id, client_id, client_name, display_name');
+
       // If extended months requested, fetch historical entries too
       const extendedPromise = extendedMonths > 0
         ? supabase
@@ -115,12 +140,14 @@ export function useTimesheetData(
             .order('work_date', { ascending: false })
         : null;
 
-      const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, extendedResult] = await Promise.all([
+      const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, companyCanonicalResult, companiesResult, extendedResult] = await Promise.all([
         entriesPromise,
         resourcesPromise,
         projectsPromise,
         associationsPromise,
         canonicalPromise,
+        companyCanonicalPromise,
+        companiesPromise,
         extendedPromise,
       ]);
 
@@ -140,6 +167,13 @@ export function useTimesheetData(
       if (canonicalResult.error && !canonicalResult.error.message.includes('does not exist')) {
         console.warn('Failed to fetch canonical mapping:', canonicalResult.error.message);
       }
+      // Company canonical mapping is optional - don't fail if view doesn't exist yet
+      if (companyCanonicalResult.error && !companyCanonicalResult.error.message.includes('does not exist')) {
+        console.warn('Failed to fetch company canonical mapping:', companyCanonicalResult.error.message);
+      }
+      if (companiesResult.error) {
+        throw new Error(companiesResult.error.message);
+      }
       if (extendedResult?.error) {
         throw new Error(extendedResult.error.message);
       }
@@ -155,6 +189,9 @@ export function useTimesheetData(
       }));
       setAssociationRecords(normalizedAssociations);
       setCanonicalMappings(canonicalResult.data || []);
+      setCompanyCanonicalRecords(companyCanonicalResult.data || []);
+      setCompanyRecords(companiesResult.data || []);
+
       setExtendedEntries(extendedResult?.data || []);
 
       // Build project rates map
@@ -257,9 +294,36 @@ export function useTimesheetData(
     return lookup;
   }, [associationRecords, canonicalEntityMap, resourceDisplayNameMap]);
 
+  // Build company_id (UUID) -> company details lookup
+  const companyById = useMemo(() => {
+    const map = new Map<string, CompanyRecord>();
+    for (const company of companyRecords) {
+      map.set(company.id, company);
+    }
+    return map;
+  }, [companyRecords]);
+
+  // Build company client_id -> canonical display name lookup
+  // This maps timesheet entry client_ids to their CANONICAL company's display name
+  // (so grouped companies' entries are displayed under the primary company name)
+  const companyCanonicalLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const record of companyCanonicalRecords) {
+      const company = companyById.get(record.company_id);
+      const canonicalCompany = companyById.get(record.canonical_company_id);
+
+      if (!company || !canonicalCompany) continue;
+
+      // Use canonical company's display_name if set, otherwise use client_name
+      const canonicalDisplayName = canonicalCompany.display_name || canonicalCompany.client_name;
+      lookup.set(company.client_id, canonicalDisplayName);
+    }
+    return lookup;
+  }, [companyCanonicalRecords, companyById]);
+
   const projects = useMemo(
-    () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup),
-    [entries, displayNameLookup, userIdToDisplayNameLookup]
+    () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup),
+    [entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup]
   );
   const resources = useMemo(
     () => aggregateByResource(entries, displayNameLookup, userIdToDisplayNameLookup),

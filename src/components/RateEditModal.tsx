@@ -277,9 +277,14 @@ export function RateEditModal({
             </div>
           </div>
 
-          {/* Validation warning */}
-          {minHoursValue !== '' && maxHoursValue !== '' &&
-            parseFloat(minHoursValue) > parseFloat(maxHoursValue) && (
+          {/* Validation warning - only show if both values are non-empty valid numbers */}
+          {(() => {
+            if (minHoursValue.trim() === '' || maxHoursValue.trim() === '') return false;
+            const min = parseFloat(minHoursValue);
+            const max = parseFloat(maxHoursValue);
+            if (isNaN(min) || isNaN(max)) return false;
+            return min > max;
+          })() && (
             <p className="text-xs text-error">
               Minimum hours cannot exceed maximum hours
             </p>

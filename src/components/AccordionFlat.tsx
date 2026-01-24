@@ -14,7 +14,7 @@
  * - Radius: rounded-lg
  */
 
-import { useState, Fragment, type ReactNode } from 'react';
+import { useState, useEffect, Fragment, type ReactNode } from 'react';
 
 export interface AccordionFlatColumn {
   /** Unique key for the column */
@@ -89,6 +89,24 @@ export function AccordionFlat({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(groupsDefaultExpanded && groups ? groups.map(g => g.id) : [])
   );
+
+  // Sync expanded groups when groups change (handles async loading)
+  // This ensures new groups are expanded when groupsDefaultExpanded is true
+  useEffect(() => {
+    if (groupsDefaultExpanded && groups) {
+      setExpandedGroups(prev => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const group of groups) {
+          if (!next.has(group.id)) {
+            next.add(group.id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [groups, groupsDefaultExpanded]);
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups(prev => {

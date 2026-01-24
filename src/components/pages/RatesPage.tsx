@@ -12,6 +12,7 @@ import {
   formatMonthDisplay,
   isFutureMonth,
 } from '../../hooks/useMonthlyRates';
+import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 
 const TARGET_RATE_2026 = 60;
 const DEFAULT_RATE = 45;
@@ -49,6 +50,9 @@ export function RatesPage() {
     updateActiveStatus,
     refetch,
   } = useMonthlyRates({ selectedMonth });
+
+  // Get canonical company mapping for CSV export
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Calculate metrics from monthly rates data
   const rateMetrics = useMemo(() => {
@@ -102,18 +106,23 @@ export function RatesPage() {
     // Header row
     csvRows.push(['Company', 'Project', 'Rate']);
 
-    // Sort by company then project
+    // Sort by company then project (using canonical company names)
     const sortedProjects = [...projectsWithRates].sort((a, b) => {
-      const companyA = a.clientName || 'Unassigned';
-      const companyB = b.clientName || 'Unassigned';
+      const canonicalA = a.clientId ? getCanonicalCompany(a.clientId) : null;
+      const canonicalB = b.clientId ? getCanonicalCompany(b.clientId) : null;
+      const companyA = canonicalA?.canonicalDisplayName || a.clientName || 'Unassigned';
+      const companyB = canonicalB?.canonicalDisplayName || b.clientName || 'Unassigned';
       if (companyA !== companyB) return companyA.localeCompare(companyB);
       return a.projectName.localeCompare(b.projectName);
     });
 
     // Data rows
     for (const project of sortedProjects) {
+      // Use canonical company name if available
+      const canonicalInfo = project.clientId ? getCanonicalCompany(project.clientId) : null;
+      const companyName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
       csvRows.push([
-        project.clientName || 'Unassigned',
+        companyName,
         project.projectName,
         project.effectiveRate.toFixed(2),
       ]);
@@ -134,7 +143,7 @@ export function RatesPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [projectsWithRates, dateRange.start]);
+  }, [projectsWithRates, dateRange.start, getCanonicalCompany, selectedMonth.year]);
 
   const currentYear = new Date().getFullYear();
   const isFuture = isFutureMonth(selectedMonth);

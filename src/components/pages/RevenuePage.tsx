@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjects } from '../../hooks/useProjects';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import {
   formatCurrency,
   buildDbRateLookupByName,
@@ -30,6 +31,7 @@ export function RevenuePage() {
 
   const { projects, entries, loading, error } = useTimesheetData(dateRange);
   const { projects: dbProjects } = useProjects();
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -143,7 +145,9 @@ export function RevenuePage() {
     const taskMap = new Map<string, { company: string; project: string; projectId: string | null; task: string; minutes: number; rate: number }>();
 
     for (const entry of entries) {
-      const company = entry.client_name || 'Unassigned';
+      // Use canonical company name if available
+      const canonicalInfo = entry.client_id ? getCanonicalCompany(entry.client_id) : null;
+      const company = canonicalInfo?.canonicalDisplayName || entry.client_name || 'Unassigned';
       const project = entry.project_name;
       const projectId = entry.project_id;
       const task = entry.task_name || 'No Task';
@@ -297,7 +301,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start]);
+  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, getCanonicalCompany]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">

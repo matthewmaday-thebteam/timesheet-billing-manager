@@ -28,6 +28,7 @@ import {
 } from '../../utils/billing';
 import { minutesToHours } from '../../utils/calculations';
 import { useProjects } from '../../hooks/useProjects';
+import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import { Badge } from '../Badge';
 import { ChevronIcon } from '../ChevronIcon';
 import type {
@@ -90,6 +91,9 @@ export function RevenueTable({ entries, roundingByProjectId, billingDataByProjec
   const { projects: dbProjects } = useProjects();
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
 
+  // Get canonical company mapping for grouping
+  const { getCanonicalCompany } = useCanonicalCompanyMapping();
+
   // Check if any projects have billing limits
   const hasBillingColumns = useMemo(() => {
     if (!billingDataByProjectId) return false;
@@ -109,10 +113,13 @@ export function RevenueTable({ entries, roundingByProjectId, billingDataByProjec
   const companyData = useMemo(() => {
     // First, aggregate entries by company -> project -> task
     // Also track project_id for rounding lookup
+    // Use canonical company name for grouping (handles company associations)
     const companyMap = new Map<string, Map<string, { projectId: string | null; tasks: Map<string, number> }>>();
 
     for (const entry of entries) {
-      const companyName = entry.client_name || 'Unassigned';
+      // Get canonical company name (uses primary company name if part of a group)
+      const canonicalInfo = getCanonicalCompany(entry.client_id);
+      const companyName = canonicalInfo?.canonicalDisplayName || entry.client_name || 'Unassigned';
       const projectName = entry.project_name;
       const projectId = entry.project_id;
       const taskName = entry.task_name || 'No Task';
@@ -274,7 +281,7 @@ export function RevenueTable({ entries, roundingByProjectId, billingDataByProjec
     result.sort((a, b) => b.revenue - a.revenue);
 
     return result;
-  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId]);
+  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId, getCanonicalCompany]);
 
   // Calculate totals
   const totalActualMinutes = companyData.reduce((sum, c) => sum + c.totalMinutes, 0);
@@ -347,7 +354,7 @@ export function RevenueTable({ entries, roundingByProjectId, billingDataByProjec
               Rounding
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-              Rate ($/hr)
+              Rate
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Revenue
@@ -511,10 +518,14 @@ export function RevenueTable({ entries, roundingByProjectId, billingDataByProjec
                             </>
                           )}
                           <td className="px-6 py-2 text-right">
-                            <span className="text-sm text-vercel-gray-300">—</span>
+                            <span className={`text-sm ${project.rounding !== DEFAULT_ROUNDING_INCREMENT ? 'text-bteam-brand' : 'text-vercel-gray-300'}`}>
+                              {project.rounding === 0 ? '—' : `${project.rounding}m`}
+                            </span>
                           </td>
                           <td className="px-6 py-2 text-right">
-                            <span className="text-sm text-vercel-gray-300">—</span>
+                            <span className="text-sm text-vercel-gray-300">
+                              ${project.rate.toFixed(2)}
+                            </span>
                           </td>
                           <td className="px-6 py-2 text-right">
                             <span className="text-sm text-vercel-gray-300">{formatCurrency(task.revenue)}</span>

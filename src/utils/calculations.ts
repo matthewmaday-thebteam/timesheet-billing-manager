@@ -37,7 +37,8 @@ function getResourceKey(
 export function aggregateByProject(
   entries: TimesheetEntry[],
   displayNameLookup?: Map<string, string>,
-  userIdToDisplayNameLookup?: Map<string, string>
+  userIdToDisplayNameLookup?: Map<string, string>,
+  companyCanonicalLookup?: Map<string, string>
 ): ProjectSummary[] {
   const projectMap = new Map<string, {
     totalMinutes: number;
@@ -54,12 +55,17 @@ export function aggregateByProject(
   }>();
 
   for (const entry of entries) {
+    // Get canonical company name (uses primary company name if part of a group)
+    const canonicalCompanyName = entry.client_id && companyCanonicalLookup
+      ? companyCanonicalLookup.get(entry.client_id)
+      : null;
+
     // Get or create project
     if (!projectMap.has(entry.project_name)) {
       projectMap.set(entry.project_name, {
         totalMinutes: 0,
         clientId: entry.client_id || '',
-        clientName: entry.client_name || 'Unassigned',
+        clientName: canonicalCompanyName || entry.client_name || 'Unassigned',
         resourceMap: new Map(),
       });
     }
