@@ -78,10 +78,10 @@ export function Dashboard() {
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation - single source of truth
+  // CRITICAL: ID-based lookups only, no name fallbacks
   const { totalRevenue, billingResult } = useUnifiedBilling({
     entries,
     projectsWithRates,
-    fallbackRateLookup: dbRateLookup,
     getCanonicalCompanyName,
   });
 

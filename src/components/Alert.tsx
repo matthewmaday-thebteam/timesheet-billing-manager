@@ -24,9 +24,11 @@ interface AlertProps {
   icon?: 'error' | 'info' | 'warning';
   /** Visual variant */
   variant?: 'default' | 'warning' | 'error';
+  /** Optional additional content */
+  children?: React.ReactNode;
 }
 
-export function Alert({ message, icon = 'error', variant = 'default' }: AlertProps) {
+export function Alert({ message, icon = 'error', variant = 'default', children }: AlertProps) {
   const icons = {
     error: (
       <path
@@ -85,6 +87,11 @@ export function Alert({ message, icon = 'error', variant = 'default' }: AlertPro
         </svg>
         <span className={`text-sm ${textClasses}`}>{message}</span>
       </div>
+      {children && (
+        <div className={`mt-2 ${textClasses}`}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

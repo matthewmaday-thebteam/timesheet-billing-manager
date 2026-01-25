@@ -11,6 +11,7 @@ import { CompaniesPage } from './components/pages/CompaniesPage';
 import { RevenuePage } from './components/pages/RevenuePage';
 import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
+import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
@@ -75,6 +76,8 @@ function AuthenticatedApp() {
         return <EOMReportsPage />;
       case 'users':
         return <UsersPage />;
+      case 'diagnostics':
+        return <DiagnosticsPage />;
       default:
         return <Dashboard />;
     }

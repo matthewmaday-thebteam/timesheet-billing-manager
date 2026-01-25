@@ -1,14 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
-import { useProjects } from '../../hooks/useProjects';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import {
   formatCurrency,
-  buildDbRateLookupByName,
-  getEffectiveRate,
   formatHours,
   applyRounding,
   calculateBilledHours,
@@ -19,7 +16,7 @@ import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Button } from '../Button';
 import { Alert } from '../Alert';
-import type { DateRange, MonthSelection, RoundingIncrement, ProjectRateDisplayWithBilling } from '../../types';
+import type { DateRange, MonthSelection, ProjectRateDisplayWithBilling } from '../../types';
 
 export function RevenuePage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -31,7 +28,6 @@ export function RevenuePage() {
   });
 
   const { entries, loading, error } = useTimesheetData(dateRange);
-  const { projects: dbProjects } = useProjects();
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Convert dateRange to MonthSelection for the rates hook
@@ -43,27 +39,8 @@ export function RevenuePage() {
   // Fetch monthly rates (which now includes rounding data)
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
-  // Build rounding lookup by EXTERNAL project ID (Clockify/ClickUp ID)
+  // Build billing data lookup by EXTERNAL project ID (Clockify/ClickUp ID)
   // This matches the project_id in timesheet entries
-  const roundingByProjectId = useMemo(() => {
-    const map = new Map<string, RoundingIncrement>();
-
-    for (const p of projectsWithRates) {
-      // Use externalProjectId, not projectId (UUID)
-      if (p.externalProjectId) {
-        const roundingValue = typeof p.effectiveRounding === 'number'
-          ? p.effectiveRounding
-          : Number(p.effectiveRounding);
-        if ([0, 5, 15, 30].includes(roundingValue)) {
-          map.set(p.externalProjectId, roundingValue as RoundingIncrement);
-        }
-      }
-    }
-
-    return map;
-  }, [projectsWithRates]);
-
-  // Build billing data lookup by EXTERNAL project ID
   const billingDataByProjectId = useMemo(() => {
     const map = new Map<string, ProjectRateDisplayWithBilling>();
     for (const p of projectsWithRates) {
@@ -74,9 +51,6 @@ export function RevenuePage() {
     return map;
   }, [projectsWithRates]);
 
-  // Build database rate lookup (fallback for projects not in monthly rates)
-  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
-
   // Helper to get canonical company name
   const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
@@ -84,10 +58,10 @@ export function RevenuePage() {
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation - single source of truth
-  const { totalRevenue, billingResult } = useUnifiedBilling({
+  // CRITICAL: ID-based lookups only, no name fallbacks
+  const { totalRevenue, billingResult, unmatchedProjects, allProjectsMatched } = useUnifiedBilling({
     entries,
     projectsWithRates,
-    fallbackRateLookup: dbRateLookup,
     getCanonicalCompanyName,
   });
 
@@ -119,6 +93,13 @@ export function RevenuePage() {
     const taskMap = new Map<string, { company: string; project: string; projectId: string | null; task: string; minutes: number; rate: number }>();
 
     for (const entry of entries) {
+      // Skip entries without project ID (unmatched projects)
+      if (!entry.project_id) continue;
+
+      // Get billing data by ID only
+      const billingData = billingDataByProjectId.get(entry.project_id);
+      if (!billingData) continue; // Skip unmatched projects
+
       // Use canonical company name if available
       const canonicalInfo = entry.client_id ? getCanonicalCompany(entry.client_id) : null;
       const company = canonicalInfo?.canonicalDisplayName || entry.client_name || 'Unassigned';
@@ -127,7 +108,7 @@ export function RevenuePage() {
       const task = entry.task_name || 'No Task';
       const key = `${company}|${project}|${task}`;
 
-      const rate = getEffectiveRate(project, dbRateLookup, {});
+      const rate = billingData.effectiveRate;
 
       if (taskMap.has(key)) {
         taskMap.get(key)!.minutes += entry.total_minutes;
@@ -163,17 +144,14 @@ export function RevenuePage() {
     });
 
     for (const proj of sortedProjects) {
-      // Get billing data for this project
-      const billingData = proj.projectId ? billingDataByProjectId.get(proj.projectId) : null;
+      // Get billing data for this project - ID lookup only
+      if (!proj.projectId) continue;
+      const billingData = billingDataByProjectId.get(proj.projectId);
+      if (!billingData) continue; // Skip unmatched projects
 
-      // Use monthly rate from billingData if available, otherwise fall back to project table rate
-      const effectiveRate = billingData?.effectiveRate ?? proj.rate;
-
-      // Get rounding - prefer billingData, then roundingByProjectId map
-      let rounding = billingData?.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
-      if (rounding === DEFAULT_ROUNDING_INCREMENT && proj.projectId && roundingByProjectId.has(proj.projectId)) {
-        rounding = roundingByProjectId.get(proj.projectId)!;
-      }
+      // Use rate and rounding from billingData (ID lookup)
+      const effectiveRate = billingData.effectiveRate;
+      const rounding = billingData.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
 
       const incLabel = rounding === 0 ? '—' : `${rounding}m`;
 
@@ -275,7 +253,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dbRateLookup, roundingByProjectId, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, getCanonicalCompany]);
+  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, getCanonicalCompany]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -316,6 +294,30 @@ export function RevenuePage() {
 
       {/* Error State */}
       {error && <Alert message={error} icon="error" variant="error" />}
+
+      {/* Unmatched Projects Warning */}
+      {!allProjectsMatched && (
+        <Alert
+          message={`Data integrity error: ${unmatchedProjects.length} project(s) could not be matched by ID and are excluded from billing.`}
+          icon="warning"
+          variant="warning"
+        >
+          <div className="mt-2 text-sm">
+            <p className="font-medium mb-1">Unmatched projects:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {unmatchedProjects.map((p, i) => (
+                <li key={i}>
+                  <span className="font-mono text-xs">{p.entryProjectId}</span>
+                  {' - '}
+                  {p.entryProjectName}
+                  {' '}
+                  <span className="text-vercel-gray-400">({(p.totalMinutes / 60).toFixed(2)} hrs)</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Alert>
+      )}
 
       {/* Billing Rates Table */}
       {loading ? (
