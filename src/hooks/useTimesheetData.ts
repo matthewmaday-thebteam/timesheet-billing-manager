@@ -54,6 +54,10 @@ interface UseTimesheetDataResult {
   resources: ResourceSummary[];
   /** Monthly aggregates for line chart (only populated if extendedMonths > 0) */
   monthlyAggregates: MonthlyAggregate[];
+  /** Lookup from user_name/external_label to display name (First Last) */
+  displayNameLookup: Map<string, string>;
+  /** Lookup from user_id to CANONICAL display name (for proper employee grouping across systems) */
+  userIdToDisplayNameLookup: Map<string, string>;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -341,6 +345,8 @@ export function useTimesheetData(
     projects,
     resources,
     monthlyAggregates,
+    displayNameLookup,
+    userIdToDisplayNameLookup,
     loading,
     error,
     refetch: fetchData,

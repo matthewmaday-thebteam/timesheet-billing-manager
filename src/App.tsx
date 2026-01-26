@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { Spinner } from './components/Spinner';
 import { HolidaysPage } from './components/pages/HolidaysPage';
 import { EmployeesPage } from './components/pages/EmployeesPage';
+import { EmployeeManagementPage } from './components/pages/EmployeeManagementPage';
 import { RatesPage } from './components/pages/RatesPage';
 import { ProjectsPage } from './components/pages/ProjectsPage';
 import { CompaniesPage } from './components/pages/CompaniesPage';
@@ -76,6 +77,8 @@ function AuthenticatedApp() {
         return <EOMReportsPage />;
       case 'users':
         return <UsersPage />;
+      case 'employee-management':
+        return <EmployeeManagementPage />;
       case 'diagnostics':
         return <DiagnosticsPage />;
       default:

@@ -1,11 +1,15 @@
-import { useState, useMemo, useCallback } from 'react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
+import { useResources } from '../hooks/useResources';
+import { useTimeOff } from '../hooks/useTimeOff';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { buildDbRateLookupByName } from '../utils/billing';
 import { DateRangeFilter } from './DateRangeFilter';
@@ -16,6 +20,8 @@ import { EmployeePerformance } from './EmployeePerformance';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
+import { Card } from './Card';
+import { DailyHoursChart } from './atoms/charts/DailyHoursChart';
 import type { DateRange, MonthSelection } from '../types';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
@@ -44,11 +50,35 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources, monthlyAggregates, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, monthlyAggregates, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
   const { projects: dbProjects } = useProjects();
+
+  // Fetch actual employee/resource data for expected hours calculation
+  const { resources: employees } = useResources();
+
+  // Fetch time-off data for the selected period
+  const { timeOff } = useTimeOff({
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+    approvedOnly: true,
+  });
+
+  // Fetch holidays for the selected month
+  const [holidays, setHolidays] = useState<BulgarianHoliday[]>([]);
+  useEffect(() => {
+    async function fetchHolidays() {
+      const year = dateRange.start.getFullYear();
+      const { data } = await supabase
+        .from('bulgarian_holidays')
+        .select('*')
+        .eq('year', year);
+      setHolidays(data || []);
+    }
+    fetchHolidays();
+  }, [dateRange.start]);
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -66,7 +96,7 @@ export function Dashboard() {
   const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
-  const underHoursItems = getUnderHoursResources(resources, effectiveEndDate);
+  const underHoursItems = getUnderHoursResources(resourceSummaries, effectiveEndDate);
 
   // Build database rate lookup (fallback for projects not in monthly rates)
   const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
@@ -116,7 +146,7 @@ export function Dashboard() {
         ) : (
           <StatsOverview
             projects={projects}
-            resources={resources}
+            resources={resourceSummaries}
             underHoursCount={underHoursItems.length}
             totalRevenue={totalRevenue}
             onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
@@ -127,7 +157,7 @@ export function Dashboard() {
         <div className="space-y-4">
           {/* Resources Charts: Hours by Resource + Top 5 lists */}
           <DashboardChartsRow
-            resources={resources}
+            resources={resourceSummaries}
             entries={entries}
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
@@ -137,9 +167,24 @@ export function Dashboard() {
             section="resources"
           />
 
+          {/* Daily Hours Chart */}
+          <Card variant="default" padding="lg">
+            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+              Resource Utilization - {format(dateRange.start, 'MMMM yyyy')}
+            </h3>
+            <DailyHoursChart
+              entries={entries}
+              startDate={dateRange.start}
+              endDate={dateRange.end}
+              holidays={holidays}
+              resources={employees}
+              timeOff={timeOff}
+            />
+          </Card>
+
           {/* Trend Charts: Revenue Trend + MoM + CAGR */}
           <DashboardChartsRow
-            resources={resources}
+            resources={resourceSummaries}
             entries={entries}
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
@@ -171,8 +216,12 @@ export function Dashboard() {
               </div>
               <div className="space-y-3">
                 <EmployeePerformance
-                  projects={projects}
-                  dbRateLookup={dbRateLookup}
+                  entries={entries}
+                  projectsWithRates={projectsWithRates}
+                  timeOff={timeOff}
+                  billingResult={billingResult}
+                  getCanonicalCompanyName={getCanonicalCompanyName}
+                  userIdToDisplayNameLookup={userIdToDisplayNameLookup}
                 />
               </div>
             </section>

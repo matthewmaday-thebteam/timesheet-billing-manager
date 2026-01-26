@@ -7,7 +7,7 @@ import { AIChatWindow } from './chat';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'eom-reports' | 'users' | 'diagnostics';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'eom-reports' | 'users' | 'employee-management' | 'diagnostics';
 
 interface NavItemConfig {
   id: NavRoute;
@@ -18,8 +18,8 @@ const navItems: NavItemConfig[] = [
   { id: 'home', label: 'Home' },
   { id: 'holidays', label: 'Holidays' },
   { id: 'employees', label: 'Employees' },
-  { id: 'projects', label: 'Projects' },
   { id: 'companies', label: 'Companies' },
+  { id: 'projects', label: 'Projects' },
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
   { id: 'eom-reports', label: 'EOM Reports' },
@@ -34,35 +34,25 @@ interface MainHeaderProps {
 export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeaderProps) {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDocsMenuOpen, setIsDocsMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const docsMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menus on outside click
+  // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
-      if (docsMenuRef.current && !docsMenuRef.current.contains(event.target as Node)) {
-        setIsDocsMenuOpen(false);
-      }
     };
 
-    if (isMenuOpen || isDocsMenuOpen) {
+    if (isMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isMenuOpen, isDocsMenuOpen]);
-
-  const handleDocsClick = (section: DocsSection) => {
-    setIsDocsMenuOpen(false);
-    onOpenDocs?.(section);
-  };
+  }, [isMenuOpen]);
 
   const handleSignOut = async () => {
     setIsMenuOpen(false);
@@ -129,54 +119,6 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
             Ask the Accountant
           </button>
 
-          {/* Docs Dropdown */}
-          <div className="relative" ref={docsMenuRef}>
-            <button
-              onClick={() => setIsDocsMenuOpen(!isDocsMenuOpen)}
-              className="text-sm text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors focus:outline-none focus:ring-1 focus:ring-black rounded px-2 py-1 flex items-center gap-1"
-            >
-              Docs
-              <svg
-                className={`w-3 h-3 transition-transform ${isDocsMenuOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isDocsMenuOpen && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-lg border border-vercel-gray-100 overflow-hidden z-50"
-                style={{
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
-              >
-                <div className="py-1">
-                  <button
-                    onClick={() => handleDocsClick('atoms')}
-                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Components
-                  </button>
-                  <button
-                    onClick={() => handleDocsClick('tokens')}
-                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                    </svg>
-                    Styles
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Separator */}
           <div className="w-px h-6 bg-vercel-gray-100" />
 
@@ -224,6 +166,30 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                     Users
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onRouteChange('employee-management');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Employee Management
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onOpenDocs?.('tokens');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    Site Style
                   </button>
                   <button
                     onClick={() => {
