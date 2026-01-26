@@ -46,7 +46,7 @@ export interface DateRange {
   end: Date;
 }
 
-export type DateFilterMode = 'current' | 'month' | 'custom';
+export type DateFilterMode = 'current' | 'month';
 
 // Employee/Resource Management Types
 export interface EmploymentType {
@@ -84,6 +84,7 @@ export interface Resource {
   expected_hours: number | null;
   hourly_rate: number | null;
   monthly_cost: number | null;
+  bamboo_employee_id: string | null;
   created_at: string;
   updated_at: string;
   // Multi-system user associations (Clockify, ClickUp, etc.)
@@ -100,6 +101,7 @@ export interface ResourceFormData {
   expected_hours: number | null;
   hourly_rate: number | null;
   monthly_cost: number | null;
+  bamboo_employee_id: string | null;
 }
 
 // Bulgarian Holidays Types
@@ -707,4 +709,42 @@ export interface ProjectRatesForMonthResultWithBilling extends ProjectRatesForMo
 
   // Carryover available
   carryover_hours_in: number;
+}
+
+// ============================================================================
+// Employee Time-Off Types (BambooHR Integration)
+// ============================================================================
+
+/**
+ * BambooHR employee record from bamboo_employees table.
+ */
+export interface BambooEmployee {
+  id: string;
+  bamboo_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
+/**
+ * Employee time-off record from employee_time_off table.
+ */
+export interface EmployeeTimeOff {
+  id: string;
+  bamboo_request_id: string;
+  bamboo_employee_id: string;
+  resource_id: string | null;
+  employee_name: string;
+  employee_email: string | null;
+  time_off_type: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
 }

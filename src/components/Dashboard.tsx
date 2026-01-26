@@ -12,11 +12,10 @@ import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { buildDbRateLookupByName } from '../utils/billing';
-import { DateRangeFilter } from './DateRangeFilter';
+import { RangeSelector } from './atoms/RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { ProjectCard } from './ProjectCard';
-import { EmployeePerformance } from './EmployeePerformance';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
@@ -50,7 +49,7 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, monthlyAggregates, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, monthlyAggregates, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
@@ -135,7 +134,7 @@ export function Dashboard() {
           </div>
         </section>
 
-        <DateRangeFilter dateRange={dateRange} onChange={setDateRange} />
+        <RangeSelector variant="dateRange" dateRange={dateRange} onChange={setDateRange} />
 
         {/* Stats Overview - Above Charts */}
         {loading ? (
@@ -206,26 +205,6 @@ export function Dashboard() {
 
         {!loading && (
           <>
-
-            {/* Itemized Reports Section */}
-            <section>
-              <div className="flex justify-between items-end mb-4">
-                <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">
-                  Itemized Reports
-                </h2>
-              </div>
-              <div className="space-y-3">
-                <EmployeePerformance
-                  entries={entries}
-                  projectsWithRates={projectsWithRates}
-                  timeOff={timeOff}
-                  billingResult={billingResult}
-                  getCanonicalCompanyName={getCanonicalCompanyName}
-                  userIdToDisplayNameLookup={userIdToDisplayNameLookup}
-                />
-              </div>
-            </section>
-
             {/* Projects Section */}
             <section>
               <div className="flex justify-between items-end mb-4">

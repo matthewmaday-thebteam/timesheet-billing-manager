@@ -4,13 +4,14 @@ A React-based timesheet and billing management application that integrates with 
 
 ## Features
 
-- **Dashboard**: Overview of timesheet hours and billing metrics
-- **Employees Page**: Manage employee information with enrichment data and physical person grouping
-- **Companies Page**: View and manage companies with grouping support for multi-system entities
-- **Projects Page**: View projects organized by company
-- **Rates Page**: Manage monthly billing rates per project
-- **Revenue Page**: Track billable hours and revenue with drill-down views
-- **Timesheet View**: Detailed view of time entries with filtering
+- **Dashboard**: Overview of timesheet hours and billing metrics with resource utilization chart
+- **Employees Page**: Employee performance with hours, revenue, and utilization metrics (Underutilization, Lost Revenue, Utilization %, Time Off)
+- **Employee Management**: Manage employee information with enrichment data and physical person grouping
+- **Company Management**: View and manage companies with grouping support for multi-system entities
+- **Projects Page**: View projects organized by company with export capability
+- **Rates Page**: Manage monthly billing rates per project with average rate metrics
+- **Revenue Page**: Track billable hours and revenue with drill-down views and billing limits (MIN/MAX/Carryover)
+- **Holidays Page**: Manage Bulgarian holidays for working days calculations
 
 ## Tech Stack
 
@@ -148,24 +149,42 @@ vercel --prod
 ```
 src/
 ├── components/
+│   ├── atoms/
+│   │   ├── RangeSelector.tsx      # Reusable date range selector (variants: export, dateRange, exportOnly)
+│   │   ├── RevenueTable.tsx       # Revenue breakdown table
+│   │   └── charts/
+│   │       └── DailyHoursChart.tsx # Resource utilization heatmap chart
 │   ├── pages/
-│   │   ├── EmployeesPage.tsx      # Employee management page
+│   │   ├── EmployeesPage.tsx      # Employee performance with utilization metrics
+│   │   ├── EmployeeManagementPage.tsx # Employee data management
 │   │   ├── CompaniesPage.tsx      # Company management page
 │   │   ├── ProjectsPage.tsx       # Projects view page
 │   │   ├── RatesPage.tsx          # Monthly rates management
-│   │   └── RevenuePage.tsx        # Revenue tracking page
-│   ├── EmployeeEditorDrawer.tsx   # Employee edit form
+│   │   ├── RevenuePage.tsx        # Revenue tracking page
+│   │   ├── HolidaysPage.tsx       # Holiday management
+│   │   └── DiagnosticsPage.tsx    # Data diagnostics and validation
+│   ├── EmployeePerformance.tsx    # Employee hours/revenue accordion table
+│   ├── EmployeeEditorModal.tsx    # Employee edit modal
 │   ├── CompanyEditorModal.tsx     # Company edit modal
 │   ├── CompanyGroupSection.tsx    # Company grouping UI
 │   └── ResourceTable.tsx          # Employee data table
 ├── hooks/
 │   ├── useResources.ts            # Fetch/update resources
+│   ├── useEmployeeTableEntities.ts # Fetch employees (excludes grouped members)
 │   ├── useCompanies.ts            # Fetch companies with grouping
 │   ├── useCompanyGroup.ts         # Fetch company group data
 │   ├── useCompanyGroupMutations.ts # Company group CRUD operations
 │   ├── useMonthlyRates.ts         # Monthly rate management
+│   ├── useUnifiedBilling.ts       # Unified billing calculations
+│   ├── useTimeOff.ts              # Employee time-off records
 │   ├── useEmploymentTypes.ts      # Fetch employment types
-│   └── useTimesheetData.ts        # Fetch timesheet entries
+│   ├── useCanonicalCompanyMapping.ts # Company canonical name resolution
+│   └── useTimesheetData.ts        # Fetch timesheet entries with lookups
+├── utils/
+│   ├── billing.ts                 # Billing utilities (formatting, rounding)
+│   ├── billingCalculations.ts     # Unified billing calculation engine
+│   ├── calculations.ts            # Hour/minute calculations
+│   └── holidays.ts                # Bulgarian holiday calculations
 ├── types/
 │   └── index.ts                   # TypeScript interfaces
 └── lib/

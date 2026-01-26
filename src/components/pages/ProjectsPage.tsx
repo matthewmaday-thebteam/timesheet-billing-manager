@@ -2,8 +2,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { AccordionFlat } from '../AccordionFlat';
 import { Spinner } from '../Spinner';
-import { Button } from '../Button';
 import { DropdownMenu } from '../DropdownMenu';
+import { RangeSelector } from '../atoms/RangeSelector';
 import type { MonthSelection, DateRange } from '../../types';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
@@ -183,21 +183,12 @@ export function ProjectsPage() {
         </div>
       </div>
 
-      {/* Export Button Container */}
-      <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <div className="ml-auto">
-          <Button
-            variant="secondary"
-            onClick={handleExportCSV}
-            disabled={isLoading || projectsWithRates.length === 0}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export CSV
-          </Button>
-        </div>
-      </div>
+      {/* Export Button */}
+      <RangeSelector
+        variant="exportOnly"
+        onExport={handleExportCSV}
+        exportDisabled={isLoading || projectsWithRates.length === 0}
+      />
 
       {/* Error State */}
       {error && (

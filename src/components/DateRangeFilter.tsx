@@ -1,18 +1,16 @@
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { Button } from './Button';
-import { DatePicker } from './DatePicker';
 import type { DateRange, DateFilterMode } from '../types';
 
 interface DateRangeFilterProps {
   dateRange: DateRange;
   onChange: (range: DateRange) => void;
-  hideCustomRange?: boolean;
   /** Optional content to display on the right side (replaces date range text) */
   rightContent?: React.ReactNode;
 }
 
-export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false, rightContent }: DateRangeFilterProps) {
+export function DateRangeFilter({ dateRange, onChange, rightContent }: DateRangeFilterProps) {
   const [mode, setMode] = useState<DateFilterMode>('current');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
@@ -38,15 +36,6 @@ export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false, 
     });
   };
 
-  const handleCustomDateChange = (field: 'start' | 'end', value: string) => {
-    if (!value) return;
-    const date = parse(value, 'yyyy-MM-dd', new Date());
-    onChange({
-      ...dateRange,
-      [field]: date,
-    });
-  };
-
   return (
     <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
       <div className="flex gap-2">
@@ -62,14 +51,6 @@ export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false, 
         >
           Select Month
         </Button>
-        {!hideCustomRange && (
-          <Button
-            variant={mode === 'custom' ? 'primary' : 'secondary'}
-            onClick={() => handleModeChange('custom')}
-          >
-            Custom Range
-          </Button>
-        )}
       </div>
 
       {mode === 'month' && (
@@ -93,26 +74,6 @@ export function DateRangeFilter({ dateRange, onChange, hideCustomRange = false, 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Button>
-        </div>
-      )}
-
-      {mode === 'custom' && (
-        <div className="flex items-center gap-2">
-          <div className="w-40">
-            <DatePicker
-              value={format(dateRange.start, 'yyyy-MM-dd')}
-              onChange={(value) => handleCustomDateChange('start', value)}
-              placeholder="Start date"
-            />
-          </div>
-          <span className="text-vercel-gray-400">/</span>
-          <div className="w-40">
-            <DatePicker
-              value={format(dateRange.end, 'yyyy-MM-dd')}
-              onChange={(value) => handleCustomDateChange('end', value)}
-              placeholder="End date"
-            />
-          </div>
         </div>
       )}
 

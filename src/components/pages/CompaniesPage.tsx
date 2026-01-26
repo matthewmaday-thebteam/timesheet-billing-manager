@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Spinner } from '../Spinner';
-import { Button } from '../Button';
 import { DropdownMenu } from '../DropdownMenu';
+import { RangeSelector } from '../atoms/RangeSelector';
 import { CompanyEditorModal } from '../CompanyEditorModal';
 import { useCompanies } from '../../hooks/useCompanies';
 import type { CompanyWithGrouping, CompanyFormData } from '../../types';
@@ -87,28 +87,19 @@ export function CompaniesPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-vercel-gray-600">Companies</h1>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Company Management</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
-            Below are the known companies in the system and their associations
+            Manage company information and associations
           </p>
         </div>
       </div>
 
-      {/* Export Button Container */}
-      <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
-        <div className="ml-auto">
-          <Button
-            variant="secondary"
-            onClick={handleExportCSV}
-            disabled={isLoading || companies.length === 0}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export CSV
-          </Button>
-        </div>
-      </div>
+      {/* Export Button */}
+      <RangeSelector
+        variant="exportOnly"
+        onExport={handleExportCSV}
+        exportDisabled={isLoading || companies.length === 0}
+      />
 
       {/* Error State */}
       {error && (
