@@ -16,7 +16,6 @@ import { buildDbRateLookup } from '../utils/billing';
 import { RangeSelector } from './atoms/RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
-import { ProjectCard } from './ProjectCard';
 import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
@@ -212,29 +211,6 @@ export function Dashboard() {
           )}
         </div>
 
-        {!loading && (
-          <>
-            {/* Projects Section */}
-            <section>
-              <div className="flex justify-between items-end mb-4">
-                <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">
-                  Projects
-                </h2>
-              </div>
-              {projects.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-lg border border-vercel-gray-100">
-                  <p className="text-sm text-vercel-gray-400">No timesheet data found for this period</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {projects.map((project) => (
-                    <ProjectCard key={project.projectName} project={project} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
-        )}
       </main>
 
       {/* Under Hours Modal */}
