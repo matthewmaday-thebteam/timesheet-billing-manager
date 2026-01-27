@@ -159,9 +159,21 @@ export function aggregateByResource(
     }>;
   }>();
 
+  // Track which resource keys were resolved from userIdToDisplayNameLookup
+  // (meaning the key itself IS already the canonical display name)
+  const resolvedFromUserId = new Set<string>();
+
   for (const entry of entries) {
     // Get resource key - uses associations if available
     const resourceKey = getResourceKey(entry, userIdToDisplayNameLookup);
+
+    // Check if this key was resolved from userIdToDisplayNameLookup
+    if (userIdToDisplayNameLookup && entry.user_id) {
+      const resolvedName = userIdToDisplayNameLookup.get(entry.user_id);
+      if (resolvedName && resolvedName === resourceKey) {
+        resolvedFromUserId.add(resourceKey);
+      }
+    }
 
     if (!resourceMap.has(resourceKey)) {
       resourceMap.set(resourceKey, {
@@ -200,9 +212,16 @@ export function aggregateByResource(
         entries: taskData.entries.sort((a, b) => b.date.localeCompare(a.date)),
       });
     }
+
+    // If userName was resolved from userIdToDisplayNameLookup, it's already the display name
+    // Otherwise, try to look it up in displayNameLookup (keyed by external_label)
+    const displayName = resolvedFromUserId.has(userName)
+      ? userName
+      : (displayNameLookup?.get(userName) || 'Unknown');
+
     resources.push({
       userName,
-      displayName: displayNameLookup?.get(userName) || 'Unknown',
+      displayName,
       totalMinutes: data.totalMinutes,
       weeklyMinutes: data.weeklyMinutes,
       tasks: tasks.sort((a, b) => b.totalMinutes - a.totalMinutes),
