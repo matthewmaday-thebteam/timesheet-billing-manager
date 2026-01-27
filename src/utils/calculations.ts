@@ -38,7 +38,8 @@ export function aggregateByProject(
   entries: TimesheetEntry[],
   displayNameLookup?: Map<string, string>,
   userIdToDisplayNameLookup?: Map<string, string>,
-  companyCanonicalLookup?: Map<string, string>
+  companyCanonicalLookup?: Map<string, string>,
+  projectCanonicalLookup?: Map<string, string>
 ): ProjectSummary[] {
   const projectMap = new Map<string, {
     totalMinutes: number;
@@ -55,21 +56,27 @@ export function aggregateByProject(
   }>();
 
   for (const entry of entries) {
-    // Get canonical company name (uses primary company name if part of a group)
-    const canonicalCompanyName = entry.client_id && companyCanonicalLookup
-      ? companyCanonicalLookup.get(entry.client_id)
+    // Get canonical project name via ID lookup only - no name fallbacks
+    // If project_id is missing or not in lookup, use 'Unknown Project'
+    const canonicalProjectName = entry.project_id && projectCanonicalLookup?.has(entry.project_id)
+      ? projectCanonicalLookup.get(entry.project_id)!
+      : entry.project_id || 'Unknown Project';
+
+    // Get canonical company name via ID lookup only - no name fallbacks
+    const canonicalCompanyName = entry.client_id && companyCanonicalLookup?.has(entry.client_id)
+      ? companyCanonicalLookup.get(entry.client_id)!
       : null;
 
-    // Get or create project
-    if (!projectMap.has(entry.project_name)) {
-      projectMap.set(entry.project_name, {
+    // Get or create project (using canonical name for grouping)
+    if (!projectMap.has(canonicalProjectName)) {
+      projectMap.set(canonicalProjectName, {
         totalMinutes: 0,
         clientId: entry.client_id || '',
-        clientName: canonicalCompanyName || entry.client_name || 'Unassigned',
+        clientName: canonicalCompanyName || 'Unknown',
         resourceMap: new Map(),
       });
     }
-    const project = projectMap.get(entry.project_name)!;
+    const project = projectMap.get(canonicalProjectName)!;
     project.totalMinutes += entry.total_minutes;
 
     // Get resource key - uses associations if available
@@ -120,7 +127,7 @@ export function aggregateByProject(
       }
       resources.push({
         userName,
-        displayName: displayNameLookup?.get(userName) || userName,
+        displayName: displayNameLookup?.get(userName) || 'Unknown',
         totalMinutes: resourceData.totalMinutes,
         weeklyMinutes: resourceData.weeklyMinutes,
         tasks: tasks.sort((a, b) => b.totalMinutes - a.totalMinutes),
@@ -195,7 +202,7 @@ export function aggregateByResource(
     }
     resources.push({
       userName,
-      displayName: displayNameLookup?.get(userName) || userName,
+      displayName: displayNameLookup?.get(userName) || 'Unknown',
       totalMinutes: data.totalMinutes,
       weeklyMinutes: data.weeklyMinutes,
       tasks: tasks.sort((a, b) => b.totalMinutes - a.totalMinutes),

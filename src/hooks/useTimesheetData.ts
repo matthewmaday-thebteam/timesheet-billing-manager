@@ -36,6 +36,19 @@ interface CompanyCanonicalRecord {
   role: string;
 }
 
+interface ProjectCanonicalRecord {
+  project_id: string;
+  canonical_project_id: string;
+  role: string;
+}
+
+interface ProjectRecord {
+  id: string;
+  project_id: string;
+  project_name: string;
+  rate: number | null;
+}
+
 interface CompanyRecord {
   id: string;
   client_id: string;
@@ -58,6 +71,8 @@ interface UseTimesheetDataResult {
   displayNameLookup: Map<string, string>;
   /** Lookup from user_id to CANONICAL display name (for proper employee grouping across systems) */
   userIdToDisplayNameLookup: Map<string, string>;
+  /** Lookup from external project_id to CANONICAL external project_id (for billing lookups) */
+  projectCanonicalIdLookup: Map<string, string>;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -75,6 +90,8 @@ export function useTimesheetData(
   const [canonicalMappings, setCanonicalMappings] = useState<CanonicalMappingRecord[]>([]);
   const [companyCanonicalRecords, setCompanyCanonicalRecords] = useState<CompanyCanonicalRecord[]>([]);
   const [companyRecords, setCompanyRecords] = useState<CompanyRecord[]>([]);
+  const [projectCanonicalRecords, setProjectCanonicalRecords] = useState<ProjectCanonicalRecord[]>([]);
+  const [projectRecords, setProjectRecords] = useState<ProjectRecord[]>([]);
   const [projectRates, setProjectRates] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +124,7 @@ export function useTimesheetData(
 
       const projectsPromise = supabase
         .from('projects')
-        .select('project_name, rate');
+        .select('id, project_id, project_name, rate');
 
       // Fetch associations with their resource data for user_id -> displayName mapping
       const associationsPromise = supabase
@@ -134,6 +151,11 @@ export function useTimesheetData(
         .from('companies')
         .select('id, client_id, client_name, display_name');
 
+      // Fetch project canonical mapping for project grouping
+      const projectCanonicalPromise = supabase
+        .from('v_project_canonical')
+        .select('project_id, canonical_project_id, role');
+
       // If extended months requested, fetch historical entries too
       const extendedPromise = extendedMonths > 0
         ? supabase
@@ -144,7 +166,7 @@ export function useTimesheetData(
             .order('work_date', { ascending: false })
         : null;
 
-      const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, companyCanonicalResult, companiesResult, extendedResult] = await Promise.all([
+      const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, companyCanonicalResult, companiesResult, projectCanonicalResult, extendedResult] = await Promise.all([
         entriesPromise,
         resourcesPromise,
         projectsPromise,
@@ -152,6 +174,7 @@ export function useTimesheetData(
         canonicalPromise,
         companyCanonicalPromise,
         companiesPromise,
+        projectCanonicalPromise,
         extendedPromise,
       ]);
 
@@ -178,6 +201,10 @@ export function useTimesheetData(
       if (companiesResult.error) {
         throw new Error(companiesResult.error.message);
       }
+      // Project canonical mapping is optional - don't fail if view doesn't exist yet
+      if (projectCanonicalResult.error && !projectCanonicalResult.error.message.includes('does not exist')) {
+        console.warn('Failed to fetch project canonical mapping:', projectCanonicalResult.error.message);
+      }
       if (extendedResult?.error) {
         throw new Error(extendedResult.error.message);
       }
@@ -195,14 +222,16 @@ export function useTimesheetData(
       setCanonicalMappings(canonicalResult.data || []);
       setCompanyCanonicalRecords(companyCanonicalResult.data || []);
       setCompanyRecords(companiesResult.data || []);
+      setProjectCanonicalRecords(projectCanonicalResult.data || []);
+      setProjectRecords(projectsResult.data || []);
 
       setExtendedEntries(extendedResult?.data || []);
 
-      // Build project rates map
+      // Build project rates map keyed by external project_id (not name)
       const ratesMap = new Map<string, number>();
       for (const project of projectsResult.data || []) {
-        if (project.rate !== null) {
-          ratesMap.set(project.project_name, project.rate);
+        if (project.rate !== null && project.project_id) {
+          ratesMap.set(project.project_id, project.rate);
         }
       }
       setProjectRates(ratesMap);
@@ -325,9 +354,51 @@ export function useTimesheetData(
     return lookup;
   }, [companyCanonicalRecords, companyById]);
 
+  // Build project UUID -> project details lookup
+  const projectByUuid = useMemo(() => {
+    const map = new Map<string, ProjectRecord>();
+    for (const project of projectRecords) {
+      map.set(project.id, project);
+    }
+    return map;
+  }, [projectRecords]);
+
+  // Build project canonical lookup: external project_id -> canonical project_name
+  // This maps timesheet entry project_ids to their CANONICAL project's name
+  // (so grouped projects' entries are aggregated under the primary project name)
+  const projectCanonicalLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const record of projectCanonicalRecords) {
+      const project = projectByUuid.get(record.project_id);
+      const canonicalProject = projectByUuid.get(record.canonical_project_id);
+
+      if (!project || !canonicalProject) continue;
+
+      // Map external project_id to canonical project's name
+      lookup.set(project.project_id, canonicalProject.project_name);
+    }
+    return lookup;
+  }, [projectCanonicalRecords, projectByUuid]);
+
+  // Build project canonical ID lookup: external project_id -> canonical external project_id
+  // This maps member project IDs to their primary project's external ID for billing lookups
+  const projectCanonicalIdLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const record of projectCanonicalRecords) {
+      const project = projectByUuid.get(record.project_id);
+      const canonicalProject = projectByUuid.get(record.canonical_project_id);
+
+      if (!project || !canonicalProject) continue;
+
+      // Map external project_id to canonical project's external ID
+      lookup.set(project.project_id, canonicalProject.project_id);
+    }
+    return lookup;
+  }, [projectCanonicalRecords, projectByUuid]);
+
   const projects = useMemo(
-    () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup),
-    [entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup]
+    () => aggregateByProject(entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup, projectCanonicalLookup),
+    [entries, displayNameLookup, userIdToDisplayNameLookup, companyCanonicalLookup, projectCanonicalLookup]
   );
   const resources = useMemo(
     () => aggregateByResource(entries, displayNameLookup, userIdToDisplayNameLookup),
@@ -335,9 +406,10 @@ export function useTimesheetData(
   );
 
   // Calculate monthly aggregates for line chart (uses extended entries if available)
+  // Uses canonical project mapping for proper rate lookups
   const monthlyAggregates = useMemo(
-    () => aggregateEntriesByMonth(extendedEntries.length > 0 ? extendedEntries : entries, projectRates),
-    [extendedEntries, entries, projectRates]
+    () => aggregateEntriesByMonth(extendedEntries.length > 0 ? extendedEntries : entries, projectRates, projectCanonicalIdLookup),
+    [extendedEntries, entries, projectRates, projectCanonicalIdLookup]
   );
 
   return {
@@ -347,6 +419,7 @@ export function useTimesheetData(
     monthlyAggregates,
     displayNameLookup,
     userIdToDisplayNameLookup,
+    projectCanonicalIdLookup,
     loading,
     error,
     refetch: fetchData,

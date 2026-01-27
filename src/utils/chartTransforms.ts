@@ -167,16 +167,19 @@ export function transformToLineChartData(
  * Groups entries by YYYY-MM and calculates total revenue.
  *
  * @param entries - Array of timesheet entries
- * @param projectRates - Map of project name to hourly rate
+ * @param projectRates - Map of external project_id to hourly rate
+ * @param projectCanonicalIdLookup - Optional map from external project_id to canonical project_id
  * @returns Array of monthly aggregates sorted chronologically
  */
 export function aggregateEntriesByMonth(
   entries: Array<{
     work_date: string;
+    project_id: string | null;
     project_name: string;
     total_minutes: number;
   }>,
-  projectRates: Map<string, number>
+  projectRates: Map<string, number>,
+  projectCanonicalIdLookup?: Map<string, string>
 ): MonthlyAggregate[] {
   const monthMap = new Map<string, MonthlyAggregate>();
 
@@ -193,7 +196,11 @@ export function aggregateEntriesByMonth(
     }
 
     const aggregate = monthMap.get(month)!;
-    const rate = projectRates.get(entry.project_name) ?? 0;
+
+    // Get canonical project ID for rate lookup
+    const projectId = entry.project_id || '';
+    const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
+    const rate = projectRates.get(canonicalProjectId) ?? 0;
     const hours = entry.total_minutes / 60;
 
     aggregate.totalMinutes += entry.total_minutes;

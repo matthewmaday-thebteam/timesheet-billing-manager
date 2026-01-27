@@ -405,11 +405,10 @@ export function DiagnosticsPage() {
       return lookup;
     }
 
-    // Build billing config getter from projectsWithRates
-    const getBillingConfig = (projectId: string, projectName: string): ProjectBillingConfig => {
-      const project = projectsWithRates.find(
-        p => p.externalProjectId === projectId || p.projectName.toLowerCase() === projectName.toLowerCase()
-      );
+    // Build billing config getter from projectsWithRates (ID-only lookup)
+    const getBillingConfig = (projectId: string, _projectName: string): ProjectBillingConfig => {
+      // Only look up by ID - no name fallbacks
+      const project = projectsWithRates.find(p => p.externalProjectId === projectId);
 
       if (project) {
         return {
@@ -425,7 +424,7 @@ export function DiagnosticsPage() {
         };
       }
 
-      // Default config
+      // Default config - no match by ID
       return {
         rate: 0,
         rounding: 15,
@@ -439,12 +438,11 @@ export function DiagnosticsPage() {
       };
     };
 
-    // Build company name getter
-    const getCompanyName = (clientId: string, clientName: string): string => {
-      const company = companies.find(
-        c => c.client_id === clientId || c.client_name.toLowerCase() === clientName.toLowerCase()
-      );
-      return company?.display_name || company?.client_name || clientName;
+    // Build company name getter (ID-only lookup)
+    const getCompanyName = (clientId: string, _clientName: string): string => {
+      // Only look up by ID - no name fallbacks
+      const company = companies.find(c => c.client_id === clientId);
+      return company?.display_name || company?.client_name || 'Unknown';
     };
 
     // Build billing inputs from database entries
@@ -464,28 +462,30 @@ export function DiagnosticsPage() {
     // Calculate monthly billing
     const billingResult = calculateMonthlyBilling(billingInputs);
 
-    // Build lookup by project name
+    // Build lookup by project ID (canonical)
     for (const company of billingResult.companies) {
       for (const project of company.projects) {
-        // Key by project name (lowercase for case-insensitive matching)
-        lookup.set(project.projectName.toLowerCase(), {
-          roundedHours: project.roundedHours,
-          billedHours: project.billedHours,
-          billedRevenue: project.billedRevenue,
-          rate: project.rate,
-        });
+        // Key by project ID only - no name-based lookups
+        if (project.projectId) {
+          lookup.set(project.projectId, {
+            roundedHours: project.roundedHours,
+            billedHours: project.billedHours,
+            billedRevenue: project.billedRevenue,
+            rate: project.rate,
+          });
+        }
       }
     }
 
     return lookup;
   }, [dbEntries, projectsWithRates, companies]);
 
-  // Build billing config lookup
+  // Build billing config lookup (ID-only)
   const billingConfigLookup = useMemo(() => {
     const lookup = new Map<string, BillingConfigLookup>();
 
     for (const project of projectsWithRates) {
-      // Key by both project ID and project name for flexible matching
+      // Key by project ID only - no name fallbacks
       const config: BillingConfigLookup = {
         rate: project.effectiveRate,
         rounding: project.effectiveRounding,
@@ -499,20 +499,19 @@ export function DiagnosticsPage() {
       };
 
       lookup.set(project.externalProjectId, config);
-      lookup.set(project.projectName.toLowerCase(), config);
     }
 
     return lookup;
   }, [projectsWithRates]);
 
-  // Build company name lookup
+  // Build company name lookup (ID-only)
   const companyNameLookup = useMemo(() => {
     const lookup = new Map<string, string>();
 
     for (const company of companies) {
       const displayName = company.display_name || company.client_name;
+      // Key by client ID only - no name fallbacks
       lookup.set(company.client_id, displayName);
-      lookup.set(company.client_name.toLowerCase(), displayName);
     }
 
     return lookup;
@@ -572,14 +571,10 @@ export function DiagnosticsPage() {
         return;
       }
 
-      // Build lookup functions
-      const getBillingConfig = (projectId: string, projectName: string): BillingConfigLookup => {
-        // Try by project ID first
-        let config = billingConfigLookup.get(projectId);
-        if (config) return config;
-
-        // Try by project name (case-insensitive)
-        config = billingConfigLookup.get(projectName.toLowerCase());
+      // Build lookup functions (ID-only, no name fallbacks)
+      const getBillingConfig = (projectId: string, _projectName: string): BillingConfigLookup => {
+        // Only look up by project ID - no name fallbacks
+        const config = billingConfigLookup.get(projectId);
         if (config) return config;
 
         // Return default config (not matched in system)
@@ -596,17 +591,10 @@ export function DiagnosticsPage() {
         };
       };
 
-      const getCompanyName = (clientId: string, clientName: string): string => {
-        // Try by client ID first
-        let name = companyNameLookup.get(clientId);
-        if (name) return name;
-
-        // Try by client name (case-insensitive)
-        name = companyNameLookup.get(clientName.toLowerCase());
-        if (name) return name;
-
-        // Return original client name
-        return clientName;
+      const getCompanyName = (clientId: string, _clientName: string): string => {
+        // Only look up by client ID - no name fallbacks
+        const name = companyNameLookup.get(clientId);
+        return name || 'Unknown';
       };
 
       // Run validation
@@ -826,7 +814,7 @@ export function DiagnosticsPage() {
                   <ProjectValidationCard
                     key={`${result.source}:${result.clientName}:${result.projectName}`}
                     result={result}
-                    appBilling={appBillingByProject.get(result.projectName.toLowerCase()) || null}
+                    appBilling={appBillingByProject.get(result.sourceProjectId) || null}
                   />
                 ))}
               </div>

@@ -135,6 +135,8 @@ export function buildDbRateLookup(projects: Project[]): Map<string, number> {
 /**
  * Build a rate lookup by project name from database projects
  * Key is project_name for display/report matching
+ * @deprecated Use buildDbRateLookup (keyed by project_id) for ID-based lookups.
+ * Name-based lookups don't support canonical project mapping.
  */
 export function buildDbRateLookupByName(projects: Project[]): Map<string, number> {
   const lookup = new Map<string, number>();
@@ -149,6 +151,7 @@ export function buildDbRateLookupByName(projects: Project[]): Map<string, number
 /**
  * Get rate for a project with proper fallback logic
  * Priority: Database rate > Legacy localStorage rate > Default $45
+ * @deprecated Use useMonthlyRates hook for ID-based rate lookups that support canonical project mapping.
  */
 export function getEffectiveRate(
   projectName: string,
@@ -222,6 +225,7 @@ export function setProjectRate(projectName: string, rate: number): void {
  * Calculate revenue for a single project
  * Uses database rates with $45 fallback, then legacy localStorage rates
  * Applies per-task rounding: each task is rounded individually, then summed
+ * @deprecated Use useUnifiedBilling hook for accurate revenue calculations with canonical project mapping.
  */
 export function calculateProjectRevenue(
   project: ProjectSummary,
@@ -244,6 +248,7 @@ export function calculateProjectRevenue(
 /**
  * Calculate total revenue across all projects
  * Uses database rates with $45 fallback, then legacy localStorage rates
+ * @deprecated Use useUnifiedBilling hook for accurate revenue calculations with canonical project mapping.
  */
 export function calculateTotalRevenue(
   projects: ProjectSummary[],
@@ -259,6 +264,7 @@ export function calculateTotalRevenue(
  * Get project rates as an array (for table display)
  * Includes all projects from data + any stored rates
  * Uses database rates with proper fallback
+ * @deprecated Use useMonthlyRates hook for ID-based rate lookups that support canonical project mapping.
  */
 export function getProjectRatesArray(
   projects: ProjectSummary[],

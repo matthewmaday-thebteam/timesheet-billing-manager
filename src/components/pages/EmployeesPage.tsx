@@ -32,7 +32,7 @@ export function EmployeesPage() {
     };
   });
 
-  const { entries, userIdToDisplayNameLookup, loading, error } = useTimesheetData(dateRange);
+  const { entries, userIdToDisplayNameLookup, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -70,10 +70,10 @@ export function EmployeesPage() {
     fetchHolidays();
   }, [dateRange.start]);
 
-  // Helper to get canonical company name
-  const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
+  // Helper to get canonical company name (ID-only lookup, no name fallbacks)
+  const getCanonicalCompanyName = useCallback((clientId: string, _clientName: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
-    return canonicalInfo?.canonicalDisplayName || clientName || 'Unassigned';
+    return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation
@@ -81,14 +81,15 @@ export function EmployeesPage() {
     entries,
     projectsWithRates,
     getCanonicalCompanyName,
+    projectCanonicalIdLookup,
   });
 
-  // Build project config map for rounding lookup
+  // Build project config map for rounding lookup (keyed by external project ID)
   const projectConfigMap = useMemo(() => {
     const map = new Map<string, { rounding: RoundingIncrement }>();
     for (const project of projectsWithRates) {
-      if (project.projectId) {
-        map.set(project.projectId, {
+      if (project.externalProjectId) {
+        map.set(project.externalProjectId, {
           rounding: project.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT,
         });
       }
@@ -109,16 +110,18 @@ export function EmployeesPage() {
     return lookup;
   }, [billingResult]);
 
-  // Build total project minutes lookup
+  // Build total project minutes lookup using canonical project IDs
   const projectTotalMinutesLookup = useMemo(() => {
     const lookup = new Map<string, number>();
     for (const entry of entries) {
-      const projectId = entry.project_id || '';
+      const rawProjectId = entry.project_id || '';
+      // Map to canonical project ID (member -> primary)
+      const projectId = projectCanonicalIdLookup?.get(rawProjectId) || rawProjectId;
       const current = lookup.get(projectId) || 0;
       lookup.set(projectId, current + entry.total_minutes);
     }
     return lookup;
-  }, [entries]);
+  }, [entries, projectCanonicalIdLookup]);
 
   // Calculate utilization metrics
   const utilizationMetrics = useMemo(() => {
@@ -301,7 +304,9 @@ export function EmployeesPage() {
 
         for (const [projectKey, taskMap] of projectMap) {
           const [projectId, projectName] = projectKey.split('::');
-          const config = projectConfigMap.get(projectId);
+          // Map to canonical project ID for all lookups
+          const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
+          const config = projectConfigMap.get(canonicalProjectId);
           const rounding = config?.rounding ?? DEFAULT_ROUNDING_INCREMENT;
 
           // Calculate project totals for this employee
@@ -310,9 +315,9 @@ export function EmployeesPage() {
             employeeProjectMinutes += taskMinutes;
           }
 
-          // Calculate proportional revenue
-          const totalProjectMinutes = projectTotalMinutesLookup.get(projectId) || employeeProjectMinutes;
-          const projectBilledRevenue = projectBilledRevenueLookup.get(projectId) || 0;
+          // Calculate proportional revenue using canonical project ID
+          const totalProjectMinutes = projectTotalMinutesLookup.get(canonicalProjectId) || employeeProjectMinutes;
+          const projectBilledRevenue = projectBilledRevenueLookup.get(canonicalProjectId) || 0;
           const employeeShare = totalProjectMinutes > 0 ? employeeProjectMinutes / totalProjectMinutes : 0;
           const employeeProjectRevenue = projectBilledRevenue * employeeShare;
 
@@ -356,7 +361,7 @@ export function EmployeesPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectConfigMap, projectBilledRevenueLookup, projectTotalMinutesLookup]);
+  }, [entries, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectConfigMap, projectBilledRevenueLookup, projectTotalMinutesLookup, projectCanonicalIdLookup]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -422,6 +427,7 @@ export function EmployeesPage() {
           billingResult={billingResult}
           getCanonicalCompanyName={getCanonicalCompanyName}
           userIdToDisplayNameLookup={userIdToDisplayNameLookup}
+          projectCanonicalIdLookup={projectCanonicalIdLookup}
         />
       )}
     </div>

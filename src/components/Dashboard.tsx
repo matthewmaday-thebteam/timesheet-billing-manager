@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
+import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
@@ -11,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
-import { buildDbRateLookupByName } from '../utils/billing';
+import { buildDbRateLookup } from '../utils/billing';
 import { RangeSelector } from './atoms/RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
@@ -49,11 +50,14 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, monthlyAggregates, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
   const { projects: dbProjects } = useProjects();
+
+  // Fetch canonical project count from v_project_table_entities (per Formulas page definition)
+  const { projects: canonicalProjects } = useProjectTableEntities();
 
   // Fetch actual employee/resource data for expected hours calculation
   const { resources: employees } = useResources();
@@ -97,13 +101,13 @@ export function Dashboard() {
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
   const underHoursItems = getUnderHoursResources(resourceSummaries, effectiveEndDate);
 
-  // Build database rate lookup (fallback for projects not in monthly rates)
-  const dbRateLookup = useMemo(() => buildDbRateLookupByName(dbProjects), [dbProjects]);
+  // Build database rate lookup by external project_id (fallback for projects not in monthly rates)
+  const dbRateLookup = useMemo(() => buildDbRateLookup(dbProjects), [dbProjects]);
 
-  // Helper to get canonical company name
-  const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
+  // Helper to get canonical company name (ID-only lookup, no name fallbacks)
+  const getCanonicalCompanyName = useCallback((clientId: string, _clientName: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
-    return canonicalInfo?.canonicalDisplayName || clientName || 'Unassigned';
+    return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation - single source of truth
@@ -112,6 +116,7 @@ export function Dashboard() {
     entries,
     projectsWithRates,
     getCanonicalCompanyName,
+    projectCanonicalIdLookup,
   });
 
   return (
@@ -145,6 +150,7 @@ export function Dashboard() {
         ) : (
           <StatsOverview
             projects={projects}
+            projectCount={canonicalProjects.length}
             resources={resourceSummaries}
             underHoursCount={underHoursItems.length}
             totalRevenue={totalRevenue}
@@ -160,6 +166,7 @@ export function Dashboard() {
             entries={entries}
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
+            projectCanonicalIdLookup={projectCanonicalIdLookup}
             billingResult={billingResult}
             currentMonthRevenue={totalRevenue}
             loading={loading}
@@ -187,6 +194,7 @@ export function Dashboard() {
             entries={entries}
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
+            projectCanonicalIdLookup={projectCanonicalIdLookup}
             billingResult={billingResult}
             currentMonthRevenue={totalRevenue}
             loading={loading}
@@ -237,6 +245,7 @@ export function Dashboard() {
         expectedHours={expectedHours}
         workingDaysElapsed={workingDays.elapsed}
         workingDaysTotal={workingDays.total}
+        userIdToDisplayNameLookup={userIdToDisplayNameLookup}
       />
     </>
   );

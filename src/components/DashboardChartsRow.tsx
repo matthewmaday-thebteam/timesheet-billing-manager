@@ -47,8 +47,10 @@ export interface DashboardChartsRowProps {
   entries: TimesheetEntry[];
   /** Monthly aggregates for line chart */
   monthlyAggregates: MonthlyAggregate[];
-  /** Project rates lookup by project name (fallback) */
+  /** Project rates lookup by external project_id (fallback) */
   projectRates: Map<string, number>;
+  /** Canonical project ID lookup (external project_id -> canonical project_id) */
+  projectCanonicalIdLookup?: Map<string, string>;
   /** Unified billing result from useUnifiedBilling */
   billingResult?: MonthlyBillingResult;
   /** Pre-calculated total revenue for the current month (with billing limits applied) */
@@ -68,31 +70,41 @@ function transformEntriesToTopList(
   entries: TimesheetEntry[],
   billingResult: MonthlyBillingResult | undefined,
   projectRates: Map<string, number>,
+  projectCanonicalIdLookup: Map<string, string> | undefined,
   topN: number = 5,
   sortBy: 'hours' | 'revenue' = 'hours'
 ): TopResourceItem[] {
-  // Build project revenue lookup from billing result
+  // Helper to get canonical project ID
+  const getCanonicalProjectId = (projectId: string | null): string => {
+    if (!projectId) return '';
+    return projectCanonicalIdLookup?.get(projectId) || projectId;
+  };
+
+  // Build project revenue lookup from billing result (keyed by canonical project ID)
   const projectRevenues = new Map<string, number>();
   const projectMinutes = new Map<string, number>();
 
   if (billingResult) {
     for (const company of billingResult.companies) {
       for (const project of company.projects) {
-        projectRevenues.set(project.projectName, project.billedRevenue);
-        projectMinutes.set(project.projectName, project.actualMinutes);
+        // Key by project ID (canonical), not name
+        const projectId = project.projectId || '';
+        projectRevenues.set(projectId, project.billedRevenue);
+        projectMinutes.set(projectId, project.actualMinutes);
       }
     }
   }
 
-  // If no billing result, fall back to simple calculation
+  // If no billing result, fall back to simple calculation using canonical project IDs
   if (!billingResult) {
     for (const entry of entries) {
-      const current = projectMinutes.get(entry.project_name) || 0;
-      projectMinutes.set(entry.project_name, current + entry.total_minutes);
+      const canonicalProjectId = getCanonicalProjectId(entry.project_id);
+      const current = projectMinutes.get(canonicalProjectId) || 0;
+      projectMinutes.set(canonicalProjectId, current + entry.total_minutes);
 
-      const rate = projectRates.get(entry.project_name) ?? 0;
-      const currentRevenue = projectRevenues.get(entry.project_name) || 0;
-      projectRevenues.set(entry.project_name, currentRevenue + (entry.total_minutes / 60) * rate);
+      const rate = projectRates.get(canonicalProjectId) ?? 0;
+      const currentRevenue = projectRevenues.get(canonicalProjectId) || 0;
+      projectRevenues.set(canonicalProjectId, currentRevenue + (entry.total_minutes / 60) * rate);
     }
   }
 
@@ -104,8 +116,10 @@ function transformEntriesToTopList(
     const current = userStats.get(userName) || { minutes: 0, revenue: 0 };
 
     // Calculate user's share of project revenue based on their contribution
-    const totalProjectMinutes = projectMinutes.get(entry.project_name) || 1;
-    const projectRevenue = projectRevenues.get(entry.project_name) || 0;
+    // Always use canonical project ID for lookups
+    const canonicalProjectId = getCanonicalProjectId(entry.project_id);
+    const totalProjectMinutes = projectMinutes.get(canonicalProjectId) || 1;
+    const projectRevenue = projectRevenues.get(canonicalProjectId) || 0;
     const userShare = (entry.total_minutes / totalProjectMinutes) * projectRevenue;
 
     userStats.set(userName, {
@@ -137,6 +151,7 @@ export function DashboardChartsRow({
   entries,
   monthlyAggregates,
   projectRates,
+  projectCanonicalIdLookup,
   billingResult,
   currentMonthRevenue,
   loading = false,
@@ -215,14 +230,14 @@ export function DashboardChartsRow({
 
   // Top 5 by hours for the selected month
   const topFiveByHours = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, 5, 'hours'),
-    [entries, billingResult, projectRates]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, 5, 'hours'),
+    [entries, billingResult, projectRates, projectCanonicalIdLookup]
   );
 
   // Top 5 by revenue for the selected month
   const topFiveByRevenue = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, 5, 'revenue'),
-    [entries, billingResult, projectRates]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, 5, 'revenue'),
+    [entries, billingResult, projectRates, projectCanonicalIdLookup]
   );
 
   // Loading state

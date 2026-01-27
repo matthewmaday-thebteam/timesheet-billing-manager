@@ -26,7 +26,7 @@ export function RevenuePage() {
     };
   });
 
-  const { entries, loading, error } = useTimesheetData(dateRange);
+  const { entries, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Convert dateRange to MonthSelection for the rates hook
@@ -50,10 +50,10 @@ export function RevenuePage() {
     return map;
   }, [projectsWithRates]);
 
-  // Helper to get canonical company name
-  const getCanonicalCompanyName = useCallback((clientId: string, clientName: string): string => {
+  // Helper to get canonical company name (ID-only lookup, no name fallbacks)
+  const getCanonicalCompanyName = useCallback((clientId: string, _clientName: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
-    return canonicalInfo?.canonicalDisplayName || clientName || 'Unassigned';
+    return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation - single source of truth
@@ -62,6 +62,7 @@ export function RevenuePage() {
     entries,
     projectsWithRates,
     getCanonicalCompanyName,
+    projectCanonicalIdLookup,
   });
 
   // Check if any projects have billing limits for CSV export
@@ -95,15 +96,19 @@ export function RevenuePage() {
       // Skip entries without project ID (unmatched projects)
       if (!entry.project_id) continue;
 
-      // Get billing data by ID only
-      const billingData = billingDataByProjectId.get(entry.project_id);
+      // Map to canonical project ID (member projects -> primary project)
+      const canonicalProjectId = projectCanonicalIdLookup?.get(entry.project_id) || entry.project_id;
+
+      // Get billing data by canonical ID only
+      const billingData = billingDataByProjectId.get(canonicalProjectId);
       if (!billingData) continue; // Skip unmatched projects
 
-      // Use canonical company name if available
+      // Use canonical company name (ID-only lookup, no name fallbacks)
       const canonicalInfo = entry.client_id ? getCanonicalCompany(entry.client_id) : null;
-      const company = canonicalInfo?.canonicalDisplayName || entry.client_name || 'Unassigned';
-      const project = entry.project_name;
-      const projectId = entry.project_id;
+      const company = canonicalInfo?.canonicalDisplayName || 'Unknown';
+      // Use canonical project name from billing data
+      const project = billingData.projectName;
+      const projectId = canonicalProjectId;
       const task = entry.task_name || 'No Task';
       const key = `${company}|${project}|${task}`;
 

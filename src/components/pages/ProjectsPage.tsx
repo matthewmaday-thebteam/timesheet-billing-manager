@@ -54,6 +54,7 @@ export function ProjectsPage() {
       project_id: project.project_id,
       project_name: project.project_name,
       rate: project.rate,
+      target_hours: project.target_hours,
       created_at: project.created_at,
       updated_at: project.updated_at,
     };

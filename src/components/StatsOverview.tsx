@@ -11,6 +11,8 @@ const MONTHLY_TARGET = (ANNUAL_BUDGET * TARGET_RATIO) / 12;
 
 interface StatsOverviewProps {
   projects: ProjectSummary[];
+  /** Canonical project count from v_project_table_entities (per Formulas page definition) */
+  projectCount: number;
   resources: ResourceSummary[];
   underHoursCount: number;
   totalRevenue: number;
@@ -19,6 +21,7 @@ interface StatsOverviewProps {
 
 export function StatsOverview({
   projects,
+  projectCount,
   resources,
   underHoursCount,
   totalRevenue,
@@ -75,7 +78,7 @@ export function StatsOverview({
       <div className="w-[10%]">
         <MetricCard
           title="Projects"
-          value={projects.length}
+          value={projectCount}
         />
       </div>
 

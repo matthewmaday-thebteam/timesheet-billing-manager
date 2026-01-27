@@ -126,6 +126,7 @@ export interface Project {
   project_id: string;
   project_name: string;
   rate: number | null;
+  target_hours: number;  // 0 = no target
   created_at: string;
   updated_at: string;
 }

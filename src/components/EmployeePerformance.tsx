@@ -33,6 +33,8 @@ interface EmployeePerformanceProps {
   getCanonicalCompanyName: (clientId: string, clientName: string) => string;
   /** Lookup from user_id to CANONICAL display name (for proper employee grouping) */
   userIdToDisplayNameLookup: Map<string, string>;
+  /** Lookup from external project_id to CANONICAL project_id (for billing config lookups) */
+  projectCanonicalIdLookup?: Map<string, string>;
 }
 
 interface TaskData {
@@ -84,7 +86,13 @@ export function EmployeePerformance({
   billingResult,
   getCanonicalCompanyName,
   userIdToDisplayNameLookup,
+  projectCanonicalIdLookup,
 }: EmployeePerformanceProps) {
+  // Helper to get canonical project ID (for member project -> primary project mapping)
+  const getCanonicalProjectId = (projectId: string): string => {
+    if (!projectId || !projectCanonicalIdLookup) return projectId;
+    return projectCanonicalIdLookup.get(projectId) || projectId;
+  };
   // Build lookup map: projectId -> billing config
   const projectConfigMap = useMemo(() => {
     const map = new Map<string, { rate: number; rounding: RoundingIncrement; clientName: string }>();
@@ -125,15 +133,18 @@ export function EmployeePerformance({
   }, [billingResult]);
 
   // Build total project minutes lookup (all employees combined) for proportional distribution
+  // Uses canonical project ID so member project minutes aggregate with primary
   const projectTotalMinutesLookup = useMemo(() => {
     const lookup = new Map<string, number>();
     for (const entry of entries) {
-      const projectId = entry.project_id || '';
+      const rawProjectId = entry.project_id || '';
+      // Map to canonical project ID (member -> primary)
+      const projectId = projectCanonicalIdLookup?.get(rawProjectId) || rawProjectId;
       const current = lookup.get(projectId) || 0;
       lookup.set(projectId, current + entry.total_minutes);
     }
     return lookup;
-  }, [entries]);
+  }, [entries, projectCanonicalIdLookup]);
 
   // Build hierarchical data: Employee -> Company -> Project -> Task
   const employeeData = useMemo(() => {
@@ -202,7 +213,9 @@ export function EmployeePerformance({
 
         for (const [projectKey, taskMap] of projectMap) {
           const [projectId, projectName] = projectKey.split('::');
-          const config = projectConfigMap.get(projectId);
+          // Use canonical project ID for billing config lookup (member projects -> primary)
+          const canonicalProjectId = getCanonicalProjectId(projectId);
+          const config = projectConfigMap.get(canonicalProjectId);
           const rounding = config?.rounding ?? DEFAULT_ROUNDING_INCREMENT;
 
           const tasks: TaskData[] = [];
@@ -225,8 +238,9 @@ export function EmployeePerformance({
 
           // Calculate employee's proportional share of project billedRevenue
           // This ensures MIN/MAX/ROLLOVER adjustments are distributed to employees
-          const totalProjectMinutes = projectTotalMinutesLookup.get(projectId) || projectTotalMinutes;
-          const projectBilledRevenue = projectBilledRevenueLookup.get(projectId) || 0;
+          // Use canonical project ID for both lookups (member projects aggregate under primary)
+          const totalProjectMinutes = projectTotalMinutesLookup.get(canonicalProjectId) || projectTotalMinutes;
+          const projectBilledRevenue = projectBilledRevenueLookup.get(canonicalProjectId) || 0;
           const employeeShare = totalProjectMinutes > 0 ? projectTotalMinutes / totalProjectMinutes : 0;
           const employeeProjectRevenue = projectBilledRevenue * employeeShare;
 

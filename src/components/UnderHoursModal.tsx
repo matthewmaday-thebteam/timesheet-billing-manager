@@ -17,6 +17,8 @@ interface UnderHoursModalProps {
   expectedHours: number;
   workingDaysElapsed: number;
   workingDaysTotal: number;
+  /** Lookup from user_id to CANONICAL display name (for proper entry filtering) */
+  userIdToDisplayNameLookup?: Map<string, string>;
 }
 
 // Table columns for task breakdown
@@ -35,13 +37,23 @@ export function UnderHoursModal({
   expectedHours,
   workingDaysElapsed,
   workingDaysTotal,
+  userIdToDisplayNameLookup,
 }: UnderHoursModalProps) {
   // Build accordion items from under-hours resources
   const accordionItems: AccordionListTableItem[] = useMemo(() => {
     return items.map((item) => {
       // Get task entries for this user, sorted by Client -> Date (desc) -> Task
+      // Use canonical display name matching via userIdToDisplayNameLookup for proper grouping
       const userEntries = entries
-        .filter((e) => e.user_name === item.userName)
+        .filter((e) => {
+          // Match by canonical display name if lookup is available
+          if (userIdToDisplayNameLookup && e.user_id) {
+            const canonicalName = userIdToDisplayNameLookup.get(e.user_id);
+            return canonicalName === item.displayName;
+          }
+          // Fallback to raw user_name match
+          return e.user_name === item.userName;
+        })
         .map((entry) => ({
           client: entry.project_name,
           date: entry.work_date,
@@ -107,7 +119,7 @@ export function UnderHoursModal({
         emptyMessage: 'No tasks recorded for this period',
       };
     });
-  }, [items, entries]);
+  }, [items, entries, userIdToDisplayNameLookup]);
 
   // Sticky header content (summary cards + info banner)
   const stickyHeaderContent = (

@@ -40,6 +40,8 @@ interface UseUnifiedBillingParams {
   projectsWithRates: ProjectRateDisplayWithBilling[];
   /** Function to get canonical company name (optional) */
   getCanonicalCompanyName?: (clientId: string, clientName: string) => string;
+  /** Lookup from external project_id to canonical external project_id (for member → primary mapping) */
+  projectCanonicalIdLookup?: Map<string, string>;
 }
 
 interface UseUnifiedBillingResult {
@@ -83,6 +85,7 @@ export function useUnifiedBilling({
   entries,
   projectsWithRates,
   getCanonicalCompanyName,
+  projectCanonicalIdLookup,
 }: UseUnifiedBillingParams): UseUnifiedBillingResult {
   // Build lookup map from projectsWithRates - ONLY by external project ID
   const billingConfigByProjectId = useMemo(() => {
@@ -108,65 +111,56 @@ export function useUnifiedBilling({
     return map;
   }, [projectsWithRates]);
 
+  // Build lookup from canonical project ID to project name
+  const projectNameByCanonicalId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of projectsWithRates) {
+      if (p.externalProjectId) {
+        map.set(p.externalProjectId, p.projectName);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
   // Build billing inputs and calculate, tracking unmatched projects
   const { billingInputs, billingResult, unmatchedProjects } = useMemo(() => {
     // Track unmatched projects
     const unmatched = new Map<string, UnmatchedProject>();
 
-    // Helper to get billing config - ID lookup ONLY, no fallbacks
-    const getBillingConfig = (projectId: string, projectName: string): ProjectBillingConfig | null => {
-      // Empty project ID is a data error
-      if (!projectId) {
-        const key = `__empty__:${projectName}`;
-        if (!unmatched.has(key)) {
-          unmatched.set(key, {
-            entryProjectId: '(empty)',
-            entryProjectName: projectName,
-            totalMinutes: 0,
-          });
-        }
-        return null;
+    // Helper to get canonical project ID (maps member project IDs to their primary)
+    const getCanonicalProjectId = (projectId: string): string => {
+      if (!projectId) return projectId;
+      // If we have a canonical lookup, use it to map member → primary
+      if (projectCanonicalIdLookup) {
+        return projectCanonicalIdLookup.get(projectId) || projectId;
       }
-
-      // Look up by project ID only
-      const config = billingConfigByProjectId.get(projectId);
-
-      if (!config) {
-        // Track this unmatched project
-        if (!unmatched.has(projectId)) {
-          unmatched.set(projectId, {
-            entryProjectId: projectId,
-            entryProjectName: projectName,
-            totalMinutes: 0,
-          });
-        }
-        return null;
-      }
-
-      return config;
+      return projectId;
     };
 
-    // Helper to get company name
+    // Helper to get company name (ID-only lookup)
     const getCompanyName = (clientId: string, clientName: string): string => {
       if (getCanonicalCompanyName) {
         return getCanonicalCompanyName(clientId, clientName);
       }
-      return clientName || 'Unassigned';
+      return 'Unknown';
     };
 
     // First pass: identify all unmatched projects and their minutes
     const projectMinutes = new Map<string, { projectName: string; totalMinutes: number }>();
     for (const entry of entries) {
       const projectId = entry.project_id || '';
-      const key = projectId || `__empty__:${entry.project_name}`;
+      const canonicalId = getCanonicalProjectId(projectId);
+      // Use project ID as key - no name fallback. Entries without project_id get grouped under '__empty__'
+      const key = projectId || '__empty__';
 
       if (!projectMinutes.has(key)) {
-        projectMinutes.set(key, { projectName: entry.project_name, totalMinutes: 0 });
+        // Store project ID as identifier, not name
+        projectMinutes.set(key, { projectName: projectId || '(no ID)', totalMinutes: 0 });
       }
       projectMinutes.get(key)!.totalMinutes += entry.total_minutes;
 
-      // Check if this project is matched
-      if (!projectId || !billingConfigByProjectId.has(projectId)) {
+      // Check if this project is matched (using canonical ID)
+      if (!projectId || !billingConfigByProjectId.has(canonicalId)) {
         if (!unmatched.has(key)) {
           unmatched.set(key, {
             entryProjectId: projectId || '(empty)',
@@ -184,18 +178,32 @@ export function useUnifiedBilling({
       }
     }
 
-    // Filter entries to only include matched projects for billing calculation
-    const matchedEntries = entries.filter(entry => {
-      const projectId = entry.project_id;
-      return projectId && billingConfigByProjectId.has(projectId);
-    });
+    // Filter and transform entries to use canonical project IDs and names
+    const matchedEntries = entries
+      .filter(entry => {
+        const projectId = entry.project_id;
+        if (!projectId) return false;
+        const canonicalId = getCanonicalProjectId(projectId);
+        return billingConfigByProjectId.has(canonicalId);
+      })
+      .map(entry => {
+        // Transform entry to use canonical project ID and name
+        const canonicalId = getCanonicalProjectId(entry.project_id!);
+        const canonicalName = projectNameByCanonicalId.get(canonicalId) || canonicalId;
+        return {
+          ...entry,
+          project_id: canonicalId,
+          project_name: canonicalName,
+        };
+      });
 
-    // Build inputs with matched entries only
+    // Build inputs with matched entries (now using canonical project IDs and names)
     const inputs = buildBillingInputs({
       entries: matchedEntries,
-      getBillingConfig: (projectId, projectName) => {
+      getBillingConfig: (projectId, _projectName) => {
         // This should always succeed since we filtered to matched entries
-        const config = getBillingConfig(projectId, projectName);
+        // projectId is now the canonical ID
+        const config = billingConfigByProjectId.get(projectId);
         if (!config) {
           // This should never happen after filtering, but be defensive
           throw new Error(`Data integrity error: project ${projectId} not found after filtering`);
@@ -216,7 +224,9 @@ export function useUnifiedBilling({
   }, [
     entries,
     billingConfigByProjectId,
+    projectNameByCanonicalId,
     getCanonicalCompanyName,
+    projectCanonicalIdLookup,
   ]);
 
   return {
