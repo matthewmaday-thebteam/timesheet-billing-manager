@@ -376,6 +376,8 @@ export function DiagnosticsPage() {
   const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // Key to force file input reset when clearing files
+  const [inputKey, setInputKey] = useState(0);
 
   // Fetch billing configuration for the selected month
   const { projectsWithRates, isLoading: ratesLoading, error: ratesError } = useMonthlyRates({
@@ -633,6 +635,8 @@ export function DiagnosticsPage() {
     });
     setValidationReport(null);
     setValidationError(null);
+    // Increment key to force file input elements to reset
+    setInputKey(prev => prev + 1);
   }, []);
 
   const isLoading = ratesLoading || companiesLoading || entriesLoading;
@@ -721,6 +725,7 @@ export function DiagnosticsPage() {
                 <div className="flex items-center gap-2">
                   <label className="flex-1">
                     <input
+                      key={`clockify-${inputKey}`}
                       type="file"
                       accept=".txt,.json"
                       onChange={handleFileUpload('clockify')}
@@ -750,6 +755,7 @@ export function DiagnosticsPage() {
                 <div className="flex items-center gap-2">
                   <label className="flex-1">
                     <input
+                      key={`clickup-${inputKey}`}
                       type="file"
                       accept=".txt,.json"
                       onChange={handleFileUpload('clickup')}
