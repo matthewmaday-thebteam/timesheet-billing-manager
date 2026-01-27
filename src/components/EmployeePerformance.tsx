@@ -302,7 +302,7 @@ export function EmployeePerformance({
   }, [entries, projectConfigMap, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectBilledRevenueLookup, projectTotalMinutesLookup]);
 
   // Calculate totals
-  const totalMinutes = employeeData.reduce((sum, emp) => sum + emp.minutes, 0);
+  const totalRoundedMinutes = employeeData.reduce((sum, emp) => sum + emp.roundedMinutes, 0);
   const totalRevenue = employeeData.reduce((sum, emp) => sum + emp.revenue, 0);
   const totalPtoDays = employeeData.reduce((sum, emp) => sum + emp.ptoDays, 0);
 
@@ -423,7 +423,7 @@ export function EmployeePerformance({
                       )}
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <span className="text-sm text-black">{minutesToHours(employee.minutes)}</span>
+                      <span className="text-sm text-black">{minutesToHours(employee.roundedMinutes)}</span>
                     </td>
                     <td className="px-6 py-3 text-right">
                       <span className="text-sm font-medium text-black">{formatCurrency(employee.revenue)}</span>
@@ -451,7 +451,7 @@ export function EmployeePerformance({
                             <span className="text-sm text-vercel-gray-300">—</span>
                           </td>
                           <td className="px-6 py-3 text-right">
-                            <span className="text-sm text-vercel-gray-200">{minutesToHours(company.minutes)}</span>
+                            <span className="text-sm text-vercel-gray-200">{minutesToHours(company.roundedMinutes)}</span>
                           </td>
                           <td className="px-6 py-3 text-right">
                             <span className="text-sm text-vercel-gray-200">{formatCurrency(company.revenue)}</span>
@@ -479,7 +479,7 @@ export function EmployeePerformance({
                                   <span className="text-sm text-vercel-gray-300">—</span>
                                 </td>
                                 <td className="px-6 py-2 text-right">
-                                  <span className="text-sm text-vercel-gray-300">{minutesToHours(project.minutes)}</span>
+                                  <span className="text-sm text-vercel-gray-300">{minutesToHours(project.roundedMinutes)}</span>
                                 </td>
                                 <td className="px-6 py-2 text-right">
                                   <span className="text-sm text-vercel-gray-300">{formatCurrency(project.revenue)}</span>
@@ -496,7 +496,7 @@ export function EmployeePerformance({
                                     <span className="text-sm text-vercel-gray-400">—</span>
                                   </td>
                                   <td className="px-6 py-2 text-right">
-                                    <span className="text-sm text-vercel-gray-400">{minutesToHours(task.minutes)}</span>
+                                    <span className="text-sm text-vercel-gray-400">{minutesToHours(task.roundedMinutes)}</span>
                                   </td>
                                   <td className="px-6 py-2 text-right">
                                     <span className="text-sm text-vercel-gray-400">{formatCurrency(task.revenue)}</span>
@@ -526,7 +526,7 @@ export function EmployeePerformance({
                 )}
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-                {minutesToHours(totalMinutes)}
+                {minutesToHours(totalRoundedMinutes)}
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
                 {formatCurrency(totalRevenue)}
