@@ -553,6 +553,87 @@ export interface StagedCompanyGroupChanges {
 }
 
 // ============================================================================
+// Project Grouping Types
+// ============================================================================
+
+/**
+ * Role of a project within the Project grouping system.
+ */
+export type ProjectGroupRole = 'primary' | 'member' | 'unassociated';
+
+/**
+ * Project with grouping information for table display.
+ */
+export interface ProjectWithGrouping extends Project {
+  grouping_role: ProjectGroupRole;
+  group_id: string | null;
+  member_count: number;
+  company_uuid: string | null;
+  company_display_name: string | null;
+}
+
+/**
+ * Member project display data for modal.
+ */
+export interface ProjectGroupMemberDisplay {
+  member_project_id: string;
+  project_id: string;
+  project_name: string;
+  added_at: string;
+}
+
+/**
+ * Unassociated project available for grouping.
+ */
+export interface UnassociatedProject {
+  id: string;
+  project_id: string;
+  project_name: string;
+}
+
+/**
+ * Result from rpc_project_group_get RPC.
+ */
+export interface ProjectGroupGetResult {
+  success: boolean;
+  project_id: string;
+  role: ProjectGroupRole;
+  group_id: string | null;
+  primary_project_id: string | null;
+  members: ProjectGroupMemberDisplay[];
+  message?: string;
+}
+
+/**
+ * Result from project group mutation RPCs.
+ */
+export interface ProjectGroupMutationResult {
+  success: boolean;
+  group_id: string | null;
+  primary_project_id: string;
+  member_project_ids: string[];
+  group_dissolved?: boolean;
+  removed_member_project_id?: string;
+}
+
+/**
+ * Staged addition of a member project.
+ */
+export interface StagedProjectMemberAdd {
+  id: string;
+  project_id: string;
+  project_name: string;
+}
+
+/**
+ * Staged changes for project grouping.
+ */
+export interface StagedProjectGroupChanges {
+  additions: StagedProjectMemberAdd[];
+  removals: Set<string>;
+}
+
+// ============================================================================
 // Monthly Billing Rules Types (Task 028)
 // ============================================================================
 

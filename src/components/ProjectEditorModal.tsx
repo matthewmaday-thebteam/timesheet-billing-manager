@@ -1,148 +1,173 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import type { Project, ProjectFormData } from '../types';
+import { ProjectGroupSection } from './ProjectGroupSection';
+import { useProjectGroup } from '../hooks/useProjectGroup';
+import { useProjectGroupMutations } from '../hooks/useProjectGroupMutations';
+import type {
+  Project,
+  StagedProjectGroupChanges,
+} from '../types';
 
 interface ProjectEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   project: Project | null;
-  onSave: (id: string, data: ProjectFormData) => Promise<boolean>;
-  isSaving: boolean;
+  /** Callback when group changes are saved (to trigger refetch) */
+  onGroupChange?: () => void;
 }
 
-function getRateFromProject(project: Project | null): { rateValue: string; hasRate: boolean } {
-  if (project && project.rate !== null) {
-    return { rateValue: String(project.rate), hasRate: true };
-  }
-  return { rateValue: '', hasRate: false };
-}
+// Initial empty staged changes
+const EMPTY_STAGED_CHANGES: StagedProjectGroupChanges = {
+  additions: [],
+  removals: new Set<string>(),
+};
 
 export function ProjectEditorModal({
   isOpen,
   onClose,
   project,
-  onSave,
-  isSaving,
+  onGroupChange,
 }: ProjectEditorModalProps) {
-  const initialRate = getRateFromProject(project);
-  const [rateValue, setRateValue] = useState<string>(initialRate.rateValue);
-  const [hasRate, setHasRate] = useState(initialRate.hasRate);
-  const [lastResetKey, setLastResetKey] = useState<string>('');
+  const [lastProjectId, setLastProjectId] = useState<string | null>(project?.id ?? null);
+  const [stagedGroupChanges, setStagedGroupChanges] = useState<StagedProjectGroupChanges>(EMPTY_STAGED_CHANGES);
 
-  // Reset form when project/isOpen changes (React-recommended pattern)
-  const resetKey = `${project?.id ?? 'none'}-${isOpen}`;
-  if (resetKey !== lastResetKey) {
-    setLastResetKey(resetKey);
-    const rate = getRateFromProject(project);
-    setRateValue(rate.rateValue);
-    setHasRate(rate.hasRate);
+  // Fetch project group data
+  const {
+    role: projectRole,
+    members: persistedMembers,
+    loading: loadingGroup,
+  } = useProjectGroup(project?.id ?? null);
+
+  // Group mutation hook
+  const { saveChanges: saveGroupChanges, isSaving: isSavingGroup, saveError: groupSaveError } = useProjectGroupMutations();
+
+  // Reset form when project changes
+  const currentProjectId = project?.id ?? null;
+  if (currentProjectId !== lastProjectId) {
+    setLastProjectId(currentProjectId);
+    setStagedGroupChanges(EMPTY_STAGED_CHANGES);
   }
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleStagedChangesUpdate = useCallback((changes: StagedProjectGroupChanges) => {
+    setStagedGroupChanges(changes);
+  }, []);
 
+  // Check if there are group changes to save
+  const hasGroupChanges = stagedGroupChanges.additions.length > 0 || stagedGroupChanges.removals.size > 0;
+  const hasExistingGroup = projectRole === 'primary';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!project) return;
 
-    // Parse the rate value - empty string means null (use fallback)
-    const rate = hasRate && rateValue !== '' ? parseFloat(rateValue) : null;
+    // If there are group changes, save them
+    if (hasGroupChanges) {
+      const groupResult = await saveGroupChanges({
+        primaryProjectId: project.id,
+        hasExistingGroup,
+        additions: stagedGroupChanges.additions,
+        removals: Array.from(stagedGroupChanges.removals),
+      });
 
-    const success = await onSave(project.id, { rate });
-    if (success) {
+      if (groupResult.success) {
+        setStagedGroupChanges(EMPTY_STAGED_CHANGES);
+        onGroupChange?.();
+        onClose();
+      }
+    } else {
       onClose();
     }
   };
 
-  const handleRateChange = (value: string) => {
-    // Allow empty string, numbers, and decimal
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setRateValue(value);
-      setHasRate(value !== '');
-    }
-  };
-
-  const handleClearRate = () => {
-    setRateValue('');
-    setHasRate(false);
-  };
+  const isLoading = isSavingGroup;
 
   if (!project) return null;
-
-  const footerContent = (
-    <>
-      <Button variant="secondary" onClick={onClose}>
-        Cancel
-      </Button>
-      <Button variant="primary" onClick={() => handleSubmit()} disabled={isSaving}>
-        {isSaving ? (
-          <span className="flex items-center gap-2">
-            <Spinner size="sm" />
-            Saving...
-          </span>
-        ) : (
-          'Save Rate'
-        )}
-      </Button>
-    </>
-  );
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Project Rate"
-      maxWidth="sm"
-      footer={footerContent}
+      title="Edit Project"
+      maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Project Name (Read-only) */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Project Name
-          </label>
-          <div className="px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600">
-            {project.project_name}
+        {/* Project Info Section */}
+        <div className="space-y-4">
+          {/* Read-only Project Name */}
+          <div>
+            <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
+              Project Name
+            </label>
+            <div className="px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600">
+              {project.project_name}
+            </div>
+          </div>
+
+          {/* Read-only External Project ID */}
+          <div>
+            <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
+              External ID (from time tracking)
+            </label>
+            <div className="px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-400 font-mono">
+              {project.project_id}
+            </div>
           </div>
         </div>
 
-        {/* Rate Input */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Hourly Rate (USD)
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vercel-gray-400">$</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={rateValue}
-              onChange={(e) => handleRateChange(e.target.value)}
-              className="w-full pl-7 pr-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
-              placeholder="45.00"
-            />
-          </div>
-          <p className="mt-2 text-2xs text-vercel-gray-300">
-            Leave empty to use the default rate of $45.00. Enter 0 for unbillable projects.
-          </p>
-        </div>
+        {/* Divider */}
+        <div className="border-t border-vercel-gray-100" />
 
-        {/* Clear Rate Button */}
-        {hasRate && (
-          <Button variant="ghost" size="sm" onClick={handleClearRate}>
-            Clear rate (use default $45.00)
-          </Button>
+        {/* Project Associations Section */}
+        {loadingGroup ? (
+          <div className="flex items-center justify-center py-4">
+            <Spinner size="sm" />
+            <span className="ml-2 text-sm text-vercel-gray-400">Loading associations...</span>
+          </div>
+        ) : (
+          <ProjectGroupSection
+            projectId={project.id}
+            persistedMembers={persistedMembers}
+            stagedChanges={stagedGroupChanges}
+            onStagedChangesUpdate={handleStagedChangesUpdate}
+            disabled={isLoading}
+          />
         )}
 
-        {/* Current Status */}
-        <div className="p-3 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-vercel-gray-400">Effective Rate:</span>
-            <span className="text-sm font-semibold text-vercel-gray-600">
-              ${hasRate && rateValue !== '' ? parseFloat(rateValue || '0').toFixed(2) : '45.00'}
-              {!hasRate && <span className="text-2xs font-normal text-vercel-gray-300 ml-1">(default)</span>}
-            </span>
+        {/* Error display */}
+        {groupSaveError && (
+          <div className="p-3 bg-error-light border border-error rounded-md">
+            <p className="text-sm text-error">{groupSaveError}</p>
           </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            {hasGroupChanges ? 'Cancel' : 'Close'}
+          </Button>
+          {hasGroupChanges && (
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          )}
         </div>
       </form>
     </Modal>
