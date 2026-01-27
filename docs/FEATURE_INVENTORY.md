@@ -43,6 +43,8 @@
 | F037 | MoM Growth Rate Chart | Complete | P1 | BarChartAtom.tsx |
 | F038 | CAGR Projection Chart | Complete | P1 | CAGRChartAtom.tsx |
 | F039 | Best/Worst Case Projections | Complete | P1 | LineGraphAtom.tsx |
+| F040 | Canonical Project Mapping | Complete | P0 | useUnifiedBilling.ts, useTimesheetData.ts |
+| F041 | Project Target Hours | Complete | P2 | ProjectEditorModal.tsx, useProjectUpdate.ts |
 
 ---
 
@@ -381,6 +383,10 @@ Utils:
 | `supabase/migrations/027_backfill_default_roundings.sql` | SQL | 25 | Backfill default rounding values |
 | `src/design-system/style-review/StyleReviewPage.tsx` | Component | 600+ | Design system documentation |
 | `supabase/migrations/012_create_avatars_storage.sql` | SQL | 45 | Avatars storage bucket with RLS |
+| `supabase/migrations/032_add_project_target_hours.sql` | SQL | 22 | Add target_hours column to projects |
+| `supabase/migrations/033_fix_project_grouping_in_rates.sql` | SQL | 205 | Fix RPC to exclude member projects |
+| `src/hooks/useProjectUpdate.ts` | Hook | 51 | Update project fields (target_hours) |
+| `src/hooks/useUnifiedBilling.ts` | Hook | 255 | Single source of truth for billing calculations |
 
 ---
 
@@ -754,3 +760,69 @@ bestCase: isFutureMonth ? lastRevenue * 1.15 : null
 // Worst case: -15% growth
 worstCase: isFutureMonth ? lastRevenue * 0.85 : null
 ```
+
+---
+
+### F040: Canonical Project Mapping
+**Components**: `useUnifiedBilling.ts`, `useTimesheetData.ts`
+**Description**: Enforces ID-only lookups across the application to ensure data integrity.
+
+| Principle | Implementation |
+|-----------|----------------|
+| ID-Only Lookups | All billing, rates, and company lookups use unique IDs only |
+| No Name Fallbacks | When ID lookup fails, return 'Unknown' instead of falling back to names |
+| Canonical Mapping | Member projects map to their primary (canonical) project |
+| Data Errors Surface | Unmatched IDs are flagged as data errors, not silently defaulted |
+
+**Key Data Structures**:
+- `projectCanonicalIdLookup`: Map<string, string> - maps member project_id → canonical project_id
+- `v_project_canonical`: Database view with project grouping (primary/member/unassociated roles)
+- `v_project_table_entities`: View returning only primary and unassociated projects
+
+**Formula Definition** (from Formulas page):
+```
+project = projects WHERE grouping_role != 'member'
+```
+
+**Affected Components**:
+- `useUnifiedBilling.ts` - Transforms entries to canonical IDs/names before billing calculation
+- `useTimesheetData.ts` - Provides `projectCanonicalIdLookup` for all lookups
+- `RevenuePage.tsx` - Uses canonical IDs for CSV export and billing data lookup
+- `EmployeePerformance.tsx` - Uses canonical IDs for billing config and revenue lookups
+- `DashboardChartsRow.tsx` - Uses canonical IDs for rate lookups
+- `DiagnosticsPage.tsx` - ID-only lookups for validation
+
+**Migration**: `033_fix_project_grouping_in_rates.sql`
+- Updates `get_all_project_rates_for_month()` RPC to exclude member projects
+- Only returns rates for primary and unassociated projects
+
+---
+
+### F041: Project Target Hours
+**Components**: `ProjectEditorModal.tsx`, `useProjectUpdate.ts`
+**Description**: Allows admins to set an hours target for each project.
+
+| Feature | Details |
+|---------|---------|
+| Field | `target_hours` on projects table |
+| Default | 0 (no target) |
+| Auto-Provision | New projects from timesheet uploads get target_hours = 0 via DEFAULT |
+| UI | Numeric input in Project Editor modal |
+| Validation | Non-negative number |
+
+**Database Schema**:
+```sql
+ALTER TABLE projects ADD COLUMN target_hours NUMERIC(10, 2) NOT NULL DEFAULT 0;
+```
+
+**Migration**: `032_add_project_target_hours.sql`
+
+**Hook**: `useProjectUpdate.ts`
+- Updates project fields via direct Supabase call
+- Returns `{ updateProject, isUpdating }` for async update handling
+
+**Business Rules**:
+1. Target hours is per-project (not per-month)
+2. Value of 0 means no target
+3. Only admins can edit (existing RLS applies)
+4. All new auto-provisioned projects get target_hours = 0
