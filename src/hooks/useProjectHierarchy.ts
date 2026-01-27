@@ -3,15 +3,18 @@
  *
  * Hierarchy: Company => Project => Employee => Day => Task
  *
- * Uses useUnifiedBilling for project-level billed hours/revenue (with MIN/MAX/CARRYOVER),
- * then distributes proportionally to Employee/Day/Task based on work share.
+ * Billing approach (matching Revenue page pattern):
+ * - Task/Day/Employee: Show rounded hours and BASE revenue (roundedHours × rate)
+ * - Project/Company: Show BILLED hours/revenue (after MIN/MAX/CARRYOVER)
+ *
+ * Note: Child revenues don't sum to parent when MIN/MAX is applied - same as Revenue page.
  *
  * @official 2026-01-27
  */
 
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import { applyRounding, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
+import { applyRounding, roundHours, roundCurrency } from '../utils/billing';
 import { useUnifiedBilling } from './useUnifiedBilling';
 import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement } from '../types';
 
@@ -21,23 +24,23 @@ import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement }
 
 export interface TaskData {
   taskName: string;
-  hours: number;
-  revenue: number;
+  hours: number;      // Rounded hours
+  revenue: number;    // Base revenue (roundedHours × rate)
 }
 
 export interface DayData {
   date: string;          // YYYY-MM-DD for sorting
   displayDate: string;   // "Mon, Jan 15" for display
-  hours: number;
-  revenue: number;
+  hours: number;         // Sum of task rounded hours
+  revenue: number;       // Sum of task base revenue
   tasks: TaskData[];
 }
 
 export interface EmployeeData {
   employeeId: string;
   employeeName: string;
-  hours: number;
-  revenue: number;
+  hours: number;         // Sum of day hours
+  revenue: number;       // Sum of day base revenue
   days: DayData[];
 }
 
@@ -45,14 +48,21 @@ export interface ProjectData {
   projectId: string;
   projectName: string;
   rate: number;
+  rounding: RoundingIncrement;
+  // Billed amounts (after MIN/MAX/CARRYOVER)
   hours: number;
   revenue: number;
+  // Flags for billing adjustments
+  minimumApplied: boolean;
+  maximumApplied: boolean;
+  carryoverIn: number;
   employees: EmployeeData[];
 }
 
 export interface CompanyData {
   companyId: string;
   companyName: string;
+  // Billed amounts (sum of project billed)
   hours: number;
   revenue: number;
   projects: ProjectData[];
@@ -94,7 +104,15 @@ export function useProjectHierarchy({
 
   // Build lookup maps from billing result
   const projectBillingLookup = useMemo(() => {
-    const lookup = new Map<string, { billedHours: number; billedRevenue: number; rate: number }>();
+    const lookup = new Map<string, {
+      billedHours: number;
+      billedRevenue: number;
+      rate: number;
+      rounding: RoundingIncrement;
+      minimumApplied: boolean;
+      maximumApplied: boolean;
+      carryoverIn: number;
+    }>();
     for (const company of billingResult.companies) {
       for (const project of company.projects) {
         if (project.projectId) {
@@ -102,6 +120,10 @@ export function useProjectHierarchy({
             billedHours: project.billedHours,
             billedRevenue: project.billedRevenue,
             rate: project.rate,
+            rounding: project.rounding,
+            minimumApplied: project.minimumApplied,
+            maximumApplied: project.maximumApplied,
+            carryoverIn: project.carryoverIn,
           });
         }
       }
@@ -138,17 +160,6 @@ export function useProjectHierarchy({
     return lookup;
   }, [billingResult]);
 
-  // Build rounding config lookup
-  const roundingLookup = useMemo(() => {
-    const lookup = new Map<string, RoundingIncrement>();
-    for (const p of projectsWithRates) {
-      if (p.externalProjectId) {
-        lookup.set(p.externalProjectId, p.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT);
-      }
-    }
-    return lookup;
-  }, [projectsWithRates]);
-
   // Helper to get canonical project ID
   const getCanonicalProjectId = (projectId: string): string => {
     if (!projectId) return projectId;
@@ -159,24 +170,8 @@ export function useProjectHierarchy({
   };
 
   return useMemo(() => {
-    // First pass: calculate total rounded minutes per project (for proportional distribution)
-    const projectTotalRoundedMinutes = new Map<string, number>();
-
-    for (const entry of entries) {
-      const projectId = entry.project_id;
-      if (!projectId) continue;
-
-      const canonicalProjectId = getCanonicalProjectId(projectId);
-      if (!projectBillingLookup.has(canonicalProjectId)) continue;
-
-      const rounding = roundingLookup.get(canonicalProjectId) ?? DEFAULT_ROUNDING_INCREMENT;
-      const roundedMinutes = applyRounding(entry.total_minutes, rounding);
-
-      const current = projectTotalRoundedMinutes.get(canonicalProjectId) || 0;
-      projectTotalRoundedMinutes.set(canonicalProjectId, current + roundedMinutes);
-    }
-
     // Build nested structure: Company -> Project -> Employee -> Day -> Task
+    // Store raw rounded minutes for later conversion
     const companyMap = new Map<string, {
       companyId: string;
       companyName: string;
@@ -184,17 +179,18 @@ export function useProjectHierarchy({
         projectId: string;
         projectName: string;
         rate: number;
+        rounding: RoundingIncrement;
         billedHours: number;
         billedRevenue: number;
-        totalRoundedMinutes: number;
+        minimumApplied: boolean;
+        maximumApplied: boolean;
+        carryoverIn: number;
         employees: Map<string, {
           employeeId: string;
           employeeName: string;
-          roundedMinutes: number;
           days: Map<string, {
             date: string;
-            roundedMinutes: number;
-            tasks: Map<string, number>; // taskName -> roundedMinutes
+            tasks: Map<string, number>; // taskName -> raw minutes (before rounding)
           }>;
         }>;
       }>;
@@ -211,8 +207,6 @@ export function useProjectHierarchy({
       if (!billing || !companyInfo) continue;
 
       const projectName = projectNameLookup.get(canonicalProjectId) || canonicalProjectId;
-      const rounding = roundingLookup.get(canonicalProjectId) ?? DEFAULT_ROUNDING_INCREMENT;
-      const roundedMinutes = applyRounding(entry.total_minutes, rounding);
 
       // Get employee name
       const employeeId = entry.user_id || '__UNKNOWN__';
@@ -236,9 +230,12 @@ export function useProjectHierarchy({
           projectId: canonicalProjectId,
           projectName,
           rate: billing.rate,
+          rounding: billing.rounding,
           billedHours: billing.billedHours,
           billedRevenue: billing.billedRevenue,
-          totalRoundedMinutes: projectTotalRoundedMinutes.get(canonicalProjectId) || 0,
+          minimumApplied: billing.minimumApplied,
+          maximumApplied: billing.maximumApplied,
+          carryoverIn: billing.carryoverIn,
           employees: new Map(),
         });
       }
@@ -249,32 +246,28 @@ export function useProjectHierarchy({
         project.employees.set(employeeId, {
           employeeId,
           employeeName,
-          roundedMinutes: 0,
           days: new Map(),
         });
       }
       const employee = project.employees.get(employeeId)!;
-      employee.roundedMinutes += roundedMinutes;
 
       // Get or create day
       const workDate = entry.work_date;
       if (!employee.days.has(workDate)) {
         employee.days.set(workDate, {
           date: workDate,
-          roundedMinutes: 0,
           tasks: new Map(),
         });
       }
       const day = employee.days.get(workDate)!;
-      day.roundedMinutes += roundedMinutes;
 
-      // Aggregate task minutes
+      // Aggregate task minutes (raw, before rounding)
       const taskName = entry.task_name || 'No Task';
       const currentTaskMinutes = day.tasks.get(taskName) || 0;
-      day.tasks.set(taskName, currentTaskMinutes + roundedMinutes);
+      day.tasks.set(taskName, currentTaskMinutes + entry.total_minutes);
     }
 
-    // Convert maps to arrays and calculate proportional hours/revenue
+    // Convert maps to arrays and calculate rounded hours/base revenue
     const companies: CompanyData[] = [];
     let totalHours = 0;
     let totalRevenue = 0;
@@ -285,42 +278,33 @@ export function useProjectHierarchy({
       let companyRevenue = 0;
 
       for (const projectEntry of companyEntry.projects.values()) {
-        const { billedHours, billedRevenue, totalRoundedMinutes } = projectEntry;
+        const { rate, rounding, billedHours, billedRevenue, minimumApplied, maximumApplied, carryoverIn } = projectEntry;
         const employees: EmployeeData[] = [];
 
         for (const employeeEntry of projectEntry.employees.values()) {
-          // Calculate employee's share of project billed hours/revenue
-          const employeeShare = totalRoundedMinutes > 0
-            ? employeeEntry.roundedMinutes / totalRoundedMinutes
-            : 0;
-          const employeeHours = billedHours * employeeShare;
-          const employeeRevenue = billedRevenue * employeeShare;
-
           const days: DayData[] = [];
+          let employeeHours = 0;
+          let employeeRevenue = 0;
 
           for (const dayEntry of employeeEntry.days.values()) {
-            // Calculate day's share of employee's hours/revenue
-            const dayShare = employeeEntry.roundedMinutes > 0
-              ? dayEntry.roundedMinutes / employeeEntry.roundedMinutes
-              : 0;
-            const dayHours = employeeHours * dayShare;
-            const dayRevenue = employeeRevenue * dayShare;
-
             const tasks: TaskData[] = [];
+            let dayHours = 0;
+            let dayRevenue = 0;
 
-            for (const [taskName, taskRoundedMinutes] of dayEntry.tasks) {
-              // Calculate task's share of day's hours/revenue
-              const taskShare = dayEntry.roundedMinutes > 0
-                ? taskRoundedMinutes / dayEntry.roundedMinutes
-                : 0;
-              const taskHours = dayHours * taskShare;
-              const taskRevenue = dayRevenue * taskShare;
+            for (const [taskName, rawMinutes] of dayEntry.tasks) {
+              // Apply rounding at task level, calculate base revenue
+              const roundedMinutes = applyRounding(rawMinutes, rounding);
+              const hours = roundHours(roundedMinutes / 60);
+              const revenue = roundCurrency(hours * rate);
 
               tasks.push({
                 taskName,
-                hours: taskHours,
-                revenue: taskRevenue,
+                hours,
+                revenue,
               });
+
+              dayHours += hours;
+              dayRevenue += revenue;
             }
 
             // Sort tasks by name
@@ -329,6 +313,10 @@ export function useProjectHierarchy({
             // Format display date: "Mon, Jan 15"
             const displayDate = format(new Date(dayEntry.date + 'T12:00:00'), 'EEE, MMM d');
 
+            // Round accumulated values
+            dayHours = roundHours(dayHours);
+            dayRevenue = roundCurrency(dayRevenue);
+
             days.push({
               date: dayEntry.date,
               displayDate,
@@ -336,10 +324,17 @@ export function useProjectHierarchy({
               revenue: dayRevenue,
               tasks,
             });
+
+            employeeHours += dayHours;
+            employeeRevenue += dayRevenue;
           }
 
           // Sort days by date descending (most recent first)
           days.sort((a, b) => b.date.localeCompare(a.date));
+
+          // Round accumulated values
+          employeeHours = roundHours(employeeHours);
+          employeeRevenue = roundCurrency(employeeRevenue);
 
           employees.push({
             employeeId: employeeEntry.employeeId,
@@ -353,12 +348,17 @@ export function useProjectHierarchy({
         // Sort employees by name
         employees.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
 
+        // Project level uses BILLED hours/revenue from unified billing
         projects.push({
           projectId: projectEntry.projectId,
           projectName: projectEntry.projectName,
-          rate: projectEntry.rate,
+          rate,
+          rounding,
           hours: billedHours,
           revenue: billedRevenue,
+          minimumApplied,
+          maximumApplied,
+          carryoverIn,
           employees,
         });
 
@@ -368,6 +368,10 @@ export function useProjectHierarchy({
 
       // Sort projects by name
       projects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+
+      // Round company totals
+      companyHours = roundHours(companyHours);
+      companyRevenue = roundCurrency(companyRevenue);
 
       companies.push({
         companyId: companyEntry.companyId,
@@ -384,12 +388,16 @@ export function useProjectHierarchy({
     // Sort companies by name
     companies.sort((a, b) => a.companyName.localeCompare(b.companyName));
 
+    // Round totals
+    totalHours = roundHours(totalHours);
+    totalRevenue = roundCurrency(totalRevenue);
+
     return {
       companies,
       totalHours,
       totalRevenue,
     };
-  }, [entries, projectBillingLookup, companyLookup, projectNameLookup, roundingLookup, userIdToDisplayNameLookup, projectCanonicalIdLookup]);
+  }, [entries, projectBillingLookup, companyLookup, projectNameLookup, userIdToDisplayNameLookup, projectCanonicalIdLookup]);
 }
 
 export default useProjectHierarchy;
