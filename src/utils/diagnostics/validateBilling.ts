@@ -100,9 +100,9 @@ function validateProject(
 ): ProjectValidationResult {
   const { getBillingConfig, getCompanyName } = options;
 
-  // Get billing configuration for this project
-  const config = getBillingConfig(group.projectId, group.projectName);
-  const canonicalClientName = getCompanyName(group.clientId, group.clientName);
+  // Get billing configuration for this project (ID-only lookup)
+  const config = getBillingConfig(group.projectId);
+  const canonicalClientName = getCompanyName(group.clientId);
 
   // Raw data
   const rawMinutes = group.totalMinutes;
@@ -265,8 +265,8 @@ export function validateAgainstExpected(
 
   // Validate each project against expected
   const projects: ProjectValidationResult[] = groups.map((group) => {
-    const config = getBillingConfig(group.projectId, group.projectName);
-    const canonicalClientName = getCompanyName(group.clientId, group.clientName);
+    const config = getBillingConfig(group.projectId);
+    const canonicalClientName = getCompanyName(group.clientId);
 
     // Raw data
     const rawMinutes = group.totalMinutes;
@@ -277,8 +277,8 @@ export function validateAgainstExpected(
     const calculatedRoundedHours = roundHours(roundedMinutes / 60);
     const calculatedBaseRevenue = roundCurrency(calculatedRoundedHours * config.rate);
 
-    // Get expected values
-    const projectKey = `${group.clientName}:${group.projectName}`;
+    // Get expected values (key by IDs only - no name-based lookups)
+    const projectKey = `${group.clientId}:${group.projectId}`;
     const expected = expectedResults.get(projectKey) || {
       roundedHours: calculatedRoundedHours,
       baseRevenue: calculatedBaseRevenue,

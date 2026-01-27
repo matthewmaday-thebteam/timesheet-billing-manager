@@ -51,7 +51,7 @@ export function RevenuePage() {
   }, [projectsWithRates]);
 
   // Helper to get canonical company name (ID-only lookup, no name fallbacks)
-  const getCanonicalCompanyName = useCallback((clientId: string, _clientName: string): string => {
+  const getCanonicalCompanyName = useCallback((clientId: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);

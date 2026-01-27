@@ -38,8 +38,8 @@ interface UseUnifiedBillingParams {
   entries: TimesheetEntry[];
   /** Projects with billing configuration from useMonthlyRates */
   projectsWithRates: ProjectRateDisplayWithBilling[];
-  /** Function to get canonical company name (optional) */
-  getCanonicalCompanyName?: (clientId: string, clientName: string) => string;
+  /** Function to get canonical company name (ID-only lookup) */
+  getCanonicalCompanyName?: (clientId: string) => string;
   /** Lookup from external project_id to canonical external project_id (for member → primary mapping) */
   projectCanonicalIdLookup?: Map<string, string>;
 }
@@ -138,9 +138,9 @@ export function useUnifiedBilling({
     };
 
     // Helper to get company name (ID-only lookup)
-    const getCompanyName = (clientId: string, clientName: string): string => {
+    const getCompanyName = (clientId: string): string => {
       if (getCanonicalCompanyName) {
-        return getCanonicalCompanyName(clientId, clientName);
+        return getCanonicalCompanyName(clientId);
       }
       return 'Unknown';
     };
@@ -200,7 +200,7 @@ export function useUnifiedBilling({
     // Build inputs with matched entries (now using canonical project IDs and names)
     const inputs = buildBillingInputs({
       entries: matchedEntries,
-      getBillingConfig: (projectId, _projectName) => {
+      getBillingConfig: (projectId) => {
         // This should always succeed since we filtered to matched entries
         // projectId is now the canonical ID
         const config = billingConfigByProjectId.get(projectId);

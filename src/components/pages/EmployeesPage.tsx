@@ -71,7 +71,7 @@ export function EmployeesPage() {
   }, [dateRange.start]);
 
   // Helper to get canonical company name (ID-only lookup, no name fallbacks)
-  const getCanonicalCompanyName = useCallback((clientId: string, _clientName: string): string => {
+  const getCanonicalCompanyName = useCallback((clientId: string): string => {
     const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
@@ -266,8 +266,8 @@ export function EmployeesPage() {
       const projectId = entry.project_id || '';
       const projectName = entry.project_name || 'Unknown Project';
       const taskName = entry.task_name || entry.task_key || 'No Task';
-      const companyName = getCanonicalCompanyName(entry.client_id || '', entry.client_name || 'Unassigned');
-      const companyId = entry.client_id || companyName;
+      const companyId = entry.client_id || '';
+      const companyName = getCanonicalCompanyName(companyId);
 
       if (!userMap.has(userName)) {
         userMap.set(userName, new Map());

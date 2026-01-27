@@ -42,29 +42,29 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
     return false;
   }, [billingResult]);
 
-  // Expanded state for companies and projects
+  // Expanded state for companies and projects (keyed by ID)
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(() => new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() => new Set());
 
-  // Sort companies by revenue (highest first)
+  // Sort companies alphabetically by name
   const sortedCompanies = useMemo(() => {
-    return [...billingResult.companies].sort((a, b) => b.billedRevenue - a.billedRevenue);
+    return [...billingResult.companies].sort((a, b) => a.companyName.localeCompare(b.companyName));
   }, [billingResult.companies]);
 
   // Default all companies to expanded (show projects - Tier 2)
   useEffect(() => {
     if (sortedCompanies.length > 0) {
-      setExpandedCompanies(new Set(sortedCompanies.map(c => c.companyName)));
+      setExpandedCompanies(new Set(sortedCompanies.map(c => c.companyId)));
     }
   }, [sortedCompanies]);
 
-  const toggleCompany = (companyName: string) => {
+  const toggleCompany = (companyId: string) => {
     setExpandedCompanies(prev => {
       const next = new Set(prev);
-      if (next.has(companyName)) {
-        next.delete(companyName);
+      if (next.has(companyId)) {
+        next.delete(companyId);
       } else {
-        next.add(companyName);
+        next.add(companyId);
       }
       return next;
     });
@@ -122,17 +122,17 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
         </thead>
         <tbody className="divide-y divide-vercel-gray-100">
           {sortedCompanies.map((company) => {
-            const isCompanyExpanded = expandedCompanies.has(company.companyName);
+            const isCompanyExpanded = expandedCompanies.has(company.companyId);
 
-            // Sort projects by billed revenue
-            const sortedProjects = [...company.projects].sort((a, b) => b.billedRevenue - a.billedRevenue);
+            // Sort projects alphabetically by name
+            const sortedProjects = [...company.projects].sort((a, b) => a.projectName.localeCompare(b.projectName));
 
             return (
-              <Fragment key={company.companyName}>
+              <Fragment key={company.companyId}>
                 {/* Company Row (Level 1) */}
                 <tr
                   className="bg-vercel-gray-50 cursor-pointer hover:bg-vercel-gray-100 transition-colors"
-                  onClick={() => toggleCompany(company.companyName)}
+                  onClick={() => toggleCompany(company.companyId)}
                 >
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">
@@ -178,11 +178,11 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
 
                 {/* Project Rows (Level 2) */}
                 {isCompanyExpanded && sortedProjects.map((project) => {
-                  const projectKey = `${company.companyName}:${project.projectName}`;
+                  const projectKey = `${company.companyId}:${project.projectId}`;
                   const isProjectExpanded = expandedProjects.has(projectKey);
 
-                  // Sort tasks by revenue
-                  const sortedTasks = [...project.tasks].sort((a, b) => b.baseRevenue - a.baseRevenue);
+                  // Sort tasks alphabetically by name
+                  const sortedTasks = [...project.tasks].sort((a, b) => a.taskName.localeCompare(b.taskName));
 
                   return (
                     <Fragment key={projectKey}>

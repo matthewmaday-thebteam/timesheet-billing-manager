@@ -29,8 +29,8 @@ interface EmployeePerformanceProps {
   timeOff?: EmployeeTimeOff[];
   /** Billing result with correct billedRevenue (includes MIN/MAX adjustments) */
   billingResult: MonthlyBillingResult;
-  /** Function to get canonical company name from client_id */
-  getCanonicalCompanyName: (clientId: string, clientName: string) => string;
+  /** Function to get canonical company name from client_id (ID-only lookup) */
+  getCanonicalCompanyName: (clientId: string) => string;
   /** Lookup from user_id to CANONICAL display name (for proper employee grouping) */
   userIdToDisplayNameLookup: Map<string, string>;
   /** Lookup from external project_id to CANONICAL project_id (for billing config lookups) */
@@ -93,14 +93,13 @@ export function EmployeePerformance({
     if (!projectId || !projectCanonicalIdLookup) return projectId;
     return projectCanonicalIdLookup.get(projectId) || projectId;
   };
-  // Build lookup map: projectId -> billing config
+  // Build lookup map: projectId -> billing config (ID-based only)
   const projectConfigMap = useMemo(() => {
-    const map = new Map<string, { rate: number; rounding: RoundingIncrement; clientName: string }>();
+    const map = new Map<string, { rate: number; rounding: RoundingIncrement }>();
     for (const p of projectsWithRates) {
       map.set(p.externalProjectId, {
         rate: p.effectiveRate,
         rounding: p.effectiveRounding,
-        clientName: p.clientName || 'Unassigned',
       });
     }
     return map;
@@ -163,9 +162,9 @@ export function EmployeePerformance({
       // Use task_name (description) instead of task_key (ID)
       const taskName = entry.task_name || entry.task_key || 'No Task';
 
-      // Get canonical company name via ID-based lookup
-      const companyName = getCanonicalCompanyName(entry.client_id || '', entry.client_name || 'Unassigned');
-      const companyId = entry.client_id || companyName;
+      // Get canonical company name via ID-based lookup (no name fallbacks)
+      const companyId = entry.client_id || '';
+      const companyName = getCanonicalCompanyName(companyId);
 
       if (!userMap.has(userName)) {
         userMap.set(userName, new Map());

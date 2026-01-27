@@ -95,13 +95,9 @@ export function BillingRatesTable({
     }
   };
 
-  // Sort projects by rate (highest first), then by name
+  // Sort projects alphabetically by name
   const sortedProjects = useMemo(() => {
     return [...projectsWithRates].sort((a, b) => {
-      // Sort by rate descending
-      const rateDiff = b.effectiveRate - a.effectiveRate;
-      if (rateDiff !== 0) return rateDiff;
-      // Then by name ascending
       return a.projectName.localeCompare(b.projectName);
     });
   }, [projectsWithRates]);
@@ -205,9 +201,9 @@ export function BillingRatesTable({
     const groupMap = new Map<string, ProjectRateDisplayWithBilling[]>();
 
     for (const project of sortedProjects) {
-      // Get canonical company name (uses primary company name if part of a group)
-      const canonicalInfo = getCanonicalCompany(project.clientId);
-      const clientName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
+      // Get canonical company name via ID-only lookup
+      const canonicalInfo = project.clientId ? getCanonicalCompany(project.clientId) : null;
+      const clientName = canonicalInfo?.canonicalDisplayName || 'Unknown';
       if (!groupMap.has(clientName)) {
         groupMap.set(clientName, []);
       }
@@ -235,18 +231,8 @@ export function BillingRatesTable({
       });
     }
 
-    // Sort groups by average rate (highest first)
-    return result.sort((a, b) => {
-      const avgA = groupedByCompany.get(a.id)!.reduce(
-        (sum, p) => sum + p.effectiveRate,
-        0
-      ) / groupedByCompany.get(a.id)!.length;
-      const avgB = groupedByCompany.get(b.id)!.reduce(
-        (sum, p) => sum + p.effectiveRate,
-        0
-      ) / groupedByCompany.get(b.id)!.length;
-      return avgB - avgA;
-    });
+    // Sort groups alphabetically by company name
+    return result.sort((a, b) => a.id.localeCompare(b.id));
   }, [groupedByCompany]);
 
   return (

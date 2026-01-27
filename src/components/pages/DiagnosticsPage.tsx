@@ -406,7 +406,7 @@ export function DiagnosticsPage() {
     }
 
     // Build billing config getter from projectsWithRates (ID-only lookup)
-    const getBillingConfig = (projectId: string, _projectName: string): ProjectBillingConfig => {
+    const getBillingConfig = (projectId: string): ProjectBillingConfig => {
       // Only look up by ID - no name fallbacks
       const project = projectsWithRates.find(p => p.externalProjectId === projectId);
 
@@ -439,10 +439,10 @@ export function DiagnosticsPage() {
     };
 
     // Build company name getter (ID-only lookup)
-    const getCompanyName = (clientId: string, _clientName: string): string => {
+    const getCompanyName = (clientId: string): string => {
       // Only look up by ID - no name fallbacks
       const company = companies.find(c => c.client_id === clientId);
-      return company?.display_name || company?.client_name || 'Unknown';
+      return company?.display_name || 'Unknown';
     };
 
     // Build billing inputs from database entries
@@ -572,7 +572,7 @@ export function DiagnosticsPage() {
       }
 
       // Build lookup functions (ID-only, no name fallbacks)
-      const getBillingConfig = (projectId: string, _projectName: string): BillingConfigLookup => {
+      const getBillingConfig = (projectId: string): BillingConfigLookup => {
         // Only look up by project ID - no name fallbacks
         const config = billingConfigLookup.get(projectId);
         if (config) return config;
@@ -591,7 +591,7 @@ export function DiagnosticsPage() {
         };
       };
 
-      const getCompanyName = (clientId: string, _clientName: string): string => {
+      const getCompanyName = (clientId: string): string => {
         // Only look up by client ID - no name fallbacks
         const name = companyNameLookup.get(clientId);
         return name || 'Unknown';

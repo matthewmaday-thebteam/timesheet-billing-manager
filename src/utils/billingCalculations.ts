@@ -122,12 +122,14 @@ export interface ProjectBillingResult {
 
 /** Input for a company */
 export interface CompanyInput {
+  companyId: string;
   companyName: string;
   projects: ProjectInput[];
 }
 
 /** Result of company-level billing calculation */
 export interface CompanyBillingResult {
+  companyId: string;
   companyName: string;
 
   // Aggregated hours
@@ -319,7 +321,7 @@ export function calculateProjectBilling(project: ProjectInput): ProjectBillingRe
  * 3. Sum all project billedHours → company billedHours
  */
 export function calculateCompanyBilling(company: CompanyInput): CompanyBillingResult {
-  const { companyName, projects } = company;
+  const { companyId, companyName, projects } = company;
 
   // Calculate each project
   const projectResults: ProjectBillingResult[] = projects.map(project =>
@@ -338,6 +340,7 @@ export function calculateCompanyBilling(company: CompanyInput): CompanyBillingRe
   const billedRevenue = roundCurrency(projectResults.reduce((sum, p) => sum + p.billedRevenue, 0));
 
   return {
+    companyId,
     companyName,
     actualMinutes,
     roundedMinutes,
@@ -408,37 +411,41 @@ export interface BuildBillingInputsParams {
     project_id: string | null;
     project_name: string;
     client_id: string | null;
-    client_name: string;
     task_name: string | null;
     total_minutes: number;
   }>;
-  /** Function to get billing config for a project */
-  getBillingConfig: (projectId: string, projectName: string) => ProjectBillingConfig;
-  /** Function to get canonical company name */
-  getCompanyName: (clientId: string, clientName: string) => string;
+  /** Function to get billing config for a project (ID-only lookup) */
+  getBillingConfig: (projectId: string) => ProjectBillingConfig;
+  /** Function to get canonical company name (ID-only lookup) */
+  getCompanyName: (clientId: string) => string;
 }
 
 export function buildBillingInputs(params: BuildBillingInputsParams): CompanyInput[] {
   const { entries, getBillingConfig, getCompanyName } = params;
 
-  // Group entries: company -> project -> tasks
-  const companyMap = new Map<string, Map<string, { projectId: string | null; tasks: Map<string, number> }>>();
+  // Group entries: companyId -> projectId -> tasks
+  // Use IDs as keys, not names
+  const companyMap = new Map<string, {
+    companyName: string;
+    projectMap: Map<string, { projectId: string; projectName: string; tasks: Map<string, number> }>;
+  }>();
 
   for (const entry of entries) {
-    const companyName = getCompanyName(entry.client_id || '', entry.client_name);
+    const companyId = entry.client_id || '';
+    const companyName = getCompanyName(companyId);
+    const projectId = entry.project_id || '';
     const projectName = entry.project_name;
-    const projectId = entry.project_id;
     const taskName = entry.task_name || 'No Task';
 
-    if (!companyMap.has(companyName)) {
-      companyMap.set(companyName, new Map());
+    if (!companyMap.has(companyId)) {
+      companyMap.set(companyId, { companyName, projectMap: new Map() });
     }
-    const projectMap = companyMap.get(companyName)!;
+    const companyData = companyMap.get(companyId)!;
 
-    if (!projectMap.has(projectName)) {
-      projectMap.set(projectName, { projectId, tasks: new Map() });
+    if (!companyData.projectMap.has(projectId)) {
+      companyData.projectMap.set(projectId, { projectId, projectName, tasks: new Map() });
     }
-    const projectData = projectMap.get(projectName)!;
+    const projectData = companyData.projectMap.get(projectId)!;
 
     projectData.tasks.set(taskName, (projectData.tasks.get(taskName) || 0) + entry.total_minutes);
   }
@@ -446,26 +453,27 @@ export function buildBillingInputs(params: BuildBillingInputsParams): CompanyInp
   // Convert to CompanyInput[]
   const companies: CompanyInput[] = [];
 
-  for (const [companyName, projectMap] of companyMap) {
+  for (const [companyId, companyData] of companyMap) {
     const projects: ProjectInput[] = [];
 
-    for (const [projectName, projectData] of projectMap) {
+    for (const [projectId, projectData] of companyData.projectMap) {
       const tasks: TaskInput[] = Array.from(projectData.tasks.entries()).map(
         ([taskName, totalMinutes]) => ({ taskName, totalMinutes })
       );
 
-      const billingConfig = getBillingConfig(projectData.projectId || '', projectName);
+      const billingConfig = getBillingConfig(projectId);
 
       projects.push({
-        projectId: projectData.projectId,
-        projectName,
+        projectId: projectId || null,
+        projectName: projectData.projectName,
         tasks,
         billingConfig,
       });
     }
 
     companies.push({
-      companyName,
+      companyId,
+      companyName: companyData.companyName,
       projects,
     });
   }

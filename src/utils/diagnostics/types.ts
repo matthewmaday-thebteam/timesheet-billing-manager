@@ -211,10 +211,10 @@ export interface BillingConfigLookup {
  * Options for running validation
  */
 export interface ValidationOptions {
-  /** Function to get billing config for a project */
-  getBillingConfig: (projectId: string, projectName: string) => BillingConfigLookup;
-  /** Function to get canonical company name */
-  getCompanyName: (clientId: string, clientName: string) => string;
+  /** Function to get billing config for a project (ID-only lookup) */
+  getBillingConfig: (projectId: string) => BillingConfigLookup;
+  /** Function to get canonical company name (ID-only lookup) */
+  getCompanyName: (clientId: string) => string;
   /** Tolerance for floating-point comparisons (default: 0.01) */
   tolerance?: number;
 }

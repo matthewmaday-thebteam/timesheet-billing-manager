@@ -105,21 +105,21 @@ export function RatesPage() {
     // Header row
     csvRows.push(['Company', 'Project', 'Rate']);
 
-    // Sort by company then project (using canonical company names)
+    // Sort by company then project (using canonical company names via ID-only lookups)
     const sortedProjects = [...projectsWithRates].sort((a, b) => {
       const canonicalA = a.clientId ? getCanonicalCompany(a.clientId) : null;
       const canonicalB = b.clientId ? getCanonicalCompany(b.clientId) : null;
-      const companyA = canonicalA?.canonicalDisplayName || a.clientName || 'Unassigned';
-      const companyB = canonicalB?.canonicalDisplayName || b.clientName || 'Unassigned';
+      const companyA = canonicalA?.canonicalDisplayName || 'Unknown';
+      const companyB = canonicalB?.canonicalDisplayName || 'Unknown';
       if (companyA !== companyB) return companyA.localeCompare(companyB);
       return a.projectName.localeCompare(b.projectName);
     });
 
     // Data rows
     for (const project of sortedProjects) {
-      // Use canonical company name if available
+      // Use canonical company name via ID-only lookup (no name fallbacks)
       const canonicalInfo = project.clientId ? getCanonicalCompany(project.clientId) : null;
-      const companyName = canonicalInfo?.canonicalDisplayName || project.clientName || 'Unassigned';
+      const companyName = canonicalInfo?.canonicalDisplayName || 'Unknown';
       csvRows.push([
         companyName,
         project.projectName,
