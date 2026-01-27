@@ -3,10 +3,8 @@
  *
  * Hierarchy: Company => Project => Employee => Day => Task
  *
- * Uses timesheet data grouped canonically by:
- * - Company: via project's canonical company info (from projectsWithRates)
- * - Project: via canonical project ID mapping
- * - Employee: via userIdToDisplayNameLookup for canonical employee names
+ * Uses useUnifiedBilling for project-level billed hours/revenue (with MIN/MAX/CARRYOVER),
+ * then distributes proportionally to Employee/Day/Task based on work share.
  *
  * @official 2026-01-27
  */
@@ -14,6 +12,7 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { applyRounding, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
+import { useUnifiedBilling } from './useUnifiedBilling';
 import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement } from '../types';
 
 // ============================================================================
@@ -86,39 +85,98 @@ export function useProjectHierarchy({
   projectCanonicalIdLookup,
   userIdToDisplayNameLookup,
 }: UseProjectHierarchyParams): ProjectHierarchyResult {
-  return useMemo(() => {
-    // Build lookup map: externalProjectId -> billing config
-    const billingConfigByProjectId = new Map<string, {
-      rate: number;
-      rounding: RoundingIncrement;
-      projectName: string;
-      canonicalClientId: string;
-      canonicalClientName: string;
-    }>();
+  // Use unified billing to get project-level billed hours/revenue (with MIN/MAX/CARRYOVER)
+  const { billingResult } = useUnifiedBilling({
+    entries,
+    projectsWithRates,
+    projectCanonicalIdLookup,
+  });
 
-    for (const p of projectsWithRates) {
-      if (p.externalProjectId) {
-        billingConfigByProjectId.set(p.externalProjectId, {
-          rate: p.effectiveRate,
-          rounding: p.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT,
-          projectName: p.projectName,
-          canonicalClientId: p.canonicalClientId || p.clientId || '__UNASSIGNED__',
-          canonicalClientName: p.canonicalClientName || p.clientName || 'Unassigned',
-        });
+  // Build lookup maps from billing result
+  const projectBillingLookup = useMemo(() => {
+    const lookup = new Map<string, { billedHours: number; billedRevenue: number; rate: number }>();
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          lookup.set(project.projectId, {
+            billedHours: project.billedHours,
+            billedRevenue: project.billedRevenue,
+            rate: project.rate,
+          });
+        }
       }
     }
+    return lookup;
+  }, [billingResult]);
 
-    // Helper to get canonical project ID
-    const getCanonicalProjectId = (projectId: string): string => {
-      if (!projectId) return projectId;
-      if (projectCanonicalIdLookup) {
-        return projectCanonicalIdLookup.get(projectId) || projectId;
+  // Build company lookup from billing result
+  const companyLookup = useMemo(() => {
+    const lookup = new Map<string, { companyId: string; companyName: string }>();
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          lookup.set(project.projectId, {
+            companyId: company.companyId,
+            companyName: company.companyName,
+          });
+        }
       }
-      return projectId;
-    };
+    }
+    return lookup;
+  }, [billingResult]);
+
+  // Build project name lookup from billing result
+  const projectNameLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          lookup.set(project.projectId, project.projectName);
+        }
+      }
+    }
+    return lookup;
+  }, [billingResult]);
+
+  // Build rounding config lookup
+  const roundingLookup = useMemo(() => {
+    const lookup = new Map<string, RoundingIncrement>();
+    for (const p of projectsWithRates) {
+      if (p.externalProjectId) {
+        lookup.set(p.externalProjectId, p.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT);
+      }
+    }
+    return lookup;
+  }, [projectsWithRates]);
+
+  // Helper to get canonical project ID
+  const getCanonicalProjectId = (projectId: string): string => {
+    if (!projectId) return projectId;
+    if (projectCanonicalIdLookup) {
+      return projectCanonicalIdLookup.get(projectId) || projectId;
+    }
+    return projectId;
+  };
+
+  return useMemo(() => {
+    // First pass: calculate total rounded minutes per project (for proportional distribution)
+    const projectTotalRoundedMinutes = new Map<string, number>();
+
+    for (const entry of entries) {
+      const projectId = entry.project_id;
+      if (!projectId) continue;
+
+      const canonicalProjectId = getCanonicalProjectId(projectId);
+      if (!projectBillingLookup.has(canonicalProjectId)) continue;
+
+      const rounding = roundingLookup.get(canonicalProjectId) ?? DEFAULT_ROUNDING_INCREMENT;
+      const roundedMinutes = applyRounding(entry.total_minutes, rounding);
+
+      const current = projectTotalRoundedMinutes.get(canonicalProjectId) || 0;
+      projectTotalRoundedMinutes.set(canonicalProjectId, current + roundedMinutes);
+    }
 
     // Build nested structure: Company -> Project -> Employee -> Day -> Task
-    // Key format: companyId|projectId|employeeId|date|taskName
     const companyMap = new Map<string, {
       companyId: string;
       companyName: string;
@@ -126,13 +184,17 @@ export function useProjectHierarchy({
         projectId: string;
         projectName: string;
         rate: number;
-        rounding: RoundingIncrement;
+        billedHours: number;
+        billedRevenue: number;
+        totalRoundedMinutes: number;
         employees: Map<string, {
           employeeId: string;
           employeeName: string;
+          roundedMinutes: number;
           days: Map<string, {
             date: string;
-            tasks: Map<string, number>; // taskName -> minutes
+            roundedMinutes: number;
+            tasks: Map<string, number>; // taskName -> roundedMinutes
           }>;
         }>;
       }>;
@@ -144,10 +206,13 @@ export function useProjectHierarchy({
       if (!projectId) continue;
 
       const canonicalProjectId = getCanonicalProjectId(projectId);
-      const config = billingConfigByProjectId.get(canonicalProjectId);
-      if (!config) continue; // Skip unmatched projects
+      const billing = projectBillingLookup.get(canonicalProjectId);
+      const companyInfo = companyLookup.get(canonicalProjectId);
+      if (!billing || !companyInfo) continue;
 
-      const { rate, rounding, projectName, canonicalClientId, canonicalClientName } = config;
+      const projectName = projectNameLookup.get(canonicalProjectId) || canonicalProjectId;
+      const rounding = roundingLookup.get(canonicalProjectId) ?? DEFAULT_ROUNDING_INCREMENT;
+      const roundedMinutes = applyRounding(entry.total_minutes, rounding);
 
       // Get employee name
       const employeeId = entry.user_id || '__UNKNOWN__';
@@ -156,22 +221,24 @@ export function useProjectHierarchy({
         || 'Unknown';
 
       // Get or create company
-      if (!companyMap.has(canonicalClientId)) {
-        companyMap.set(canonicalClientId, {
-          companyId: canonicalClientId,
-          companyName: canonicalClientName,
+      if (!companyMap.has(companyInfo.companyId)) {
+        companyMap.set(companyInfo.companyId, {
+          companyId: companyInfo.companyId,
+          companyName: companyInfo.companyName,
           projects: new Map(),
         });
       }
-      const company = companyMap.get(canonicalClientId)!;
+      const company = companyMap.get(companyInfo.companyId)!;
 
       // Get or create project
       if (!company.projects.has(canonicalProjectId)) {
         company.projects.set(canonicalProjectId, {
           projectId: canonicalProjectId,
           projectName,
-          rate,
-          rounding,
+          rate: billing.rate,
+          billedHours: billing.billedHours,
+          billedRevenue: billing.billedRevenue,
+          totalRoundedMinutes: projectTotalRoundedMinutes.get(canonicalProjectId) || 0,
           employees: new Map(),
         });
       }
@@ -182,28 +249,32 @@ export function useProjectHierarchy({
         project.employees.set(employeeId, {
           employeeId,
           employeeName,
+          roundedMinutes: 0,
           days: new Map(),
         });
       }
       const employee = project.employees.get(employeeId)!;
+      employee.roundedMinutes += roundedMinutes;
 
       // Get or create day
       const workDate = entry.work_date;
       if (!employee.days.has(workDate)) {
         employee.days.set(workDate, {
           date: workDate,
+          roundedMinutes: 0,
           tasks: new Map(),
         });
       }
       const day = employee.days.get(workDate)!;
+      day.roundedMinutes += roundedMinutes;
 
       // Aggregate task minutes
       const taskName = entry.task_name || 'No Task';
-      const currentMinutes = day.tasks.get(taskName) || 0;
-      day.tasks.set(taskName, currentMinutes + entry.total_minutes);
+      const currentTaskMinutes = day.tasks.get(taskName) || 0;
+      day.tasks.set(taskName, currentTaskMinutes + roundedMinutes);
     }
 
-    // Convert maps to arrays and calculate hours/revenue with rounding
+    // Convert maps to arrays and calculate proportional hours/revenue
     const companies: CompanyData[] = [];
     let totalHours = 0;
     let totalRevenue = 0;
@@ -214,35 +285,42 @@ export function useProjectHierarchy({
       let companyRevenue = 0;
 
       for (const projectEntry of companyEntry.projects.values()) {
-        const { rate, rounding } = projectEntry;
+        const { billedHours, billedRevenue, totalRoundedMinutes } = projectEntry;
         const employees: EmployeeData[] = [];
-        let projectHours = 0;
-        let projectRevenue = 0;
 
         for (const employeeEntry of projectEntry.employees.values()) {
+          // Calculate employee's share of project billed hours/revenue
+          const employeeShare = totalRoundedMinutes > 0
+            ? employeeEntry.roundedMinutes / totalRoundedMinutes
+            : 0;
+          const employeeHours = billedHours * employeeShare;
+          const employeeRevenue = billedRevenue * employeeShare;
+
           const days: DayData[] = [];
-          let employeeHours = 0;
-          let employeeRevenue = 0;
 
           for (const dayEntry of employeeEntry.days.values()) {
-            const tasks: TaskData[] = [];
-            let dayHours = 0;
-            let dayRevenue = 0;
+            // Calculate day's share of employee's hours/revenue
+            const dayShare = employeeEntry.roundedMinutes > 0
+              ? dayEntry.roundedMinutes / employeeEntry.roundedMinutes
+              : 0;
+            const dayHours = employeeHours * dayShare;
+            const dayRevenue = employeeRevenue * dayShare;
 
-            for (const [taskName, minutes] of dayEntry.tasks) {
-              // Apply rounding at task level, then calculate revenue
-              const roundedMinutes = applyRounding(minutes, rounding);
-              const hours = roundedMinutes / 60;
-              const revenue = hours * rate;
+            const tasks: TaskData[] = [];
+
+            for (const [taskName, taskRoundedMinutes] of dayEntry.tasks) {
+              // Calculate task's share of day's hours/revenue
+              const taskShare = dayEntry.roundedMinutes > 0
+                ? taskRoundedMinutes / dayEntry.roundedMinutes
+                : 0;
+              const taskHours = dayHours * taskShare;
+              const taskRevenue = dayRevenue * taskShare;
 
               tasks.push({
                 taskName,
-                hours,
-                revenue,
+                hours: taskHours,
+                revenue: taskRevenue,
               });
-
-              dayHours += hours;
-              dayRevenue += revenue;
             }
 
             // Sort tasks by name
@@ -258,9 +336,6 @@ export function useProjectHierarchy({
               revenue: dayRevenue,
               tasks,
             });
-
-            employeeHours += dayHours;
-            employeeRevenue += dayRevenue;
           }
 
           // Sort days by date descending (most recent first)
@@ -273,9 +348,6 @@ export function useProjectHierarchy({
             revenue: employeeRevenue,
             days,
           });
-
-          projectHours += employeeHours;
-          projectRevenue += employeeRevenue;
         }
 
         // Sort employees by name
@@ -285,13 +357,13 @@ export function useProjectHierarchy({
           projectId: projectEntry.projectId,
           projectName: projectEntry.projectName,
           rate: projectEntry.rate,
-          hours: projectHours,
-          revenue: projectRevenue,
+          hours: billedHours,
+          revenue: billedRevenue,
           employees,
         });
 
-        companyHours += projectHours;
-        companyRevenue += projectRevenue;
+        companyHours += billedHours;
+        companyRevenue += billedRevenue;
       }
 
       // Sort projects by name
@@ -317,7 +389,7 @@ export function useProjectHierarchy({
       totalHours,
       totalRevenue,
     };
-  }, [entries, projectsWithRates, projectCanonicalIdLookup, userIdToDisplayNameLookup]);
+  }, [entries, projectBillingLookup, companyLookup, projectNameLookup, roundingLookup, userIdToDisplayNameLookup, projectCanonicalIdLookup]);
 }
 
 export default useProjectHierarchy;
