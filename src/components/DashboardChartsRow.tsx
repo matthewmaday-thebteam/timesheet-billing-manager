@@ -28,10 +28,18 @@ import {
   transformToCAGRProjectionData,
   calculateGrowthStats,
 } from '../utils/chartTransforms';
-import { formatCurrency } from '../utils/billing';
-import type { ResourceSummary, TimesheetEntry } from '../types';
+import { formatCurrency, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
+import type { ResourceSummary, TimesheetEntry, RoundingIncrement } from '../types';
 import type { MonthlyAggregate } from '../types/charts';
 import type { MonthlyBillingResult } from '../utils/billingCalculations';
+
+/**
+ * Round minutes up to the nearest increment (matching billingCalculations.ts)
+ */
+function roundMinutes(minutes: number, increment: RoundingIncrement): number {
+  if (increment === 0) return minutes;
+  return Math.ceil(minutes / increment) * increment;
+}
 
 /** Data for top resources list display */
 interface TopResourceItem {
@@ -51,6 +59,8 @@ export interface DashboardChartsRowProps {
   projectRates: Map<string, number>;
   /** Canonical project ID lookup (external project_id -> canonical project_id) */
   projectCanonicalIdLookup?: Map<string, string>;
+  /** Canonical user ID to display name lookup (user_id -> canonical display name) */
+  userIdToDisplayNameLookup?: Map<string, string>;
   /** Unified billing result from useUnifiedBilling */
   billingResult?: MonthlyBillingResult;
   /** Pre-calculated total revenue for the current month (with billing limits applied) */
@@ -64,6 +74,7 @@ export interface DashboardChartsRowProps {
 /**
  * Transform timesheet entries into top N resource list with hours and revenue.
  * Uses the unified billing result for accurate revenue calculations.
+ * Applies rounding per task to match Employees page calculations.
  * @param sortBy - 'hours' or 'revenue' - determines sort order
  */
 function transformEntriesToTopList(
@@ -71,6 +82,7 @@ function transformEntriesToTopList(
   billingResult: MonthlyBillingResult | undefined,
   projectRates: Map<string, number>,
   projectCanonicalIdLookup: Map<string, string> | undefined,
+  userIdToDisplayNameLookup: Map<string, string> | undefined,
   topN: number = 5,
   sortBy: 'hours' | 'revenue' = 'hours'
 ): TopResourceItem[] {
@@ -80,17 +92,18 @@ function transformEntriesToTopList(
     return projectCanonicalIdLookup?.get(projectId) || projectId;
   };
 
-  // Build project revenue lookup from billing result (keyed by canonical project ID)
+  // Build project lookups from billing result (keyed by canonical project ID)
   const projectRevenues = new Map<string, number>();
-  const projectMinutes = new Map<string, number>();
+  const projectActualMinutes = new Map<string, number>();
+  const projectRounding = new Map<string, RoundingIncrement>();
 
   if (billingResult) {
     for (const company of billingResult.companies) {
       for (const project of company.projects) {
-        // Key by project ID (canonical), not name
         const projectId = project.projectId || '';
         projectRevenues.set(projectId, project.billedRevenue);
-        projectMinutes.set(projectId, project.actualMinutes);
+        projectActualMinutes.set(projectId, project.actualMinutes);
+        projectRounding.set(projectId, project.rounding);
       }
     }
   }
@@ -99,8 +112,8 @@ function transformEntriesToTopList(
   if (!billingResult) {
     for (const entry of entries) {
       const canonicalProjectId = getCanonicalProjectId(entry.project_id);
-      const current = projectMinutes.get(canonicalProjectId) || 0;
-      projectMinutes.set(canonicalProjectId, current + entry.total_minutes);
+      const current = projectActualMinutes.get(canonicalProjectId) || 0;
+      projectActualMinutes.set(canonicalProjectId, current + entry.total_minutes);
 
       const rate = projectRates.get(canonicalProjectId) ?? 0;
       const currentRevenue = projectRevenues.get(canonicalProjectId) || 0;
@@ -108,31 +121,70 @@ function transformEntriesToTopList(
     }
   }
 
-  // Aggregate by user, distributing project revenue proportionally
-  const userStats = new Map<string, { minutes: number; revenue: number }>();
+  // Group entries by user -> project -> task to apply rounding correctly
+  // Structure: userName -> projectId -> taskName -> minutes
+  const userProjectTasks = new Map<string, Map<string, Map<string, number>>>();
 
   for (const entry of entries) {
-    const userName = entry.user_name;
-    const current = userStats.get(userName) || { minutes: 0, revenue: 0 };
-
-    // Calculate user's share of project revenue based on their contribution
-    // Always use canonical project ID for lookups
+    const userName = (entry.user_id && userIdToDisplayNameLookup?.get(entry.user_id)) || entry.user_name;
     const canonicalProjectId = getCanonicalProjectId(entry.project_id);
-    const totalProjectMinutes = projectMinutes.get(canonicalProjectId) || 1;
-    const projectRevenue = projectRevenues.get(canonicalProjectId) || 0;
-    const userShare = (entry.total_minutes / totalProjectMinutes) * projectRevenue;
+    const taskName = entry.task_name || 'No Task';
+
+    if (!userProjectTasks.has(userName)) {
+      userProjectTasks.set(userName, new Map());
+    }
+    const projectMap = userProjectTasks.get(userName)!;
+
+    if (!projectMap.has(canonicalProjectId)) {
+      projectMap.set(canonicalProjectId, new Map());
+    }
+    const taskMap = projectMap.get(canonicalProjectId)!;
+
+    const currentMinutes = taskMap.get(taskName) || 0;
+    taskMap.set(taskName, currentMinutes + entry.total_minutes);
+  }
+
+  // Calculate rounded hours and proportional revenue per user
+  const userStats = new Map<string, { roundedMinutes: number; rawMinutes: number; revenue: number }>();
+
+  for (const [userName, projectMap] of userProjectTasks) {
+    let userRoundedMinutes = 0;
+    let userRawMinutes = 0;
+    let userRevenue = 0;
+
+    for (const [projectId, taskMap] of projectMap) {
+      const rounding = projectRounding.get(projectId) ?? DEFAULT_ROUNDING_INCREMENT;
+      let projectUserRawMinutes = 0;
+      let projectUserRoundedMinutes = 0;
+
+      // Apply rounding per task
+      for (const [, taskMinutes] of taskMap) {
+        projectUserRawMinutes += taskMinutes;
+        projectUserRoundedMinutes += roundMinutes(taskMinutes, rounding);
+      }
+
+      userRawMinutes += projectUserRawMinutes;
+      userRoundedMinutes += projectUserRoundedMinutes;
+
+      // Calculate proportional revenue based on raw minutes share
+      const totalProjectMinutes = projectActualMinutes.get(projectId) || 1;
+      const projectRevenue = projectRevenues.get(projectId) || 0;
+      const userShare = (projectUserRawMinutes / totalProjectMinutes) * projectRevenue;
+      userRevenue += userShare;
+    }
 
     userStats.set(userName, {
-      minutes: current.minutes + entry.total_minutes,
-      revenue: current.revenue + userShare,
+      roundedMinutes: userRoundedMinutes,
+      rawMinutes: userRawMinutes,
+      revenue: userRevenue,
     });
   }
 
-  // Convert to list format
+  // Convert to list format using rounded minutes for hours
   const listData: TopResourceItem[] = Array.from(userStats.entries()).map(
     ([name, stats]) => ({
       name,
-      hours: stats.minutes / 60,
+      hours: stats.roundedMinutes / 60,
       revenue: stats.revenue,
     })
   );
@@ -152,6 +204,7 @@ export function DashboardChartsRow({
   monthlyAggregates,
   projectRates,
   projectCanonicalIdLookup,
+  userIdToDisplayNameLookup,
   billingResult,
   currentMonthRevenue,
   loading = false,
@@ -230,14 +283,14 @@ export function DashboardChartsRow({
 
   // Top 5 by hours for the selected month
   const topFiveByHours = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, 5, 'hours'),
-    [entries, billingResult, projectRates, projectCanonicalIdLookup]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup, 5, 'hours'),
+    [entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup]
   );
 
   // Top 5 by revenue for the selected month
   const topFiveByRevenue = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, 5, 'revenue'),
-    [entries, billingResult, projectRates, projectCanonicalIdLookup]
+    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup, 5, 'revenue'),
+    [entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup]
   );
 
   // Loading state
