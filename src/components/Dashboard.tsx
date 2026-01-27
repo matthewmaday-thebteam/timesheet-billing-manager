@@ -111,11 +111,10 @@ export function Dashboard() {
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation - single source of truth
-  // CRITICAL: ID-based lookups only, no name fallbacks
+  // Company grouping now uses project's canonical company info (from projectsWithRates)
   const { totalRevenue, billingResult } = useUnifiedBilling({
     entries,
     projectsWithRates,
-    getCanonicalCompanyName,
     projectCanonicalIdLookup,
   });
 
@@ -167,6 +166,7 @@ export function Dashboard() {
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
             projectCanonicalIdLookup={projectCanonicalIdLookup}
+            userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
             currentMonthRevenue={totalRevenue}
             loading={loading}
@@ -195,6 +195,7 @@ export function Dashboard() {
             monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
             projectCanonicalIdLookup={projectCanonicalIdLookup}
+            userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
             currentMonthRevenue={totalRevenue}
             loading={loading}
@@ -246,6 +247,7 @@ export function Dashboard() {
         workingDaysElapsed={workingDays.elapsed}
         workingDaysTotal={workingDays.total}
         userIdToDisplayNameLookup={userIdToDisplayNameLookup}
+        getCanonicalCompanyName={getCanonicalCompanyName}
       />
     </>
   );

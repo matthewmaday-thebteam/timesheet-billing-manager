@@ -3,7 +3,6 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
-import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import {
   formatCurrency,
   formatHours,
@@ -27,7 +26,6 @@ export function RevenuePage() {
   });
 
   const { entries, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
-  const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -50,18 +48,11 @@ export function RevenuePage() {
     return map;
   }, [projectsWithRates]);
 
-  // Helper to get canonical company name (ID-only lookup, no name fallbacks)
-  const getCanonicalCompanyName = useCallback((clientId: string): string => {
-    const canonicalInfo = clientId ? getCanonicalCompany(clientId) : null;
-    return canonicalInfo?.canonicalDisplayName || 'Unknown';
-  }, [getCanonicalCompany]);
-
   // Use unified billing calculation - single source of truth
-  // CRITICAL: ID-based lookups only, no name fallbacks
+  // CRITICAL: Company grouping now uses project's canonical company info (from projectsWithRates)
   const { totalRevenue, billingResult, unmatchedProjects, allProjectsMatched } = useUnifiedBilling({
     entries,
     projectsWithRates,
-    getCanonicalCompanyName,
     projectCanonicalIdLookup,
   });
 
@@ -103,9 +94,8 @@ export function RevenuePage() {
       const billingData = billingDataByProjectId.get(canonicalProjectId);
       if (!billingData) continue; // Skip unmatched projects
 
-      // Use canonical company name (ID-only lookup, no name fallbacks)
-      const canonicalInfo = entry.client_id ? getCanonicalCompany(entry.client_id) : null;
-      const company = canonicalInfo?.canonicalDisplayName || 'Unknown';
+      // Use canonical company name from the PROJECT (not entry's client_id)
+      const company = billingData.canonicalClientName || billingData.clientName || 'Unassigned';
       // Use canonical project name from billing data
       const project = billingData.projectName;
       const projectId = canonicalProjectId;
@@ -257,7 +247,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, getCanonicalCompany]);
+  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, projectCanonicalIdLookup]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">

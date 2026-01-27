@@ -77,10 +77,10 @@ export function EmployeesPage() {
   }, [getCanonicalCompany]);
 
   // Use unified billing calculation
+  // Company grouping now uses project's canonical company info (from projectsWithRates)
   const { billingResult } = useUnifiedBilling({
     entries,
     projectsWithRates,
-    getCanonicalCompanyName,
     projectCanonicalIdLookup,
   });
 

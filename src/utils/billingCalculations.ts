@@ -403,6 +403,16 @@ export function calculateMonthlyBilling(companies: CompanyInput[]): MonthlyBilli
 // ============================================================================
 
 /**
+ * Canonical company info returned by getCanonicalCompany
+ */
+export interface CanonicalCompanyResult {
+  /** The canonical (primary) company's client_id - use this for grouping */
+  canonicalClientId: string;
+  /** The canonical company's display name */
+  canonicalDisplayName: string;
+}
+
+/**
  * Build billing inputs from timesheet entries and billing configuration.
  * This is the bridge between raw database data and the unified billing functions.
  */
@@ -410,30 +420,35 @@ export interface BuildBillingInputsParams {
   entries: Array<{
     project_id: string | null;
     project_name: string;
-    client_id: string | null;
     task_name: string | null;
     total_minutes: number;
   }>;
   /** Function to get billing config for a project (ID-only lookup) */
   getBillingConfig: (projectId: string) => ProjectBillingConfig;
-  /** Function to get canonical company name (ID-only lookup) */
-  getCompanyName: (clientId: string) => string;
+  /**
+   * Function to get canonical company info by PROJECT ID (not client_id).
+   * Returns both canonical ID (for grouping) and canonical name (for display).
+   * CRITICAL: Uses project's company relationship for proper grouping.
+   */
+  getCanonicalCompanyByProject: (projectId: string) => CanonicalCompanyResult;
 }
 
 export function buildBillingInputs(params: BuildBillingInputsParams): CompanyInput[] {
-  const { entries, getBillingConfig, getCompanyName } = params;
+  const { entries, getBillingConfig, getCanonicalCompanyByProject } = params;
 
-  // Group entries: companyId -> projectId -> tasks
-  // Use IDs as keys, not names
+  // Group entries: CANONICAL companyId -> projectId -> tasks
+  // CRITICAL: Use canonical client_id as key for proper grouping of company members
   const companyMap = new Map<string, {
     companyName: string;
     projectMap: Map<string, { projectId: string; projectName: string; tasks: Map<string, number> }>;
   }>();
 
   for (const entry of entries) {
-    const companyId = entry.client_id || '';
-    const companyName = getCompanyName(companyId);
     const projectId = entry.project_id || '';
+    // Get CANONICAL company info via the PROJECT's company relationship
+    const canonicalInfo = getCanonicalCompanyByProject(projectId);
+    const companyId = canonicalInfo.canonicalClientId;  // Use CANONICAL ID for grouping
+    const companyName = canonicalInfo.canonicalDisplayName;
     const projectName = entry.project_name;
     const taskName = entry.task_name || 'No Task';
 

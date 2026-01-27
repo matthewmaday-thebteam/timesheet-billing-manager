@@ -17,6 +17,7 @@ import {
   type CompanyInput,
   type MonthlyBillingResult,
   type ProjectBillingConfig,
+  type CanonicalCompanyResult,
 } from '../utils/billingCalculations';
 import { DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
 import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement } from '../types';
@@ -38,8 +39,6 @@ interface UseUnifiedBillingParams {
   entries: TimesheetEntry[];
   /** Projects with billing configuration from useMonthlyRates */
   projectsWithRates: ProjectRateDisplayWithBilling[];
-  /** Function to get canonical company name (ID-only lookup) */
-  getCanonicalCompanyName?: (clientId: string) => string;
   /** Lookup from external project_id to canonical external project_id (for member → primary mapping) */
   projectCanonicalIdLookup?: Map<string, string>;
 }
@@ -84,7 +83,6 @@ interface UseUnifiedBillingResult {
 export function useUnifiedBilling({
   entries,
   projectsWithRates,
-  getCanonicalCompanyName,
   projectCanonicalIdLookup,
 }: UseUnifiedBillingParams): UseUnifiedBillingResult {
   // Build lookup map from projectsWithRates - ONLY by external project ID
@@ -122,6 +120,21 @@ export function useUnifiedBilling({
     return map;
   }, [projectsWithRates]);
 
+  // Build lookup from project ID to canonical company info
+  // This uses the PROJECT's company relationship (not entry's client_id)
+  const canonicalCompanyByProjectId = useMemo(() => {
+    const map = new Map<string, CanonicalCompanyResult>();
+    for (const p of projectsWithRates) {
+      if (p.externalProjectId) {
+        map.set(p.externalProjectId, {
+          canonicalClientId: p.canonicalClientId || p.clientId || '__UNASSIGNED__',
+          canonicalDisplayName: p.canonicalClientName || p.clientName || 'Unassigned',
+        });
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
   // Build billing inputs and calculate, tracking unmatched projects
   const { billingInputs, billingResult, unmatchedProjects } = useMemo(() => {
     // Track unmatched projects
@@ -137,12 +150,18 @@ export function useUnifiedBilling({
       return projectId;
     };
 
-    // Helper to get company name (ID-only lookup)
-    const getCompanyName = (clientId: string): string => {
-      if (getCanonicalCompanyName) {
-        return getCanonicalCompanyName(clientId);
+    // Helper to get canonical company info by PROJECT ID
+    // Uses the project's company relationship (from projectsWithRates)
+    const getCanonicalCompanyByProject = (projectId: string): CanonicalCompanyResult => {
+      const info = canonicalCompanyByProjectId.get(projectId);
+      if (info) {
+        return info;
       }
-      return 'Unknown';
+      // Fallback for unmatched projects (shouldn't happen after filtering)
+      return {
+        canonicalClientId: '__UNASSIGNED__',
+        canonicalDisplayName: 'Unassigned',
+      };
     };
 
     // First pass: identify all unmatched projects and their minutes
@@ -210,7 +229,7 @@ export function useUnifiedBilling({
         }
         return config;
       },
-      getCompanyName,
+      getCanonicalCompanyByProject,
     });
 
     // Calculate billing
@@ -225,7 +244,7 @@ export function useUnifiedBilling({
     entries,
     billingConfigByProjectId,
     projectNameByCanonicalId,
-    getCanonicalCompanyName,
+    canonicalCompanyByProjectId,
     projectCanonicalIdLookup,
   ]);
 

@@ -438,11 +438,25 @@ export function DiagnosticsPage() {
       };
     };
 
-    // Build company name getter (ID-only lookup)
-    const getCompanyName = (clientId: string): string => {
-      // Only look up by ID - no name fallbacks
-      const company = companies.find(c => c.client_id === clientId);
-      return company?.display_name || 'Unknown';
+    // Build project_id -> company info lookup from entries
+    // NOTE: DiagnosticsPage intentionally uses raw company data for debugging
+    const projectToCompanyMap = new Map<string, { canonicalClientId: string; canonicalDisplayName: string }>();
+    for (const e of dbEntries) {
+      if (e.project_id && !projectToCompanyMap.has(e.project_id)) {
+        const company = companies.find(c => c.client_id === e.client_id);
+        projectToCompanyMap.set(e.project_id, {
+          canonicalClientId: e.client_id || '__UNASSIGNED__',
+          canonicalDisplayName: company?.display_name || 'Unknown',
+        });
+      }
+    }
+
+    // Getter by project ID (matches new buildBillingInputs interface)
+    const getCanonicalCompanyByProject = (projectId: string) => {
+      return projectToCompanyMap.get(projectId) || {
+        canonicalClientId: '__UNASSIGNED__',
+        canonicalDisplayName: 'Unknown',
+      };
     };
 
     // Build billing inputs from database entries
@@ -450,13 +464,11 @@ export function DiagnosticsPage() {
       entries: dbEntries.map(e => ({
         project_id: e.project_id,
         project_name: e.project_name,
-        client_id: e.client_id,
-        client_name: e.client_name,
         task_name: e.task_name,
         total_minutes: e.total_minutes,
       })),
       getBillingConfig,
-      getCompanyName,
+      getCanonicalCompanyByProject,
     });
 
     // Calculate monthly billing
