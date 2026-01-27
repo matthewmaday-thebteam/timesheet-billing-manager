@@ -15,7 +15,7 @@
 import { useState, useMemo, useEffect, Fragment } from 'react';
 import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement, EmployeeTimeOff } from '../types';
 import type { MonthlyBillingResult } from '../utils/billingCalculations';
-import { formatCurrency, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
+import { formatCurrency, formatHours, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
 import { minutesToHours } from '../utils/calculations';
 import { ChevronIcon } from './ChevronIcon';
 import { Card } from './Card';
@@ -301,9 +301,9 @@ export function EmployeePerformance({
     return employees.sort((a, b) => b.minutes - a.minutes);
   }, [entries, projectConfigMap, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectBilledRevenueLookup, projectTotalMinutesLookup]);
 
-  // Calculate totals
-  const totalRoundedMinutes = employeeData.reduce((sum, emp) => sum + emp.roundedMinutes, 0);
-  const totalRevenue = employeeData.reduce((sum, emp) => sum + emp.revenue, 0);
+  // Calculate totals - use billingResult for consistency with Projects/Revenue pages
+  const totalBilledHours = billingResult.billedHours;
+  const totalBilledRevenue = billingResult.billedRevenue;
   const totalPtoDays = employeeData.reduce((sum, emp) => sum + emp.ptoDays, 0);
 
   // Expanded state for each level
@@ -372,7 +372,7 @@ export function EmployeePerformance({
           <div className="text-right">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-success" />
-              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
+              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalBilledRevenue)}</span>
             </div>
             <div className="text-xs font-mono text-vercel-gray-400">total revenue</div>
           </div>
@@ -526,10 +526,10 @@ export function EmployeePerformance({
                 )}
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-                {minutesToHours(totalRoundedMinutes)}
+                {formatHours(totalBilledHours)}
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-                {formatCurrency(totalRevenue)}
+                {formatCurrency(totalBilledRevenue)}
               </td>
             </tr>
           </tfoot>
