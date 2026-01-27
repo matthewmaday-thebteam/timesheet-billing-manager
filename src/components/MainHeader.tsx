@@ -7,7 +7,7 @@ import { AIChatWindow } from './chat';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'eom-reports' | 'users' | 'employee-management' | 'diagnostics' | 'formulas';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'eom-reports' | 'users' | 'employee-management' | 'project-management' | 'diagnostics' | 'formulas';
 
 interface NavItemConfig {
   id: NavRoute;
@@ -18,6 +18,7 @@ const navItems: NavItemConfig[] = [
   { id: 'home', label: 'Home' },
   { id: 'holidays', label: 'Holidays' },
   { id: 'employees', label: 'Employees' },
+  { id: 'projects', label: 'Projects' },
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
   { id: 'eom-reports', label: 'EOM Reports' },
@@ -180,7 +181,7 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
-                      onRouteChange('projects');
+                      onRouteChange('project-management');
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
                   >

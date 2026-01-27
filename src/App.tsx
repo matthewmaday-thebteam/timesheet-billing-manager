@@ -8,11 +8,13 @@ import { EmployeesPage } from './components/pages/EmployeesPage';
 import { EmployeeManagementPage } from './components/pages/EmployeeManagementPage';
 import { RatesPage } from './components/pages/RatesPage';
 import { ProjectsPage } from './components/pages/ProjectsPage';
+import { ProjectManagementPage } from './components/pages/ProjectManagementPage';
 import { CompaniesPage } from './components/pages/CompaniesPage';
 import { RevenuePage } from './components/pages/RevenuePage';
 import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
+import { FormulasPage } from './components/pages/FormulasPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
@@ -79,8 +81,12 @@ function AuthenticatedApp() {
         return <UsersPage />;
       case 'employee-management':
         return <EmployeeManagementPage />;
+      case 'project-management':
+        return <ProjectManagementPage />;
       case 'diagnostics':
         return <DiagnosticsPage />;
+      case 'formulas':
+        return <FormulasPage />;
       default:
         return <Dashboard />;
     }
