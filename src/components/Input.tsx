@@ -44,7 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       lg: 'px-4 py-3 text-base',
     };
 
-    const baseClasses = 'w-full bg-white rounded-md border transition-colors focus:outline-none focus:ring-1 focus:ring-offset-0 text-vercel-gray-600';
+    const baseClasses = 'w-full !bg-white rounded-md border transition-colors focus:outline-none focus:ring-1 focus:ring-offset-0 text-vercel-gray-600';
 
     const stateClasses = error
       ? 'border-bteam-brand focus:border-bteam-brand focus:ring-bteam-brand'
@@ -53,7 +53,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const disabledClasses = 'disabled:bg-vercel-gray-50 disabled:text-vercel-gray-200 disabled:cursor-not-allowed';
     const placeholderClasses = 'placeholder:text-vercel-gray-200';
 
-    const inputClasses = `${baseClasses} ${stateClasses} ${disabledClasses} ${placeholderClasses} ${sizeClasses[size]} ${className}`;
+    // Override browser autofill styles to keep white background
+    const autofillClasses = 'autofill:!bg-white autofill:shadow-[inset_0_0_0px_1000px_white]';
+
+    const inputClasses = `${baseClasses} ${stateClasses} ${disabledClasses} ${placeholderClasses} ${autofillClasses} ${sizeClasses[size]} ${className}`;
 
     // Build aria-describedby based on what's present
     const describedBy = error ? errorId : helperText ? helperId : undefined;

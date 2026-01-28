@@ -82,14 +82,13 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
 
             {/* Forgot Password Link */}
             <div className="flex justify-end">
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={onForgotPassword}
+                className="text-sm text-bteam-brand hover:text-bteam-brand/80 transition-colors"
               >
                 Forgot password?
-              </Button>
+              </button>
             </div>
 
             {/* Submit Button */}
