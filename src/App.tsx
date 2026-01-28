@@ -11,6 +11,7 @@ import { ProjectsPage } from './components/pages/ProjectsPage';
 import { ProjectManagementPage } from './components/pages/ProjectManagementPage';
 import { CompaniesPage } from './components/pages/CompaniesPage';
 import { RevenuePage } from './components/pages/RevenuePage';
+import { FixedRevenuePage } from './components/pages/FixedRevenuePage';
 import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
@@ -75,6 +76,8 @@ function AuthenticatedApp() {
         return <RatesPage />;
       case 'revenue':
         return <RevenuePage />;
+      case 'fixed-revenue':
+        return <FixedRevenuePage />;
       case 'eom-reports':
         return <EOMReportsPage />;
       case 'users':
