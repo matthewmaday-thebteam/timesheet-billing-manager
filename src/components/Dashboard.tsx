@@ -5,6 +5,7 @@ import { useProjects } from '../hooks/useProjects';
 import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
+import { useBillings } from '../hooks/useBillings';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import { useResources } from '../hooks/useResources';
 import { useTimeOff } from '../hooks/useTimeOff';
@@ -91,6 +92,9 @@ export function Dashboard() {
   // Fetch monthly rates
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
+  // Fetch fixed billings for the date range (same as Revenue page)
+  const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
+
   // Get canonical company mapping
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
@@ -117,6 +121,76 @@ export function Dashboard() {
     projectCanonicalIdLookup,
   });
 
+  // Build lookup: internal UUID -> externalProjectId (same as Revenue page)
+  const internalToExternalId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of projectsWithRates) {
+      if (p.projectId && p.externalProjectId) {
+        map.set(p.projectId, p.externalProjectId);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
+  // Build lookup: externalProjectId -> milestone billing data (same as Revenue page)
+  const milestoneByExternalProjectId = useMemo(() => {
+    const map = new Map<string, { totalCents: number; billingId: string }>();
+    for (const company of companyBillings) {
+      for (const billing of company.billings) {
+        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
+          const externalId = internalToExternalId.get(billing.linkedProjectId);
+          if (externalId) {
+            // Sum if multiple milestones for same project
+            const existing = map.get(externalId);
+            map.set(externalId, {
+              totalCents: (existing?.totalCents || 0) + billing.totalCents,
+              billingId: billing.id,
+            });
+          }
+        }
+      }
+    }
+    return map;
+  }, [companyBillings, internalToExternalId]);
+
+  // Calculate filtered billing cents (excludes linked milestones) - same as Revenue page
+  const filteredBillingCents = useMemo(() => {
+    let total = 0;
+    for (const company of companyBillings) {
+      for (const billing of company.billings) {
+        // Exclude linked milestones (they're accounted for in milestoneAdjustment)
+        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
+          const externalId = internalToExternalId.get(billing.linkedProjectId);
+          if (externalId) continue; // Skip linked milestones
+        }
+        total += billing.totalCents;
+      }
+    }
+    return total;
+  }, [companyBillings, internalToExternalId]);
+
+  // Calculate milestone adjustment for total (same as Revenue page)
+  // When a project has a linked milestone, replace timesheet revenue with milestone amount
+  const milestoneAdjustment = useMemo(() => {
+    let adjustment = 0;
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          const milestone = milestoneByExternalProjectId.get(project.projectId);
+          if (milestone) {
+            // Replace timesheet revenue with milestone: add milestone, subtract timesheet
+            adjustment += (milestone.totalCents / 100) - project.billedRevenue;
+          }
+        }
+      }
+    }
+    return adjustment;
+  }, [billingResult.companies, milestoneByExternalProjectId]);
+
+  // Combined total revenue (time-based + filtered fixed billings + milestone adjustments)
+  // This matches the exact calculation in RevenuePage
+  const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
+
   return (
     <>
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
@@ -140,10 +214,12 @@ export function Dashboard() {
         <RangeSelector variant="dateRange" dateRange={dateRange} onChange={setDateRange} />
 
         {/* Stats Overview - Above Charts */}
-        {loading ? (
+        {loading || billingsLoading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner size="md" />
-            <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
+            <span className="ml-3 text-sm text-vercel-gray-400">
+              {loading ? 'Loading timesheet data...' : 'Loading billings...'}
+            </span>
           </div>
         ) : (
           <StatsOverview
@@ -151,7 +227,7 @@ export function Dashboard() {
             projectCount={canonicalProjects.length}
             resources={resourceSummaries}
             underHoursCount={underHoursItems.length}
-            totalRevenue={totalRevenue}
+            totalRevenue={combinedTotalRevenue}
             onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
           />
         )}
@@ -167,8 +243,8 @@ export function Dashboard() {
             projectCanonicalIdLookup={projectCanonicalIdLookup}
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
-            currentMonthRevenue={totalRevenue}
-            loading={loading}
+            currentMonthRevenue={combinedTotalRevenue}
+            loading={loading || billingsLoading}
             section="resources"
           />
 
@@ -196,8 +272,8 @@ export function Dashboard() {
             projectCanonicalIdLookup={projectCanonicalIdLookup}
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
-            currentMonthRevenue={totalRevenue}
-            loading={loading}
+            currentMonthRevenue={combinedTotalRevenue}
+            loading={loading || billingsLoading}
             section="trends"
           />
 
