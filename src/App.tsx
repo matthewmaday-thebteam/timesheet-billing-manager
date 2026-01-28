@@ -16,6 +16,7 @@ import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
 import { FormulasPage } from './components/pages/FormulasPage';
+import { InvestorDashboardPage } from './components/pages/InvestorDashboardPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
@@ -90,6 +91,8 @@ function AuthenticatedApp() {
         return <DiagnosticsPage />;
       case 'formulas':
         return <FormulasPage />;
+      case 'investor-dashboard':
+        return <InvestorDashboardPage />;
       default:
         return <Dashboard />;
     }
