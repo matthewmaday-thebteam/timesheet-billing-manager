@@ -212,73 +212,84 @@ export function DashboardChartsRow({
 }: DashboardChartsRowProps) {
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
+
+  // Create corrected monthlyAggregates with current month revenue updated
+  // This ensures MoM, CAGR, and all charts use the accurate combined total revenue
+  const correctedMonthlyAggregates = useMemo(() => {
+    if (currentMonthRevenue === undefined || monthlyAggregates.length === 0) {
+      return monthlyAggregates;
+    }
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1; // 1-12
+    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+    return monthlyAggregates.map(agg => {
+      if (agg.month === currentMonthKey) {
+        return { ...agg, totalRevenue: currentMonthRevenue };
+      }
+      return agg;
+    });
+  }, [monthlyAggregates, currentMonthRevenue]);
+
   // Transform data for charts
   const pieData = useMemo(
     () => transformResourcesToPieData(resources),
     [resources]
   );
 
-  // Transform line data, then override current month with accurate revenue if provided
+  // Transform line data using corrected aggregates
   const lineData = useMemo(() => {
-    const baseData = transformToLineChartData(monthlyAggregates);
+    const baseData = transformToLineChartData(correctedMonthlyAggregates);
 
-    // If we have an accurate current month revenue, update the line data
-    if (currentMonthRevenue !== undefined && monthlyAggregates.length > 0) {
+    // Update future months projections based on current month revenue
+    if (currentMonthRevenue !== undefined && correctedMonthlyAggregates.length > 0) {
       const currentMonthIndex = new Date().getMonth(); // 0-11
       const currentYear = new Date().getFullYear();
 
-      // Find the current month in aggregates to calculate cumulative
-      let cumulativeBeforeCurrent = 0;
-      for (const agg of monthlyAggregates) {
+      // Find cumulative revenue up to and including current month
+      let cumulativeRevenue = 0;
+      for (const agg of correctedMonthlyAggregates) {
         const [aggYear, aggMonth] = agg.month.split('-').map(Number);
-        if (aggYear === currentYear && aggMonth - 1 < currentMonthIndex) {
-          cumulativeBeforeCurrent += agg.totalRevenue;
+        if (aggYear === currentYear && aggMonth - 1 <= currentMonthIndex) {
+          cumulativeRevenue += agg.totalRevenue;
         }
       }
 
-      // Update current month's cumulative revenue
-      if (baseData[currentMonthIndex]) {
-        const newCumulative = Math.round(cumulativeBeforeCurrent + currentMonthRevenue);
-        baseData[currentMonthIndex] = {
-          ...baseData[currentMonthIndex],
-          revenue: newCumulative,
-        };
-
-        // Update future months to extend from the correct base
-        for (let i = currentMonthIndex + 1; i < 12; i++) {
-          if (baseData[i].bestCase !== null) {
-            const monthsAhead = i - currentMonthIndex;
-            const avgMonthlyRevenue = currentMonthRevenue; // Use current month as baseline
-            baseData[i] = {
-              ...baseData[i],
-              revenue: newCumulative, // Flat line extends current cumulative
-              bestCase: Math.round(newCumulative + (monthsAhead * avgMonthlyRevenue * 1.2)),
-              worstCase: Math.round(newCumulative + (monthsAhead * avgMonthlyRevenue * 0.8)),
-            };
-          }
+      // Update future months to extend from the correct base
+      for (let i = currentMonthIndex + 1; i < 12; i++) {
+        if (baseData[i].bestCase !== null) {
+          const monthsAhead = i - currentMonthIndex;
+          const avgMonthlyRevenue = currentMonthRevenue; // Use current month as baseline
+          baseData[i] = {
+            ...baseData[i],
+            revenue: Math.round(cumulativeRevenue), // Flat line extends current cumulative
+            bestCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 1.2)),
+            worstCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 0.8)),
+          };
         }
       }
     }
 
     return baseData;
-  }, [monthlyAggregates, currentMonthRevenue]);
+  }, [correctedMonthlyAggregates, currentMonthRevenue]);
 
-  // MoM Growth Rate data
+  // MoM Growth Rate data - uses corrected aggregates for accurate current month
   const momGrowthData = useMemo(
-    () => transformToMoMGrowthData(monthlyAggregates),
-    [monthlyAggregates]
+    () => transformToMoMGrowthData(correctedMonthlyAggregates),
+    [correctedMonthlyAggregates]
   );
 
-  // CAGR Projection data
+  // CAGR Projection data - uses corrected aggregates
   const cagrData = useMemo(
-    () => transformToCAGRProjectionData(monthlyAggregates),
-    [monthlyAggregates]
+    () => transformToCAGRProjectionData(correctedMonthlyAggregates),
+    [correctedMonthlyAggregates]
   );
 
-  // Growth statistics for display
+  // Growth statistics for display - uses corrected aggregates
   const growthStats = useMemo(
-    () => calculateGrowthStats(monthlyAggregates),
-    [monthlyAggregates]
+    () => calculateGrowthStats(correctedMonthlyAggregates),
+    [correctedMonthlyAggregates]
   );
 
   // Top 5 by hours for the selected month
