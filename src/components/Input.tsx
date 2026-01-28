@@ -44,11 +44,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       lg: 'px-4 py-3 text-base',
     };
 
-    const baseClasses = 'w-full bg-white rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0';
+    const baseClasses = 'w-full bg-white rounded-md border transition-colors focus:outline-none focus:ring-1 focus:ring-offset-0 text-vercel-gray-600';
 
     const stateClasses = error
       ? 'border-bteam-brand focus:border-bteam-brand focus:ring-bteam-brand'
-      : 'border-vercel-gray-100 focus:border-vercel-gray-600 focus:ring-vercel-gray-600';
+      : 'border-vercel-gray-200 focus:border-vercel-gray-400 focus:ring-vercel-gray-400';
 
     const disabledClasses = 'disabled:bg-vercel-gray-50 disabled:text-vercel-gray-200 disabled:cursor-not-allowed';
     const placeholderClasses = 'placeholder:text-vercel-gray-200';

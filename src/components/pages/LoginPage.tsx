@@ -40,8 +40,15 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-vercel-gray-600">Timesheet Manager</h1>
-          <p className="text-sm text-vercel-gray-400 mt-2">Sign in to your account</p>
+          <img
+            src="/logo.svg"
+            alt="The B Team Logo"
+            width={130}
+            height={130}
+            className="mx-auto mb-4"
+          />
+          <h1 className="text-2xl font-semibold text-vercel-gray-600">Manifest</h1>
+          <p className="text-sm text-vercel-gray-400 mt-2 italic">See the Unseeable. Know the Unknowable.</p>
         </div>
 
         {/* Login Card */}
