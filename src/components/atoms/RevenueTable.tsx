@@ -34,9 +34,11 @@ interface RevenueTableProps {
   companyBillings?: CompanyBillingsGroup[];
   /** Total billing cents (for footer) */
   totalBillingCents?: number;
+  /** Milestone data by external project ID - used to display milestone amount in project row */
+  milestoneByExternalProjectId?: Map<string, { totalCents: number; billingId: string }>;
 }
 
-export function RevenueTable({ billingResult, companyBillings = [], totalBillingCents = 0 }: RevenueTableProps) {
+export function RevenueTable({ billingResult, companyBillings = [], totalBillingCents = 0, milestoneByExternalProjectId }: RevenueTableProps) {
   // Check if any projects have billing limits
   const hasBillingColumns = useMemo(() => {
     for (const company of billingResult.companies) {
@@ -275,9 +277,21 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                           </span>
                         </td>
                         <td className="px-6 py-3 text-right">
-                          <span className="text-sm text-vercel-gray-200">
-                            {formatCurrency(project.billedRevenue)}
-                          </span>
+                          {(() => {
+                            const milestone = milestoneByExternalProjectId?.get(project.projectId);
+                            if (milestone) {
+                              return (
+                                <span className="text-sm text-bteam-brand">
+                                  Revenue Milestone {formatCentsToDisplay(milestone.totalCents)}
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="text-sm text-vercel-gray-200">
+                                {formatCurrency(project.billedRevenue)}
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
 

@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
+import { useBillings } from '../../hooks/useBillings';
 import {
   formatCurrency,
   formatHours,
@@ -55,6 +56,78 @@ export function RevenuePage() {
     projectsWithRates,
     projectCanonicalIdLookup,
   });
+
+  // Fetch fixed billings for the date range
+  const {
+    companyBillings,
+    totalCents: totalBillingCents,
+    isLoading: billingsLoading,
+    error: billingsError,
+  } = useBillings({ dateRange });
+
+  // Build lookup: internal UUID -> externalProjectId
+  const internalToExternalId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of projectsWithRates) {
+      if (p.projectId && p.externalProjectId) {
+        map.set(p.projectId, p.externalProjectId);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
+  // Build lookup: externalProjectId -> milestone billing data
+  const milestoneByExternalProjectId = useMemo(() => {
+    const map = new Map<string, { totalCents: number; billingId: string }>();
+    for (const company of companyBillings) {
+      for (const billing of company.billings) {
+        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
+          const externalId = internalToExternalId.get(billing.linkedProjectId);
+          if (externalId) {
+            // Sum if multiple milestones for same project
+            const existing = map.get(externalId);
+            map.set(externalId, {
+              totalCents: (existing?.totalCents || 0) + billing.totalCents,
+              billingId: billing.id,
+            });
+          }
+        }
+      }
+    }
+    return map;
+  }, [companyBillings, internalToExternalId]);
+
+  // Filter out linked milestone billings from display
+  const filteredCompanyBillings = useMemo(() => {
+    const linkedBillingIds = new Set<string>();
+    for (const company of companyBillings) {
+      for (const billing of company.billings) {
+        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
+          const externalId = internalToExternalId.get(billing.linkedProjectId);
+          if (externalId) linkedBillingIds.add(billing.id);
+        }
+      }
+    }
+
+    return companyBillings.map(company => ({
+      ...company,
+      billings: company.billings.filter(b => !linkedBillingIds.has(b.id)),
+    }));
+  }, [companyBillings, internalToExternalId]);
+
+  // Calculate filtered billing cents (excludes linked milestones)
+  const filteredBillingCents = useMemo(() => {
+    let total = 0;
+    for (const company of filteredCompanyBillings) {
+      for (const billing of company.billings) {
+        total += billing.totalCents;
+      }
+    }
+    return total;
+  }, [filteredCompanyBillings]);
+
+  // Combined total revenue (time-based + fixed billings)
+  const combinedTotalRevenue = totalRevenue + (totalBillingCents / 100);
 
   // Check if any projects have billing limits for CSV export
   const hasBillingLimitsForExport = useMemo(() => {
@@ -259,10 +332,10 @@ export function RevenuePage() {
             Revenue for the month of <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
           </p>
         </div>
-        {!loading && (
+        {!loading && !billingsLoading && (
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-success" />
-            <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
+            <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(combinedTotalRevenue)}</span>
           </div>
         )}
       </div>
@@ -303,15 +376,23 @@ export function RevenuePage() {
         </Alert>
       )}
 
+      {/* Billings Error */}
+      {billingsError && <Alert message={billingsError} icon="error" variant="error" />}
+
       {/* Billing Rates Table */}
-      {loading ? (
+      {loading || billingsLoading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner size="md" />
-          <span className="ml-3 text-sm text-vercel-gray-400">Loading timesheet data...</span>
+          <span className="ml-3 text-sm text-vercel-gray-400">
+            {loading ? 'Loading timesheet data...' : 'Loading billings...'}
+          </span>
         </div>
       ) : (
         <RevenueTable
           billingResult={billingResult}
+          companyBillings={filteredCompanyBillings}
+          totalBillingCents={filteredBillingCents}
+          milestoneByExternalProjectId={milestoneByExternalProjectId}
         />
       )}
     </div>
