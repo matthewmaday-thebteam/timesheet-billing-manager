@@ -23,7 +23,7 @@ interface AlertProps {
   /** Optional icon type */
   icon?: 'error' | 'info' | 'warning';
   /** Visual variant */
-  variant?: 'default' | 'warning' | 'error';
+  variant?: 'default' | 'warning' | 'error' | 'brand';
   /** Optional additional content */
   children?: React.ReactNode;
 }
@@ -60,18 +60,21 @@ export function Alert({ message, icon = 'error', variant = 'default', children }
     default: 'bg-vercel-gray-50 border-vercel-gray-200',
     warning: 'bg-warning-light border-warning',
     error: 'bg-error-light border-error',
+    brand: 'bg-vercel-gray-50 border-bteam-brand',
   }[variant];
 
   const iconClasses = {
     default: 'text-vercel-gray-200',
     warning: 'text-warning',
     error: 'text-error',
+    brand: 'text-bteam-brand',
   }[variant];
 
   const textClasses = {
     default: 'text-vercel-gray-200',
     warning: 'text-warning font-medium',
     error: 'text-error',
+    brand: 'text-bteam-brand',
   }[variant];
 
   return (

@@ -55,7 +55,7 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Message */}
-            {error && <Alert message={error} />}
+            {error && <Alert message={error} variant="brand" />}
 
             {/* Email Field */}
             <Input
@@ -112,7 +112,13 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
 
         {/* Footer Note */}
         <p className="text-center text-xs text-vercel-gray-300 mt-6">
-          Contact your administrator to create an account
+          <a
+            href="mailto:info@yourbteam.com?subject=Trouble%20Creating%20An%20Account"
+            className="text-bteam-brand font-bold hover:text-bteam-brand/80 transition-colors"
+          >
+            Contact
+          </a>
+          {' '}your administrator to create an account
         </p>
       </div>
     </div>
