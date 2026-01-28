@@ -60,7 +60,6 @@ export function RevenuePage() {
   // Fetch fixed billings for the date range
   const {
     companyBillings,
-    totalCents: totalBillingCents,
     isLoading: billingsLoading,
     error: billingsError,
   } = useBillings({ dateRange });
@@ -109,10 +108,16 @@ export function RevenuePage() {
       }
     }
 
-    return companyBillings.map(company => ({
-      ...company,
-      billings: company.billings.filter(b => !linkedBillingIds.has(b.id)),
-    }));
+    return companyBillings.map(company => {
+      const filteredBillings = company.billings.filter(b => !linkedBillingIds.has(b.id));
+      // Recalculate totalCents after filtering
+      const filteredTotalCents = filteredBillings.reduce((sum, b) => sum + b.totalCents, 0);
+      return {
+        ...company,
+        billings: filteredBillings,
+        totalCents: filteredTotalCents,
+      };
+    });
   }, [companyBillings, internalToExternalId]);
 
   // Calculate filtered billing cents (excludes linked milestones)
@@ -126,8 +131,27 @@ export function RevenuePage() {
     return total;
   }, [filteredCompanyBillings]);
 
-  // Combined total revenue (time-based + fixed billings)
-  const combinedTotalRevenue = totalRevenue + (totalBillingCents / 100);
+  // Calculate milestone adjustment for header total
+  // When a project has a linked milestone, replace timesheet revenue with milestone amount
+  const milestoneAdjustment = useMemo(() => {
+    let adjustment = 0;
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          const milestone = milestoneByExternalProjectId.get(project.projectId);
+          if (milestone) {
+            // Replace timesheet revenue with milestone: add milestone, subtract timesheet
+            adjustment += (milestone.totalCents / 100) - project.billedRevenue;
+          }
+        }
+      }
+    }
+    return adjustment;
+  }, [billingResult.companies, milestoneByExternalProjectId]);
+
+  // Combined total revenue (time-based + filtered fixed billings + milestone adjustments)
+  // Use filteredBillingCents to exclude linked milestones (they're accounted for in milestoneAdjustment)
+  const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
   // Check if any projects have billing limits for CSV export
   const hasBillingLimitsForExport = useMemo(() => {
@@ -228,6 +252,9 @@ export function RevenuePage() {
         projectRoundedMinutes += applyRounding(task.minutes, rounding);
       }
 
+      // Check if this project has a linked milestone (replaces timesheet revenue)
+      const projectMilestone = milestoneByExternalProjectId.get(proj.projectId);
+
       // Calculate billing result for the project (if limits exist)
       let carryoverIn = 0;
       let adjustedHours = projectRoundedMinutes / 60;
@@ -257,6 +284,11 @@ export function RevenuePage() {
         billedHours = billingResult.billedHours;
         unbillableHours = billingResult.unbillableHours;
         billedRevenue = billingResult.revenue;
+      }
+
+      // If project has a milestone, use milestone amount instead of calculated revenue
+      if (projectMilestone) {
+        billedRevenue = projectMilestone.totalCents / 100;
       }
 
       // Sort tasks by minutes

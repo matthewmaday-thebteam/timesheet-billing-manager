@@ -7,6 +7,7 @@ import { Spinner } from './Spinner';
 import { PhysicalPersonGroupSection } from './PhysicalPersonGroupSection';
 import { usePhysicalPersonGroup } from '../hooks/usePhysicalPersonGroup';
 import { useGroupMutations } from '../hooks/useGroupMutations';
+import { useBambooEmployees } from '../hooks/useBambooEmployees';
 import type {
   Resource,
   ResourceFormData,
@@ -63,6 +64,7 @@ function getFormDataFromResource(resource: Resource | null): ResourceFormData {
     expected_hours: resource?.expected_hours ?? null,
     hourly_rate: resource?.hourly_rate ?? null,
     monthly_cost: resource?.monthly_cost ?? null,
+    bamboo_employee_id: resource?.bamboo_employee_id ?? null,
   };
 }
 
@@ -96,6 +98,9 @@ export function EmployeeEditorModal({
 
   // Group mutation hook
   const { saveChanges: saveGroupChanges, isSaving: isSavingGroup, saveError: groupSaveError } = useGroupMutations();
+
+  // Fetch BambooHR employees for linking
+  const { employees: bambooEmployees, availableEmployees, loading: loadingBamboo } = useBambooEmployees();
 
   // Reset form when resource changes (React-recommended pattern)
   const currentResourceId = resource?.id ?? null;
@@ -224,6 +229,43 @@ export function EmployeeEditorModal({
     employmentTypes.map(et => ({ value: et.id, label: et.name })),
     [employmentTypes]
   );
+
+  // Bamboo user options: available employees + currently assigned (if any)
+  const bambooUserOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [
+      { value: '', label: 'None' },
+    ];
+
+    // Helper to format bamboo employee name
+    const formatName = (emp: { first_name: string | null; last_name: string | null; bamboo_id: string }) => {
+      const parts = [emp.first_name, emp.last_name].filter(Boolean);
+      return parts.length > 0 ? parts.join(' ') : emp.bamboo_id;
+    };
+
+    // Add available employees
+    for (const emp of availableEmployees) {
+      options.push({
+        value: emp.bamboo_id,
+        label: formatName(emp),
+      });
+    }
+
+    // If this resource has an assigned bamboo employee, include it even if "taken"
+    if (formData.bamboo_employee_id) {
+      const alreadyIncluded = options.some(o => o.value === formData.bamboo_employee_id);
+      if (!alreadyIncluded) {
+        const assigned = bambooEmployees.find(e => e.bamboo_id === formData.bamboo_employee_id);
+        if (assigned) {
+          options.push({
+            value: assigned.bamboo_id,
+            label: `${formatName(assigned)} (current)`,
+          });
+        }
+      }
+    }
+
+    return options;
+  }, [availableEmployees, bambooEmployees, formData.bamboo_employee_id]);
 
   const isMonthlyBilling = formData.billing_mode === 'monthly';
   const isHourlyBilling = formData.billing_mode === 'hourly';
@@ -361,6 +403,34 @@ export function EmployeeEditorModal({
             onBlur={() => handleBlur('teams_account')}
             placeholder="teams@account.com"
           />
+        </div>
+
+        {/* BambooHR User */}
+        <div>
+          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+            BambooHR User
+          </label>
+          {loadingBamboo ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md">
+              <Spinner size="sm" />
+              <span className="text-sm text-vercel-gray-400">Loading BambooHR users...</span>
+            </div>
+          ) : bambooEmployees.length === 0 ? (
+            <div className="px-3 py-2 bg-vercel-gray-50 border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-400">
+              No BambooHR users available. Run sync to populate.
+            </div>
+          ) : (
+            <Select
+              value={formData.bamboo_employee_id || ''}
+              onChange={(value) => setFormData(prev => ({
+                ...prev,
+                bamboo_employee_id: value === '' ? null : value
+              }))}
+              options={bambooUserOptions}
+              placeholder="Select BambooHR user"
+              className="w-full"
+            />
+          )}
         </div>
 
         {/* Employment Type */}

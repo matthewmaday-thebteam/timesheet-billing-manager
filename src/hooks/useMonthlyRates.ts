@@ -154,6 +154,9 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         projectName: row.project_name,
         clientId: row.client_id,
         clientName: row.client_name,
+        // Canonical company info (resolved through company grouping)
+        canonicalClientId: row.canonical_client_id,
+        canonicalClientName: row.canonical_client_name,
         firstSeenMonth: row.first_seen_month,
         effectiveRate: row.effective_rate,
         source: row.source as RateSource,

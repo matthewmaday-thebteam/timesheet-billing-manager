@@ -19,11 +19,14 @@ interface UnderHoursModalProps {
   workingDaysTotal: number;
   /** Lookup from user_id to CANONICAL display name (for proper entry filtering) */
   userIdToDisplayNameLookup?: Map<string, string>;
+  /** Function to get canonical company name from client_id */
+  getCanonicalCompanyName?: (clientId: string) => string;
 }
 
 // Table columns for task breakdown
 const taskColumns: AccordionListTableColumn[] = [
-  { key: 'client', label: 'Client', align: 'left' },
+  { key: 'company', label: 'Company', align: 'left' },
+  { key: 'project', label: 'Project', align: 'left' },
   { key: 'date', label: 'Date', align: 'left' },
   { key: 'task', label: 'Task', align: 'left' },
   { key: 'time', label: 'Time', align: 'right' },
@@ -38,11 +41,12 @@ export function UnderHoursModal({
   workingDaysElapsed,
   workingDaysTotal,
   userIdToDisplayNameLookup,
+  getCanonicalCompanyName,
 }: UnderHoursModalProps) {
   // Build accordion items from under-hours resources
   const accordionItems: AccordionListTableItem[] = useMemo(() => {
     return items.map((item) => {
-      // Get task entries for this user, sorted by Client -> Date (desc) -> Task
+      // Get task entries for this user, sorted by Company -> Project -> Date (desc) -> Task
       // Use canonical display name matching via userIdToDisplayNameLookup for proper grouping
       const userEntries = entries
         .filter((e) => {
@@ -55,14 +59,20 @@ export function UnderHoursModal({
           return e.user_name === item.userName;
         })
         .map((entry) => ({
-          client: entry.project_name,
+          // Use canonical company name if available, otherwise fallback to client_name or project_name
+          company: entry.client_id && getCanonicalCompanyName
+            ? getCanonicalCompanyName(entry.client_id)
+            : (entry.client_name || entry.project_name),
+          project: entry.project_name,
           date: entry.work_date,
           task: entry.task_name,
           minutes: entry.total_minutes,
         }))
         .sort((a, b) => {
-          const clientCompare = a.client.localeCompare(b.client);
-          if (clientCompare !== 0) return clientCompare;
+          const companyCompare = a.company.localeCompare(b.company);
+          if (companyCompare !== 0) return companyCompare;
+          const projectCompare = a.project.localeCompare(b.project);
+          if (projectCompare !== 0) return projectCompare;
           const dateCompare = b.date.localeCompare(a.date);
           if (dateCompare !== 0) return dateCompare;
           return a.task.localeCompare(b.task);
@@ -70,10 +80,13 @@ export function UnderHoursModal({
 
       // Convert to table rows
       const rows = userEntries.map((task, index) => ({
-        id: `${task.client}-${task.date}-${task.task}-${index}`,
+        id: `${task.company}-${task.project}-${task.date}-${task.task}-${index}`,
         cells: {
-          client: (
-            <span className="text-vercel-gray-600 font-medium">{task.client}</span>
+          company: (
+            <span className="text-vercel-gray-600 font-medium">{task.company}</span>
+          ),
+          project: (
+            <span className="text-vercel-gray-400 font-mono">{task.project}</span>
           ),
           date: (
             <span className="text-vercel-gray-400 font-mono">
@@ -119,7 +132,7 @@ export function UnderHoursModal({
         emptyMessage: 'No tasks recorded for this period',
       };
     });
-  }, [items, entries, userIdToDisplayNameLookup]);
+  }, [items, entries, userIdToDisplayNameLookup, getCanonicalCompanyName]);
 
   // Sticky header content (summary cards + info banner)
   const stickyHeaderContent = (

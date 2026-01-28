@@ -11,15 +11,16 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import type { BulgarianHoliday } from '../types';
+import type { BulgarianHoliday, EmployeeTimeOff } from '../types';
 
 interface HolidayCalendarProps {
   holidays: BulgarianHoliday[];
+  timeOff?: EmployeeTimeOff[];
   year: number;
   onDateClick?: (date: Date, holiday?: BulgarianHoliday) => void;
 }
 
-export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendarProps) {
+export function HolidayCalendar({ holidays, timeOff = [], year, onDateClick }: HolidayCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date(year, 0, 1));
   const [lastYear, setLastYear] = useState<number>(year);
 
@@ -36,6 +37,21 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
     });
     return map;
   }, [holidays]);
+
+  // Build set of dates with time-off
+  const timeOffDates = useMemo(() => {
+    const dates = new Set<string>();
+    for (const to of timeOff) {
+      const start = new Date(to.start_date + 'T00:00:00');
+      const end = new Date(to.end_date + 'T00:00:00');
+      const current = new Date(start);
+      while (current <= end) {
+        dates.add(format(current, 'yyyy-MM-dd'));
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    return dates;
+  }, [timeOff]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -97,6 +113,7 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
           const holiday = holidayMap.get(dateKey);
+          const hasTimeOff = timeOffDates.has(dateKey);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isToday = isSameDay(day, new Date());
           const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -108,17 +125,18 @@ export function HolidayCalendar({ holidays, year, onDateClick }: HolidayCalendar
               className={`
                 relative aspect-square flex flex-col items-center justify-center rounded-full
                 text-sm transition-colors duration-200 ease-out
-                ${isToday && !holiday ? 'border border-vercel-gray-100' : ''}
+                ${isToday && !holiday && !hasTimeOff ? 'border border-vercel-gray-100' : ''}
                 ${!isCurrentMonth ? 'text-vercel-gray-200' : ''}
-                ${isCurrentMonth && !holiday && !isWeekend ? 'text-vercel-gray-600' : ''}
-                ${isCurrentMonth && isWeekend && !holiday ? 'text-vercel-gray-400' : ''}
+                ${isCurrentMonth && !holiday && !hasTimeOff && !isWeekend ? 'text-vercel-gray-600' : ''}
+                ${isCurrentMonth && isWeekend && !holiday && !hasTimeOff ? 'text-vercel-gray-400' : ''}
                 ${holiday ? 'bg-bteam-brand text-white' : ''}
-                ${!holiday && !isToday ? 'hover:bg-vercel-gray-50' : ''}
+                ${hasTimeOff && !holiday ? 'bg-success-light text-vercel-gray-600' : ''}
+                ${!holiday && !hasTimeOff && !isToday ? 'hover:bg-vercel-gray-50' : ''}
                 focus:outline-none
               `}
-              title={holiday?.holiday_name}
+              title={holiday?.holiday_name || (hasTimeOff ? 'Employee time off' : undefined)}
             >
-              <span className={`${holiday ? 'font-semibold' : ''}`}>
+              <span className={`${holiday || hasTimeOff ? 'font-semibold' : ''}`}>
                 {format(day, 'd')}
               </span>
             </button>

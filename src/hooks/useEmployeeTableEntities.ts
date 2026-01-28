@@ -80,6 +80,7 @@ export function useEmployeeTableEntities(): UseEmployeeTableEntitiesResult {
           expected_hours: row.expected_hours,
           hourly_rate: row.hourly_rate,
           monthly_cost: row.monthly_cost,
+          bamboo_employee_id: row.bamboo_employee_id,
           created_at: row.created_at,
           updated_at: row.updated_at,
           // Include employment type if present

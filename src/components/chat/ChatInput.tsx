@@ -88,7 +88,7 @@ export function ChatInput({
       </Button>
       {showClear && onClear && (
         <Button
-          variant="ghost"
+          variant="primary"
           size="md"
           iconOnly
           onClick={onClear}

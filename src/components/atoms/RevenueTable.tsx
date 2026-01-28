@@ -60,8 +60,38 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
     return map;
   }, [companyBillings]);
 
-  // Check if there are any billings
-  const hasBillings = companyBillings.length > 0;
+  // Calculate milestone adjustments per company (milestone replaces timesheet revenue)
+  // Returns: Map<companyId, adjustmentAmount> where adjustment = sum of (milestone - timesheetRevenue) for each project
+  const milestoneAdjustmentByCompany = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!milestoneByExternalProjectId || milestoneByExternalProjectId.size === 0) return map;
+
+    for (const company of billingResult.companies) {
+      let adjustment = 0;
+      for (const project of company.projects) {
+        if (project.projectId) {
+          const milestone = milestoneByExternalProjectId.get(project.projectId);
+          if (milestone) {
+            // Replace timesheet revenue with milestone: add milestone, subtract timesheet
+            adjustment += (milestone.totalCents / 100) - project.billedRevenue;
+          }
+        }
+      }
+      if (adjustment !== 0) {
+        map.set(company.companyId, adjustment);
+      }
+    }
+    return map;
+  }, [billingResult.companies, milestoneByExternalProjectId]);
+
+  // Calculate total milestone adjustment for footer
+  const totalMilestoneAdjustment = useMemo(() => {
+    let total = 0;
+    for (const adjustment of milestoneAdjustmentByCompany.values()) {
+      total += adjustment;
+    }
+    return total;
+  }, [milestoneAdjustmentByCompany]);
 
   // Expanded state for companies and projects (keyed by ID)
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(() => new Set());
@@ -152,7 +182,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
             // Get billing revenue for this company
             const companyBillingData = billingsByClientId.get(company.companyId);
             const companyBillingCents = companyBillingData?.totalCents || 0;
-            const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100);
+            // Apply milestone adjustment: replaces timesheet revenue with milestone amount
+            const milestoneAdj = milestoneAdjustmentByCompany.get(company.companyId) || 0;
+            const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
 
             return (
               <Fragment key={company.companyId}>
@@ -278,7 +310,7 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                         </td>
                         <td className="px-6 py-3 text-right">
                           {(() => {
-                            const milestone = milestoneByExternalProjectId?.get(project.projectId);
+                            const milestone = project.projectId ? milestoneByExternalProjectId?.get(project.projectId) : undefined;
                             if (milestone) {
                               return (
                                 <span className="text-sm text-bteam-brand">
@@ -474,12 +506,7 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
               {/* Empty rate column */}
             </td>
             <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-              {formatCurrency(billingResult.billedRevenue + (totalBillingCents / 100))}
-              {hasBillings && totalBillingCents > 0 && (
-                <div className="text-xs font-normal text-vercel-gray-400 mt-0.5">
-                  (Time: {formatCurrency(billingResult.billedRevenue)} + Fixed: {formatCentsToDisplay(totalBillingCents)})
-                </div>
-              )}
+              {formatCurrency(billingResult.billedRevenue + (totalBillingCents / 100) + totalMilestoneAdjustment)}
             </td>
           </tr>
         </tfoot>

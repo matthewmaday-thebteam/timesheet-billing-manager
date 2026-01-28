@@ -126,9 +126,12 @@ export function useUnifiedBilling({
     const map = new Map<string, CanonicalCompanyResult>();
     for (const p of projectsWithRates) {
       if (p.externalProjectId) {
+        // If company info is empty/null, treat as "Unassigned"
+        const clientId = p.canonicalClientId || p.clientId;
+        const clientName = p.canonicalClientName || p.clientName;
         map.set(p.externalProjectId, {
-          canonicalClientId: p.canonicalClientId || p.clientId || '__UNASSIGNED__',
-          canonicalDisplayName: p.canonicalClientName || p.clientName || 'Unassigned',
+          canonicalClientId: clientId || '__UNASSIGNED__',
+          canonicalDisplayName: clientName || 'Unassigned',
         });
       }
     }

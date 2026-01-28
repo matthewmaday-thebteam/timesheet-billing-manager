@@ -417,7 +417,7 @@ export function BillingsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-vercel-gray-600">Billings</h1>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Fixed Billing</h1>
           <p className="text-sm text-vercel-gray-400 mt-1">
             Fixed-fee revenue containers for{' '}
             <span className="text-bteam-brand font-medium">

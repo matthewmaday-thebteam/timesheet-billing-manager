@@ -21,7 +21,7 @@ const navItems: NavItemConfig[] = [
   { id: 'projects', label: 'Projects' },
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
-  { id: 'billings', label: 'Billings' },
+  { id: 'billings', label: 'Fixed Billing' },
   { id: 'eom-reports', label: 'EOM Reports' },
 ];
 

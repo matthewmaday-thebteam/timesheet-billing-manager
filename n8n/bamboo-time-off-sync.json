@@ -1,0 +1,253 @@
+{
+  "name": "BambooHR Time-Off Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "bamboo-get-employees",
+      "name": "Get All Employees",
+      "type": "n8n-nodes-base.bambooHr",
+      "typeVersion": 1,
+      "position": [220, -100],
+      "credentials": {
+        "bambooHrApi": {
+          "id": "BAMBOO_CREDENTIAL_ID",
+          "name": "BambooHR account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "status": "approved"
+        },
+        "options": {}
+      },
+      "id": "bamboo-get-time-off",
+      "name": "Get Time-Off Requests",
+      "type": "n8n-nodes-base.bambooHr",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "credentials": {
+        "bambooHrApi": {
+          "id": "BAMBOO_CREDENTIAL_ID",
+          "name": "BambooHR account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build employee lookup map (email -> bamboo_id)\nconst employees = $('Get All Employees').all();\nconst employeeMap = new Map();\nconst employeeIdToEmail = new Map();\n\nfor (const emp of employees) {\n  const email = emp.json.workEmail || emp.json.homeEmail;\n  const bambooId = emp.json.id;\n  if (email && bambooId) {\n    employeeMap.set(email.toLowerCase(), String(bambooId));\n    employeeIdToEmail.set(String(bambooId), email.toLowerCase());\n  }\n}\n\n// Process time-off requests\nconst timeOffRequests = $('Get Time-Off Requests').all();\nconst results = [];\n\nfor (const req of timeOffRequests) {\n  const data = req.json;\n  const bambooEmployeeId = String(data.employeeId || '');\n  const employeeEmail = employeeIdToEmail.get(bambooEmployeeId) || null;\n  \n  results.push({\n    json: {\n      bamboo_request_id: String(data.id || ''),\n      bamboo_employee_id: bambooEmployeeId,\n      employee_name: data.name || 'Unknown',\n      employee_email: employeeEmail,\n      time_off_type: data.type?.name || 'Time Off',\n      status: data.status?.status || 'approved',\n      start_date: data.start,\n      end_date: data.end,\n      total_days: parseFloat(data.amount?.amount || '0'),\n      notes: data.notes?.[0]?.note || null,\n      synced_at: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true } }];"
+      },
+      "id": "merge-and-transform",
+      "name": "Merge & Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-empty",
+              "leftValue": "={{ $json._empty }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notTrue"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-empty",
+      "name": "Filter Empty",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "employee_time_off"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bamboo_request_id": "={{ $json.bamboo_request_id }}",
+            "bamboo_employee_id": "={{ $json.bamboo_employee_id }}",
+            "employee_name": "={{ $json.employee_name }}",
+            "employee_email": "={{ $json.employee_email }}",
+            "time_off_type": "={{ $json.time_off_type }}",
+            "status": "={{ $json.status }}",
+            "start_date": "={{ $json.start_date }}",
+            "end_date": "={{ $json.end_date }}",
+            "total_days": "={{ $json.total_days }}",
+            "notes": "={{ $json.notes }}",
+            "synced_at": "={{ $json.synced_at }}"
+          }
+        },
+        "conflictColumns": ["bamboo_request_id"],
+        "options": {}
+      },
+      "id": "supabase-upsert-time-off",
+      "name": "Upsert Time-Off",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [940, 0],
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build employee data for resource linking\nconst employees = $('Get All Employees').all();\nconst results = [];\n\nfor (const emp of employees) {\n  const email = emp.json.workEmail || emp.json.homeEmail;\n  const bambooId = emp.json.id;\n  \n  if (email && bambooId) {\n    results.push({\n      json: {\n        bamboo_employee_id: String(bambooId),\n        email: email.toLowerCase()\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "prepare-resource-links",
+      "name": "Prepare Resource Links",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, -200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE resources SET bamboo_employee_id = '{{ $json.bamboo_employee_id }}' WHERE LOWER(email) = '{{ $json.email }}' AND bamboo_employee_id IS NULL",
+        "options": {}
+      },
+      "id": "link-to-resources",
+      "name": "Link to Resources",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [720, -200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get All Employees",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Time-Off Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Employees": {
+      "main": [
+        [
+          {
+            "node": "Merge & Transform",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Resource Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Time-Off Requests": {
+      "main": [
+        [
+          {
+            "node": "Merge & Transform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & Transform": {
+      "main": [
+        [
+          {
+            "node": "Filter Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Empty": {
+      "main": [
+        [
+          {
+            "node": "Upsert Time-Off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Resource Links": {
+      "main": [
+        [
+          {
+            "node": "Link to Resources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

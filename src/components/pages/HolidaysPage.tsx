@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useHolidays } from '../../hooks/useHolidays';
+import { useTimeOff } from '../../hooks/useTimeOff';
 import { HolidayCalendar } from '../HolidayCalendar';
 import { HolidayTable } from '../HolidayTable';
 import { HolidayEditorModal } from '../HolidayEditorModal';
+import { EmployeeTimeOffList } from '../EmployeeTimeOffList';
 import { MetricCard } from '../MetricCard';
 import { Modal } from '../Modal';
 import { Select } from '../Select';
@@ -29,6 +31,14 @@ export function HolidaysPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [holidayToDelete, setHolidayToDelete] = useState<BulgarianHoliday | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  // Fetch employee time-off for the selected year
+  const yearStart = useMemo(() => new Date(selectedYear, 0, 1), [selectedYear]);
+  const yearEnd = useMemo(() => new Date(selectedYear, 11, 31), [selectedYear]);
+  const { timeOff, loading: loadingTimeOff } = useTimeOff({
+    startDate: yearStart,
+    endDate: yearEnd,
+  });
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(() => [
@@ -171,6 +181,7 @@ export function HolidaysPage() {
         <div className="lg:col-span-1">
           <HolidayCalendar
             holidays={holidays}
+            timeOff={timeOff}
             year={selectedYear}
             onDateClick={handleCalendarDateClick}
           />
@@ -186,6 +197,13 @@ export function HolidaysPage() {
           />
         </div>
       </div>
+
+      {/* Employee Time Off */}
+      <EmployeeTimeOffList
+        timeOff={timeOff}
+        loading={loadingTimeOff}
+        year={selectedYear}
+      />
 
       {/* Editor Modal */}
       <HolidayEditorModal
