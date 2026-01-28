@@ -213,6 +213,9 @@ export interface ProjectRateDisplay {
   projectName: string;
   clientId: string | null;
   clientName: string | null;
+  // Canonical company info (resolved through company grouping)
+  canonicalClientId: string | null;
+  canonicalClientName: string | null;
   firstSeenMonth: string | null;
 
   // What: the effective rate for the selected month
@@ -254,6 +257,9 @@ export interface ProjectRatesForMonthResult {
   project_name: string;
   client_id: string | null;
   client_name: string | null;
+  // Canonical company info (resolved through company grouping)
+  canonical_client_id: string | null;
+  canonical_client_name: string | null;
   first_seen_month: string | null;
   effective_rate: number;
   source: RateSource;
@@ -829,4 +835,136 @@ export interface EmployeeTimeOff {
   created_at: string;
   updated_at: string;
   synced_at: string;
+}
+
+// ============================================================================
+// Billings Types (Task 030 - Fixed Revenue)
+// ============================================================================
+
+/**
+ * Transaction type classification.
+ * Maps to transaction_type enum in database.
+ */
+export type TransactionType =
+  | 'revenue_milestone'
+  | 'service_fee'
+  | 'subscription'
+  | 'license'
+  | 'reimbursement';
+
+/**
+ * Display labels for transaction types.
+ */
+export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
+  revenue_milestone: 'Revenue Milestone',
+  service_fee: 'Service Fee',
+  subscription: 'Subscription',
+  license: 'License',
+  reimbursement: 'Reimbursement',
+};
+
+/**
+ * Billing record from the billings table.
+ * A billing groups transactions and has a type and optional project link.
+ */
+export interface Billing {
+  id: string;
+  company_id: string;
+  name: string;
+  type: TransactionType;
+  linked_project_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Billing transaction record from the billing_transactions table.
+ * Amount stored as cents (BIGINT in DB).
+ */
+export interface BillingTransaction {
+  id: string;
+  billing_id: string;
+  transaction_month: string;  // ISO date string, always 1st of month
+  amount_cents: number;       // Integer cents (e.g., 123456 = $1,234.56)
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Result from get_billings_with_transactions RPC.
+ * Flattened row with billing + company + transaction data.
+ * Type and linked project are at billing level.
+ */
+export interface BillingWithTransactionRow {
+  billing_id: string;
+  company_id: string;
+  company_client_id: string;
+  company_name: string;
+  company_display_name: string | null;
+  billing_name: string;
+  billing_type: TransactionType;
+  linked_project_id: string | null;
+  linked_project_name: string | null;
+  transaction_id: string | null;
+  transaction_month: string | null;
+  amount_cents: number | null;
+  transaction_description: string | null;
+}
+
+/**
+ * Aggregated billing with transactions for display.
+ */
+export interface BillingDisplay {
+  id: string;
+  companyId: string;
+  companyName: string;
+  name: string;
+  type: TransactionType;
+  linkedProjectId: string | null;
+  linkedProjectName: string | null;
+  transactions: BillingTransactionDisplay[];
+  /** Sum of transaction amounts in selected range (in cents) */
+  totalCents: number;
+}
+
+/**
+ * Transaction display data.
+ */
+export interface BillingTransactionDisplay {
+  id: string;
+  transactionMonth: string;
+  amountCents: number;
+  description: string;
+}
+
+/**
+ * Company with its billings for accordion display.
+ */
+export interface CompanyBillingsGroup {
+  companyId: string;
+  /** The client_id from companies table - used for matching in Revenue page */
+  companyClientId: string;
+  companyName: string;
+  billings: BillingDisplay[];
+  /** Sum of all billing totals for this company (in cents) */
+  totalCents: number;
+}
+
+/**
+ * Form data for creating/editing a billing.
+ */
+export interface BillingFormData {
+  company_id: string;
+  name: string;
+}
+
+/**
+ * Form data for creating/editing a transaction.
+ */
+export interface BillingTransactionFormData {
+  billing_id: string;
+  transaction_month: Date;
+  amount: string;  // String input, converted to cents
+  description: string;
 }

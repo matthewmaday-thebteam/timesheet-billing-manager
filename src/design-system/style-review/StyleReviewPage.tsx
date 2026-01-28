@@ -33,7 +33,9 @@ import { AccordionListTable } from '../../components/AccordionListTable';
 import type { AccordionListTableColumn, AccordionListTableItem } from '../../components/AccordionListTable';
 import { PieChartAtom } from '../../components/atoms/charts/PieChartAtom';
 import { LineGraphAtom } from '../../components/atoms/charts/LineGraphAtom';
+import { RangeSelector } from '../../components/atoms/RangeSelector';
 import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
+import type { DateRange } from '../../types';
 
 type Section = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
@@ -232,6 +234,13 @@ function TokensSection() {
 function AtomsSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState('');
+  const [rangeSelectorValue, setRangeSelectorValue] = useState<DateRange>(() => {
+    const now = new Date();
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+    };
+  });
 
   // Sample data for AccordionFlat demo
   const sampleFlatColumns: AccordionFlatColumn[] = [
@@ -969,6 +978,67 @@ function AtomsSection() {
               <li><span className="inline-block w-3 h-3 rounded bg-brand-indigo mr-2"></span>Target (1.8x) - brand-indigo (solid)</li>
               <li><span className="inline-block w-3 h-3 rounded bg-brand-purple mr-2"></span>Budget - brand-purple (dashed)</li>
               <li><span className="inline-block w-3 h-3 rounded bg-success mr-2"></span>Revenue - success (solid)</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* RangeSelector */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">RangeSelector</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/atoms/RangeSelector.tsx</p>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">variant="dateRange" - Month selection + date range text</p>
+              <RangeSelector
+                variant="dateRange"
+                dateRange={rangeSelectorValue}
+                onChange={setRangeSelectorValue}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">variant="export" - Month selection + Export CSV button</p>
+              <RangeSelector
+                variant="export"
+                dateRange={rangeSelectorValue}
+                onChange={setRangeSelectorValue}
+                onExport={() => alert('Export clicked!')}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">variant="exportOnly" - Just the Export CSV button</p>
+              <RangeSelector
+                variant="exportOnly"
+                onExport={() => alert('Export clicked!')}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">variant="billings" - Month selection + Export CSV + Add Billing buttons</p>
+              <RangeSelector
+                variant="billings"
+                dateRange={rangeSelectorValue}
+                onChange={setRangeSelectorValue}
+                onExport={() => alert('Export clicked!')}
+                onAddBilling={() => alert('Add Billing clicked!')}
+              />
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Four variants - dateRange (month selection + date text), export (month selection + CSV button), exportOnly (just CSV button), billings (month selection + CSV + Add Billing).
+            </p>
+          </div>
+          <div className="mt-2 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs font-medium text-vercel-gray-600 mb-2">Props:</p>
+            <ul className="text-xs text-vercel-gray-400 space-y-1">
+              <li><span className="font-mono text-brand-indigo">variant</span>: 'dateRange' | 'export' | 'exportOnly' | 'billings'</li>
+              <li><span className="font-mono text-brand-indigo">dateRange</span>: Current date range (not needed for exportOnly)</li>
+              <li><span className="font-mono text-brand-indigo">onChange</span>: Callback when date range changes (not needed for exportOnly)</li>
+              <li><span className="font-mono text-brand-indigo">onExport</span>: Callback for Export CSV click</li>
+              <li><span className="font-mono text-brand-indigo">exportDisabled</span>: Disable the export button</li>
+              <li><span className="font-mono text-brand-indigo">onAddBilling</span>: Callback for Add Billing click (billings variant only)</li>
+              <li><span className="font-mono text-brand-indigo">labels</span>: Custom labels for mode buttons</li>
             </ul>
           </div>
         </div>

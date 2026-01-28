@@ -1,10 +1,11 @@
 /**
  * RangeSelector - Month/date range selection component
  *
- * A reusable component for selecting time ranges with three variants:
+ * A reusable component for selecting time ranges with four variants:
  * - 'dateRange': Current Month / Select Month buttons + date range text
  * - 'export': Current Month / Select Month buttons + Export CSV button
  * - 'exportOnly': Just the Export CSV button (no month selection)
+ * - 'billings': Current Month / Select Month buttons + Export CSV + Add Billing buttons
  *
  * @category Atom
  */
@@ -15,7 +16,7 @@ import { Button } from '../Button';
 import type { DateRange } from '../../types';
 
 export type RangeSelectorMode = 'current' | 'month';
-export type RangeSelectorVariant = 'export' | 'dateRange' | 'exportOnly';
+export type RangeSelectorVariant = 'export' | 'dateRange' | 'exportOnly' | 'billings';
 
 interface RangeSelectorProps {
   /** Variant determines the component layout and right-side content */
@@ -24,10 +25,12 @@ interface RangeSelectorProps {
   dateRange?: DateRange;
   /** Callback when date range changes (not required for 'exportOnly' variant) */
   onChange?: (range: DateRange) => void;
-  /** Callback when Export CSV is clicked (required when variant='export' or 'exportOnly') */
+  /** Callback when Export CSV is clicked (required when variant='export', 'exportOnly', or 'billings') */
   onExport?: () => void;
-  /** Disable the export button (only applies when variant='export' or 'exportOnly') */
+  /** Disable the export button (only applies when variant='export', 'exportOnly', or 'billings') */
   exportDisabled?: boolean;
+  /** Callback when Add Billing is clicked (only applies when variant='billings') */
+  onAddBilling?: () => void;
   /** Custom labels for the mode buttons */
   labels?: {
     current?: string;
@@ -41,6 +44,7 @@ export function RangeSelector({
   onChange,
   onExport,
   exportDisabled = false,
+  onAddBilling,
   labels = {},
 }: RangeSelectorProps) {
   const [mode, setMode] = useState<RangeSelectorMode>('current');
@@ -146,8 +150,8 @@ export function RangeSelector({
       )}
 
       {/* Right Content */}
-      <div className="ml-auto">
-        {variant === 'export' ? (
+      <div className="ml-auto flex items-center gap-3">
+        {variant === 'export' && (
           <Button
             variant="secondary"
             onClick={onExport}
@@ -158,11 +162,32 @@ export function RangeSelector({
             </svg>
             Export CSV
           </Button>
-        ) : dateRange ? (
+        )}
+        {variant === 'billings' && (
+          <>
+            <Button
+              variant="secondary"
+              onClick={onExport}
+              disabled={exportDisabled}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export CSV
+            </Button>
+            <Button
+              variant="primary"
+              onClick={onAddBilling}
+            >
+              Add Billing
+            </Button>
+          </>
+        )}
+        {variant === 'dateRange' && dateRange && (
           <span className="text-sm text-vercel-gray-400">
             {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
           </span>
-        ) : null}
+        )}
       </div>
     </div>
   );

@@ -22,14 +22,21 @@ import { minutesToHours } from '../../utils/calculations';
 import { Badge } from '../Badge';
 import { ChevronIcon } from '../ChevronIcon';
 import type { MonthlyBillingResult } from '../../utils/billingCalculations';
+import type { CompanyBillingsGroup } from '../../types';
+import { TRANSACTION_TYPE_LABELS } from '../../types';
 import { DEFAULT_ROUNDING_INCREMENT } from '../../utils/billing';
+import { formatCentsToDisplay } from '../../hooks/useBillings';
 
 interface RevenueTableProps {
   /** Unified billing result from useUnifiedBilling */
   billingResult: MonthlyBillingResult;
+  /** Optional billings data grouped by company */
+  companyBillings?: CompanyBillingsGroup[];
+  /** Total billing cents (for footer) */
+  totalBillingCents?: number;
 }
 
-export function RevenueTable({ billingResult }: RevenueTableProps) {
+export function RevenueTable({ billingResult, companyBillings = [], totalBillingCents = 0 }: RevenueTableProps) {
   // Check if any projects have billing limits
   const hasBillingColumns = useMemo(() => {
     for (const company of billingResult.companies) {
@@ -42,11 +49,24 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
     return false;
   }, [billingResult]);
 
+  // Build billings lookup by company client_id (used for matching in Revenue table)
+  const billingsByClientId = useMemo(() => {
+    const map = new Map<string, CompanyBillingsGroup>();
+    for (const cb of companyBillings) {
+      map.set(cb.companyClientId, cb);
+    }
+    return map;
+  }, [companyBillings]);
+
+  // Check if there are any billings
+  const hasBillings = companyBillings.length > 0;
+
   // Expanded state for companies and projects (keyed by ID)
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(() => new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() => new Set());
 
   // Sort companies alphabetically by name
+  // Billings are matched to companies by ID - if IDs don't match, it's a data integrity issue
   const sortedCompanies = useMemo(() => {
     return [...billingResult.companies].sort((a, b) => a.companyName.localeCompare(b.companyName));
   }, [billingResult.companies]);
@@ -127,6 +147,11 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
             // Sort projects alphabetically by name
             const sortedProjects = [...company.projects].sort((a, b) => a.projectName.localeCompare(b.projectName));
 
+            // Get billing revenue for this company
+            const companyBillingData = billingsByClientId.get(company.companyId);
+            const companyBillingCents = companyBillingData?.totalCents || 0;
+            const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100);
+
             return (
               <Fragment key={company.companyId}>
                 {/* Company Row (Level 1) */}
@@ -171,7 +196,7 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
                   </td>
                   <td className="px-6 py-3 text-right">
                     <span className="text-sm font-medium text-black">
-                      {formatCurrency(company.billedRevenue)}
+                      {formatCurrency(companyTotalRevenue)}
                     </span>
                   </td>
                 </tr>
@@ -299,6 +324,103 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
                     </Fragment>
                   );
                 })}
+
+                {/* Billing Rows (Level 2) - appear after projects */}
+                {isCompanyExpanded && billingsByClientId.has(company.companyId) && (() => {
+                  const companyBillingsData = billingsByClientId.get(company.companyId)!;
+                  return companyBillingsData.billings.map((billing) => {
+                    const billingKey = `billing:${billing.id}`;
+                    const isBillingExpanded = expandedProjects.has(billingKey);
+
+                    return (
+                      <Fragment key={billing.id}>
+                        {/* Billing Row (like a project) */}
+                        <tr
+                          className="cursor-pointer hover:bg-vercel-gray-50 transition-colors"
+                          onClick={() => toggleProject(billingKey)}
+                        >
+                          <td className="pl-10 pr-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <ChevronIcon expanded={isBillingExpanded} className="text-vercel-gray-300" />
+                              <span className="text-sm text-vercel-gray-200">{billing.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className="text-sm text-vercel-gray-300">—</span>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className="text-sm text-vercel-gray-300">—</span>
+                          </td>
+                          {hasBillingColumns && (
+                            <>
+                              <td className="px-6 py-3 text-right">
+                                <span className="text-sm text-vercel-gray-300">—</span>
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <span className="text-sm text-vercel-gray-300">—</span>
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <span className="text-sm text-vercel-gray-300">—</span>
+                              </td>
+                            </>
+                          )}
+                          <td className="px-6 py-3 text-right">
+                            <span className="text-sm text-vercel-gray-300">—</span>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className="text-sm text-vercel-gray-200">
+                              {TRANSACTION_TYPE_LABELS[billing.type]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className="text-sm text-vercel-gray-200">
+                              {formatCentsToDisplay(billing.totalCents)}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {/* Transaction Rows (like tasks) */}
+                        {isBillingExpanded && billing.transactions.map((tx) => (
+                          <tr key={tx.id} className="hover:bg-vercel-gray-50 transition-colors">
+                            <td className="pl-16 pr-6 py-2">
+                              <span className="text-sm text-vercel-gray-300">{tx.description}</span>
+                            </td>
+                            <td className="px-6 py-2 text-right">
+                              <span className="text-sm text-vercel-gray-300">—</span>
+                            </td>
+                            <td className="px-6 py-2 text-right">
+                              <span className="text-sm text-vercel-gray-300">—</span>
+                            </td>
+                            {hasBillingColumns && (
+                              <>
+                                <td className="px-6 py-2 text-right">
+                                  <span className="text-sm text-vercel-gray-300">—</span>
+                                </td>
+                                <td className="px-6 py-2 text-right">
+                                  <span className="text-sm text-vercel-gray-300">—</span>
+                                </td>
+                                <td className="px-6 py-2 text-right">
+                                  <span className="text-sm text-vercel-gray-300">—</span>
+                                </td>
+                              </>
+                            )}
+                            <td className="px-6 py-2 text-right">
+                              <span className="text-sm text-vercel-gray-300">—</span>
+                            </td>
+                            <td className="px-6 py-2 text-right">
+                              <span className="text-sm text-vercel-gray-300">—</span>
+                            </td>
+                            <td className="px-6 py-2 text-right">
+                              <span className="text-sm text-vercel-gray-300">
+                                {formatCentsToDisplay(tx.amountCents)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </Fragment>
+                    );
+                  });
+                })()}
               </Fragment>
             );
           })}
@@ -338,7 +460,12 @@ export function RevenueTable({ billingResult }: RevenueTableProps) {
               {/* Empty rate column */}
             </td>
             <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-              {formatCurrency(billingResult.billedRevenue)}
+              {formatCurrency(billingResult.billedRevenue + (totalBillingCents / 100))}
+              {hasBillings && totalBillingCents > 0 && (
+                <div className="text-xs font-normal text-vercel-gray-400 mt-0.5">
+                  (Time: {formatCurrency(billingResult.billedRevenue)} + Fixed: {formatCentsToDisplay(totalBillingCents)})
+                </div>
+              )}
             </td>
           </tr>
         </tfoot>

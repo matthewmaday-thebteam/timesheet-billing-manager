@@ -7,7 +7,7 @@ import { AIChatWindow } from './chat';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'fixed-revenue' | 'eom-reports' | 'users' | 'employee-management' | 'project-management' | 'diagnostics' | 'formulas';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'projects' | 'companies' | 'rates' | 'revenue' | 'billings' | 'eom-reports' | 'users' | 'employee-management' | 'project-management' | 'diagnostics' | 'formulas';
 
 interface NavItemConfig {
   id: NavRoute;
@@ -21,7 +21,7 @@ const navItems: NavItemConfig[] = [
   { id: 'projects', label: 'Projects' },
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
-  { id: 'fixed-revenue', label: 'Fixed Revenue' },
+  { id: 'billings', label: 'Billings' },
   { id: 'eom-reports', label: 'EOM Reports' },
 ];
 
