@@ -1,7 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+
+// Inactivity timeout in milliseconds (15 minutes)
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
 interface ProfileUpdateData {
   firstName?: string;
@@ -29,6 +32,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRecoverySession, setIsRecoverySession] = useState(false);
+  const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sign out function (defined early for use in timeout)
+  const performSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  // Reset inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    // Clear existing timeout
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+
+    // Only set timeout if user is logged in
+    if (user) {
+      inactivityTimeoutRef.current = setTimeout(() => {
+        console.log('Session timed out due to inactivity');
+        performSignOut();
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+  }, [user, performSignOut]);
+
+  // Set up inactivity tracking
+  useEffect(() => {
+    if (!user) {
+      // Clear timeout when logged out
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Events that indicate user activity
+    const activityEvents = [
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'click',
+    ];
+
+    // Throttle activity detection to avoid excessive timer resets
+    let lastActivity = Date.now();
+    const throttleMs = 1000; // Only reset timer once per second max
+
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivity >= throttleMs) {
+        lastActivity = now;
+        resetInactivityTimer();
+      }
+    };
+
+    // Add event listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    // Start initial timer
+    resetInactivityTimer();
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+    };
+  }, [user, resetInactivityTimer]);
 
   useEffect(() => {
     // Get initial session
