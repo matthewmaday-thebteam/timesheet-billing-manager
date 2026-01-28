@@ -15,7 +15,7 @@ import { RangeSelector } from '../atoms/RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
-import type { DateRange, MonthSelection, ProjectRateDisplayWithBilling } from '../../types';
+import type { DateRange, MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement } from '../../types';
 
 export function RevenuePage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -171,10 +171,10 @@ export function RevenuePage() {
     // Title row
     csvRows.push([`Revenue for the month of ${format(dateRange.start, 'MMMM yyyy')}`]);
 
-    // Header row - conditionally include billing columns
+    // Header row - conditionally include billing columns, always include Task/Project/Company Revenue
     const headerRow = hasBillingLimitsForExport
-      ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Revenue']
-      : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Revenue'];
+      ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue']
+      : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue'];
     csvRows.push(headerRow);
 
     // Data rows - aggregate by company/project/task
@@ -228,41 +228,56 @@ export function RevenuePage() {
       proj.totalMinutes += item.minutes;
     }
 
-    // Convert to CSV rows sorted by company, project, task
+    // Convert to array sorted by company, project
     const sortedProjects = Array.from(projectMap.values()).sort((a, b) => {
       if (a.company !== b.company) return a.company.localeCompare(b.company);
       return a.project.localeCompare(b.project);
     });
 
+    // Pre-calculate project revenues and group by company
+    interface ProjectWithRevenue {
+      company: string;
+      project: string;
+      projectId: string | null;
+      tasks: { task: string; minutes: number }[];
+      rate: number;
+      totalMinutes: number;
+      billedRevenue: number;
+      rounding: RoundingIncrement;
+      carryoverIn: number;
+      adjustedHours: number;
+      billedHours: number;
+      unbillableHours: number;
+    }
+
+    const projectsWithRevenue: ProjectWithRevenue[] = [];
+    const companyRevenues = new Map<string, number>();
+
     for (const proj of sortedProjects) {
-      // Get billing data for this project - ID lookup only
       if (!proj.projectId) continue;
       const billingData = billingDataByProjectId.get(proj.projectId);
-      if (!billingData) continue; // Skip unmatched projects
+      if (!billingData) continue;
 
-      // Use rate and rounding from billingData (ID lookup)
       const effectiveRate = billingData.effectiveRate;
       const rounding = billingData.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
 
-      const incLabel = rounding === 0 ? '—' : `${rounding}m`;
-
-      // Calculate project-level rounded minutes (for billing calc)
+      // Calculate project-level rounded minutes
       let projectRoundedMinutes = 0;
       for (const task of proj.tasks) {
         projectRoundedMinutes += applyRounding(task.minutes, rounding);
       }
 
-      // Check if this project has a linked milestone (replaces timesheet revenue)
+      // Check for linked milestone
       const projectMilestone = milestoneByExternalProjectId.get(proj.projectId);
 
-      // Calculate billing result for the project (if limits exist)
+      // Calculate billing result
       let carryoverIn = 0;
       let adjustedHours = projectRoundedMinutes / 60;
       let billedHours = adjustedHours;
       let unbillableHours = 0;
       let billedRevenue = billedHours * effectiveRate;
 
-      if (billingData && (billingData.minimumHours !== null || billingData.maximumHours !== null || billingData.carryoverHoursIn > 0)) {
+      if (billingData.minimumHours !== null || billingData.maximumHours !== null || billingData.carryoverHoursIn > 0) {
         carryoverIn = billingData.carryoverHoursIn || 0;
         const limits = {
           minimumHours: billingData.minimumHours,
@@ -272,7 +287,7 @@ export function RevenuePage() {
           carryoverExpiryMonths: billingData.carryoverExpiryMonths,
         };
 
-        const billingResult = calculateBilledHours(
+        const result = calculateBilledHours(
           projectRoundedMinutes,
           limits,
           carryoverIn,
@@ -280,49 +295,80 @@ export function RevenuePage() {
           billingData.isActive
         );
 
-        adjustedHours = billingResult.adjustedHours;
-        billedHours = billingResult.billedHours;
-        unbillableHours = billingResult.unbillableHours;
-        billedRevenue = billingResult.revenue;
+        adjustedHours = result.adjustedHours;
+        billedHours = result.billedHours;
+        unbillableHours = result.unbillableHours;
+        billedRevenue = result.revenue;
       }
 
-      // If project has a milestone, use milestone amount instead of calculated revenue
+      // If project has a milestone, use milestone amount
       if (projectMilestone) {
         billedRevenue = projectMilestone.totalCents / 100;
       }
 
+      projectsWithRevenue.push({
+        ...proj,
+        billedRevenue,
+        rounding,
+        carryoverIn,
+        adjustedHours,
+        billedHours,
+        unbillableHours,
+      });
+
+      // Accumulate company revenue
+      const currentCompanyRevenue = companyRevenues.get(proj.company) || 0;
+      companyRevenues.set(proj.company, currentCompanyRevenue + billedRevenue);
+    }
+
+    // Track which companies we've already shown revenue for
+    const companyRevenueShown = new Set<string>();
+
+    // Build CSV rows
+    for (const proj of projectsWithRevenue) {
+      const effectiveRate = proj.rate;
+      const rounding = proj.rounding;
+      const incLabel = rounding === 0 ? '—' : `${rounding}m`;
+
       // Sort tasks by minutes
       proj.tasks.sort((a, b) => b.minutes - a.minutes);
 
-      // Track if this is the first task for the project (to add project-level billing)
-      let isFirstTask = true;
+      // Track if this is the first task for the project
+      let isFirstTaskInProject = true;
+      // Track if this is the first project for the company
+      const isFirstProjectInCompany = !companyRevenueShown.has(proj.company);
 
       for (const task of proj.tasks) {
-        // Apply rounding to each task individually
         const roundedTaskMinutes = applyRounding(task.minutes, rounding);
         const actualHours = (task.minutes / 60).toFixed(2);
         const roundedHours = (roundedTaskMinutes / 60).toFixed(2);
-        const taskRevenue = ((roundedTaskMinutes / 60) * effectiveRate).toFixed(2);
+        const taskRevenue = (roundedTaskMinutes / 60) * effectiveRate;
+
+        // Determine what to show in each revenue column
+        const taskRevenueStr = taskRevenue.toFixed(2);
+        const projectRevenueStr = isFirstTaskInProject ? proj.billedRevenue.toFixed(2) : '';
+        const companyRevenueStr = (isFirstTaskInProject && isFirstProjectInCompany)
+          ? (companyRevenues.get(proj.company) || 0).toFixed(2)
+          : '';
 
         if (hasBillingLimitsForExport) {
-          // Include billing columns - only show project-level billing on first task
           csvRows.push([
             proj.company,
             proj.project,
             task.task,
             actualHours,
             roundedHours,
-            isFirstTask ? formatHours(carryoverIn) : '',
-            isFirstTask ? formatHours(adjustedHours) : '',
-            isFirstTask ? formatHours(billedHours) : '',
-            isFirstTask && unbillableHours > 0 ? formatHours(unbillableHours) : '',
+            isFirstTaskInProject ? formatHours(proj.carryoverIn) : '',
+            isFirstTaskInProject ? formatHours(proj.adjustedHours) : '',
+            isFirstTaskInProject ? formatHours(proj.billedHours) : '',
+            isFirstTaskInProject && proj.unbillableHours > 0 ? formatHours(proj.unbillableHours) : '',
             incLabel,
             effectiveRate.toFixed(2),
-            isFirstTask ? billedRevenue.toFixed(2) : taskRevenue,
+            taskRevenueStr,
+            projectRevenueStr,
+            companyRevenueStr,
           ]);
-          isFirstTask = false;
         } else {
-          // Standard export without billing columns
           csvRows.push([
             proj.company,
             proj.project,
@@ -331,9 +377,18 @@ export function RevenuePage() {
             roundedHours,
             incLabel,
             effectiveRate.toFixed(2),
-            taskRevenue,
+            taskRevenueStr,
+            projectRevenueStr,
+            companyRevenueStr,
           ]);
         }
+
+        isFirstTaskInProject = false;
+      }
+
+      // Mark company as shown after processing first project
+      if (isFirstProjectInCompany) {
+        companyRevenueShown.add(proj.company);
       }
     }
 
@@ -352,7 +407,7 @@ export function RevenuePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, projectCanonicalIdLookup]);
+  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, projectCanonicalIdLookup, milestoneByExternalProjectId]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
