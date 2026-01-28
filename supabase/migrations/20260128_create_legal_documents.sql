@@ -11,9 +11,8 @@ CREATE TABLE IF NOT EXISTS legal_documents (
   created_by UUID REFERENCES auth.users(id),
   published_at TIMESTAMPTZ,
 
-  -- Ensure only one active version per document type
-  CONSTRAINT unique_active_document UNIQUE (document_type, is_active)
-    DEFERRABLE INITIALLY DEFERRED
+  -- Note: unique active constraint handled by partial index below
+  CONSTRAINT legal_documents_type_version_unique UNIQUE (document_type, version)
 );
 
 -- Index for quick lookup of active documents
@@ -21,6 +20,9 @@ CREATE INDEX idx_legal_documents_active ON legal_documents(document_type, is_act
 
 -- Index for version history
 CREATE INDEX idx_legal_documents_type_version ON legal_documents(document_type, version DESC);
+
+-- Partial unique index: only one active document per type
+CREATE UNIQUE INDEX idx_legal_documents_unique_active ON legal_documents(document_type) WHERE is_active = true;
 
 -- Function to get the next version number for a document type
 CREATE OR REPLACE FUNCTION get_next_legal_version(p_document_type TEXT)
