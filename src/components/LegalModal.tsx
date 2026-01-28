@@ -54,6 +54,37 @@ export function LegalModal({
     };
   }, [isOpen]);
 
+  // Parse inline formatting (bold with **)
+  const parseInlineFormatting = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let remaining = text;
+    let keyIndex = 0;
+
+    while (remaining.length > 0) {
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+
+      if (boldMatch && boldMatch.index !== undefined) {
+        // Add text before the bold
+        if (boldMatch.index > 0) {
+          parts.push(remaining.slice(0, boldMatch.index));
+        }
+        // Add the bold text
+        parts.push(
+          <strong key={keyIndex++} className="font-semibold text-vercel-gray-600">
+            {boldMatch[1]}
+          </strong>
+        );
+        remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
+      } else {
+        // No more bold, add the rest
+        parts.push(remaining);
+        break;
+      }
+    }
+
+    return parts.length === 1 ? parts[0] : parts;
+  };
+
   // Simple markdown-like rendering
   const renderContent = (text: string) => {
     const lines = text.split('\n');
@@ -64,7 +95,7 @@ export function LegalModal({
       if (currentParagraph.length > 0) {
         elements.push(
           <p key={elements.length} className="mb-4 text-vercel-gray-400 leading-relaxed">
-            {currentParagraph.join(' ')}
+            {parseInlineFormatting(currentParagraph.join(' '))}
           </p>
         );
         currentParagraph = [];
@@ -78,31 +109,31 @@ export function LegalModal({
         flushParagraph();
         elements.push(
           <h1 key={index} className="text-xl font-bold text-vercel-gray-600 mb-4 mt-6 first:mt-0">
-            {trimmed.slice(2)}
+            {parseInlineFormatting(trimmed.slice(2))}
           </h1>
         );
       } else if (trimmed.startsWith('## ')) {
         flushParagraph();
         elements.push(
           <h2 key={index} className="text-lg font-semibold text-vercel-gray-600 mb-3 mt-5">
-            {trimmed.slice(3)}
+            {parseInlineFormatting(trimmed.slice(3))}
           </h2>
         );
       } else if (trimmed.startsWith('### ')) {
         flushParagraph();
         elements.push(
           <h3 key={index} className="text-base font-medium text-vercel-gray-600 mb-2 mt-4">
-            {trimmed.slice(4)}
+            {parseInlineFormatting(trimmed.slice(4))}
           </h3>
         );
       } else if (trimmed.startsWith('- ')) {
         flushParagraph();
         elements.push(
-          <li key={index} className="ml-4 mb-1 text-vercel-gray-400">
-            {trimmed.slice(2)}
+          <li key={index} className="ml-8 mb-1.5 text-vercel-gray-400 list-disc">
+            {parseInlineFormatting(trimmed.slice(2))}
           </li>
         );
-      } else if (trimmed.startsWith('*') && trimmed.endsWith('*')) {
+      } else if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.includes('**')) {
         flushParagraph();
         elements.push(
           <p key={index} className="mb-4 text-vercel-gray-300 text-sm italic">
@@ -133,7 +164,7 @@ export function LegalModal({
       {/* Modal */}
       <div
         ref={modalRef}
-        className="relative bg-white rounded-lg shadow-modal max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+        className="relative bg-white rounded-lg shadow-modal max-w-[1075px] w-full mx-4 max-h-[80vh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="legal-modal-title"
