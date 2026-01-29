@@ -30,11 +30,13 @@ export function UsersPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleAddClick = () => {
+    clearError();
     setSelectedUser(null);
     setIsEditorOpen(true);
   };
 
   const handleEditClick = (user: AppUser) => {
+    clearError();
     setSelectedUser(user);
     setIsEditorOpen(true);
   };
@@ -169,6 +171,8 @@ export function UsersPage() {
         onUpdateRole={handleUpdateRole}
         isSaving={isOperating}
         adminCount={adminCount}
+        apiError={error}
+        onClearApiError={clearError}
       />
 
       {/* Delete Confirmation Modal */}

@@ -6,13 +6,31 @@ import { supabase } from '../lib/supabase';
 // Capture the URL hash at module load time, before the Supabase client clears it.
 // Invite links arrive with type=invite (or type=signup) in the hash fragment.
 // We treat these the same as password recovery so the user is forced to set a password.
-let _initialHashType: string | null = (() => {
+// Failed auth links arrive with error/error_description in the hash fragment.
+let _initialHashType: string | null = null;
+let _initialAuthError: string | null = null;
+
+(() => {
   try {
     const hash = window.location.hash.substring(1); // strip leading #
+    if (!hash) return;
     const params = new URLSearchParams(hash);
-    return params.get('type'); // e.g. 'invite', 'signup', 'recovery'
+
+    // Check for auth errors first (e.g. expired invite links)
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+    if (error) {
+      _initialAuthError = errorDescription
+        ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
+        : 'Authentication link is invalid or has expired';
+      // Clean the error hash from the URL
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+
+    _initialHashType = params.get('type'); // e.g. 'invite', 'signup', 'recovery'
   } catch {
-    return null;
+    // ignore
   }
 })();
 
@@ -48,7 +66,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isRecoverySession: boolean;
+  authError: string | null;
   clearRecoverySession: () => void;
+  clearAuthError: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -64,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRecoverySession, setIsRecoverySession] = useState(readPersistedRecoveryFlag);
+  const [authError, setAuthError] = useState<string | null>(_initialAuthError);
   const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sign out function (defined early for use in timeout)
@@ -161,12 +182,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Detect invite acceptance — force the user to set a password.
-        // Supabase fires SIGNED_IN (not PASSWORD_RECOVERY) for invite links,
-        // so we check the URL hash type we captured at module load time.
-        if (event === 'SIGNED_IN' && (_initialHashType === 'invite' || _initialHashType === 'signup')) {
-          setIsRecoverySession(true);
-          persistRecoveryFlag(true);
-          _initialHashType = null; // consume so subsequent sign-ins don't re-trigger
+        // Method 1 (implicit flow): Supabase fires SIGNED_IN with type=invite in the URL hash.
+        // Method 2 (PKCE flow): No hash type available, so check user_metadata flag
+        //   set by the admin-users edge function during invite creation.
+        if (event === 'SIGNED_IN') {
+          const isHashInvite = _initialHashType === 'invite' || _initialHashType === 'signup';
+          const needsPasswordSetup = session?.user?.user_metadata?.needs_password_setup === true;
+
+          if (isHashInvite || needsPasswordSetup) {
+            setIsRecoverySession(true);
+            persistRecoveryFlag(true);
+            _initialHashType = null; // consume so subsequent sign-ins don't re-trigger
+          }
         }
       }
     );
@@ -197,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
+      data: { needs_password_setup: null },
     });
     if (!error) {
       setIsRecoverySession(false);
@@ -233,12 +261,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     _initialHashType = null;
   }, []);
 
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
   const value = {
     user,
     session,
     loading,
     isRecoverySession,
+    authError,
     clearRecoverySession,
+    clearAuthError,
     signIn,
     signOut,
     resetPassword,

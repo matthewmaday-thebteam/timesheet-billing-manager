@@ -88,10 +88,19 @@ export function useAdminUsers(): UseAdminUsersReturn {
         },
       });
 
-      // On non-2xx, supabase-js sets both data (response body) and error (generic message)
-      // Prefer the specific error from our function's response body
+      // On non-2xx, supabase-js v2 sets data=null and error=FunctionsHttpError.
+      // The actual error message is in the Response object on error.context.
       if (fnError) {
-        throw new Error(data?.error || fnError.message || 'Failed to create user');
+        let message = fnError.message || 'Failed to create user';
+        try {
+          const errorBody = await (fnError as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.();
+          if (errorBody?.error) {
+            message = errorBody.error;
+          }
+        } catch {
+          // If we can't parse the response body, fall back to the generic message
+        }
+        throw new Error(message);
       }
 
       // Refresh the user list

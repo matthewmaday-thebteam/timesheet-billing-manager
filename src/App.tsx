@@ -125,7 +125,11 @@ function getInitialAuthView(): AuthView {
   return 'login';
 }
 
-function UnauthenticatedApp() {
+interface UnauthenticatedAppProps {
+  authError?: string | null;
+}
+
+function UnauthenticatedApp({ authError }: UnauthenticatedAppProps = {}) {
   const { isRecoverySession, clearRecoverySession } = useAuth();
   const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
 
@@ -148,11 +152,11 @@ function UnauthenticatedApp() {
     return <ForgotPasswordPage onBackToLogin={() => setAuthView('login')} />;
   }
 
-  return <LoginPage onForgotPassword={() => setAuthView('forgot-password')} />;
+  return <LoginPage onForgotPassword={() => setAuthView('forgot-password')} authError={authError} />;
 }
 
 function AppContent() {
-  const { user, loading, isRecoverySession } = useAuth();
+  const { user, loading, isRecoverySession, authError } = useAuth();
 
   if (loading) {
     return (
@@ -168,6 +172,11 @@ function AppContent() {
   // Show reset password page if in recovery session, even if user is logged in
   if (isRecoverySession || window.location.pathname === '/reset-password') {
     return <UnauthenticatedApp />;
+  }
+
+  // Show login page with error when an auth link failed (e.g. expired invite)
+  if (authError) {
+    return <UnauthenticatedApp authError={authError} />;
   }
 
   if (!user) {

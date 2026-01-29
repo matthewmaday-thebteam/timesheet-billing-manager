@@ -8,9 +8,10 @@ import { Alert } from '../Alert';
 
 interface LoginPageProps {
   onForgotPassword: () => void;
+  authError?: string | null;
 }
 
-export function LoginPage({ onForgotPassword }: LoginPageProps) {
+export function LoginPage({ onForgotPassword, authError }: LoginPageProps) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,6 +55,11 @@ export function LoginPage({ onForgotPassword }: LoginPageProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Auth Error (e.g. expired invite link) */}
+            {authError && (
+              <Alert message={authError} variant="brand" />
+            )}
+
             {/* Error Message */}
             {error && <Alert message={error} variant="brand" />}
 

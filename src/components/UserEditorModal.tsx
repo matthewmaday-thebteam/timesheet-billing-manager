@@ -21,6 +21,8 @@ interface UserEditorModalProps {
   onUpdateRole: (userId: string, role: UserRole) => Promise<void>;
   isSaving: boolean;
   adminCount: number;
+  apiError?: string | null;
+  onClearApiError?: () => void;
 }
 
 interface FormData {
@@ -58,6 +60,8 @@ export function UserEditorModal({
   onUpdateRole,
   isSaving,
   adminCount,
+  apiError,
+  onClearApiError,
 }: UserEditorModalProps) {
   const [formData, setFormData] = useState<FormData>(() => getFormDataFromUser(user));
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -72,6 +76,7 @@ export function UserEditorModal({
     setLastResetKey(resetKey);
     setFormData(getFormDataFromUser(user));
     setErrors({});
+    onClearApiError?.();
   }
 
   const validateForm = (): boolean => {
@@ -127,6 +132,7 @@ export function UserEditorModal({
     if (field === 'email' || field === 'password') {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+    onClearApiError?.();
   };
 
   const footerContent = (
@@ -239,6 +245,13 @@ export function UserEditorModal({
             message='To change the password, use the "Reset Password" option from the user action menu.'
             icon="info"
           />
+        )}
+
+        {/* API Error */}
+        {apiError && (
+          <div className="p-3 bg-error-light border border-error rounded-md">
+            <p className="text-sm text-error">{apiError}</p>
+          </div>
         )}
       </form>
     </Modal>
