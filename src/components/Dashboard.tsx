@@ -7,8 +7,9 @@ import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
 import { useBillings } from '../hooks/useBillings';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
-import { useResources } from '../hooks/useResources';
+import { useEmployeeTableEntities } from '../hooks/useEmployeeTableEntities';
 import { useTimeOff } from '../hooks/useTimeOff';
+import { useUtilizationMetrics } from '../hooks/useUtilizationMetrics';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
@@ -59,8 +60,8 @@ export function Dashboard() {
   // Fetch canonical project count from v_project_table_entities (per Formulas page definition)
   const { projects: canonicalProjects } = useProjectTableEntities();
 
-  // Fetch actual employee/resource data for expected hours calculation
-  const { resources: employees } = useResources();
+  // Fetch employee entities (excludes grouped members to avoid double-counting)
+  const { entities: employees } = useEmployeeTableEntities();
 
   // Fetch time-off data for the selected period
   const { timeOff } = useTimeOff({
@@ -191,6 +192,16 @@ export function Dashboard() {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Utilization metrics (shared hook — same calculation as EmployeesPage)
+  const utilizationMetrics = useUtilizationMetrics({
+    dateRange,
+    holidays,
+    employees,
+    timeOff,
+    roundedHours: billingResult.roundedHours,
+    projectsWithRates,
+  });
+
   return (
     <>
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
@@ -228,6 +239,7 @@ export function Dashboard() {
             resources={resourceSummaries}
             underHoursCount={underHoursItems.length}
             totalRevenue={combinedTotalRevenue}
+            utilizationPercent={utilizationMetrics.utilizationPercent}
             onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
           />
         )}

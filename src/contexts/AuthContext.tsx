@@ -3,6 +3,19 @@ import type { ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+// Capture the URL hash at module load time, before the Supabase client clears it.
+// Invite links arrive with type=invite (or type=signup) in the hash fragment.
+// We treat these the same as password recovery so the user is forced to set a password.
+let _initialHashType: string | null = (() => {
+  try {
+    const hash = window.location.hash.substring(1); // strip leading #
+    const params = new URLSearchParams(hash);
+    return params.get('type'); // e.g. 'invite', 'signup', 'recovery'
+  } catch {
+    return null;
+  }
+})();
+
 // Inactivity timeout in milliseconds (15 minutes)
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -17,6 +30,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isRecoverySession: boolean;
+  clearRecoverySession: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -126,6 +140,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'PASSWORD_RECOVERY') {
           setIsRecoverySession(true);
         }
+
+        // Detect invite acceptance — force the user to set a password.
+        // Supabase fires SIGNED_IN (not PASSWORD_RECOVERY) for invite links,
+        // so we check the URL hash type we captured at module load time.
+        if (event === 'SIGNED_IN' && (_initialHashType === 'invite' || _initialHashType === 'signup')) {
+          setIsRecoverySession(true);
+          _initialHashType = null; // consume so subsequent sign-ins don't re-trigger
+        }
       }
     );
 
@@ -183,11 +205,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const clearRecoverySession = useCallback(() => {
+    setIsRecoverySession(false);
+    _initialHashType = null;
+  }, []);
+
   const value = {
     user,
     session,
     loading,
     isRecoverySession,
+    clearRecoverySession,
     signIn,
     signOut,
     resetPassword,

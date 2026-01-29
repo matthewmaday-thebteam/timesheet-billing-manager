@@ -334,11 +334,11 @@ export function InvestorDashboardPage() {
             />
             <MetricCard
               title="Projects"
-              value={canonicalProjects.length}
+              value={canonicalProjects.length.toLocaleString('en-US')}
             />
             <MetricCard
               title="Resources"
-              value={resources.length}
+              value={resources.length.toLocaleString('en-US')}
             />
             <MetricCard
               title="Utilization"
@@ -350,7 +350,7 @@ export function InvestorDashboardPage() {
             />
             <MetricCard
               title={`At ${currentYear} Target`}
-              value={rateMetrics.atTargetRateCount}
+              value={rateMetrics.atTargetRateCount.toLocaleString('en-US')}
             />
           </div>
 

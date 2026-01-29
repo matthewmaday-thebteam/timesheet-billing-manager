@@ -9,6 +9,14 @@ import type {
   UserRole,
 } from '../types';
 
+function getErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
+    return (e as { message: string }).message;
+  }
+  return fallback;
+}
+
 interface UseAdminUsersReturn {
   users: AppUser[];
   loading: boolean;
@@ -52,7 +60,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
       }
       setUsers(data || []);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to fetch users';
+      const message = getErrorMessage(e, 'Failed to fetch users');
       console.error('fetchUsers error:', e);
       setError(message);
     } finally {
@@ -69,22 +77,29 @@ export function useAdminUsers(): UseAdminUsersReturn {
     setIsOperating(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await supabase.rpc('admin_create_user', {
-        p_email: params.email,
-        p_password: params.password || null,
-        p_display_name: params.display_name || null,
-        p_role: params.role || 'admin',
-        p_send_invite: params.send_invite ?? true,
+      const { data, error: fnError } = await supabase.functions.invoke('admin-users', {
+        body: {
+          email: params.email,
+          password: params.password || null,
+          display_name: params.display_name || null,
+          role: params.role || 'admin',
+          send_invite: params.send_invite ?? true,
+          redirect_to: `${window.location.origin}/reset-password`,
+        },
       });
 
-      if (rpcError) throw rpcError;
+      // On non-2xx, supabase-js sets both data (response body) and error (generic message)
+      // Prefer the specific error from our function's response body
+      if (fnError) {
+        throw new Error(data?.error || fnError.message || 'Failed to create user');
+      }
 
       // Refresh the user list
       await fetchUsers();
 
       return data as CreateUserResult;
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to create user';
+      const message = getErrorMessage(e, 'Failed to create user');
       setError(message);
       throw new Error(message);
     } finally {
@@ -111,7 +126,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
 
       return data as UpdateRoleResult;
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to update user role';
+      const message = getErrorMessage(e, 'Failed to update user role');
       setError(message);
       throw new Error(message);
     } finally {
@@ -134,7 +149,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
 
       return data as DeleteUserResult;
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to delete user';
+      const message = getErrorMessage(e, 'Failed to delete user');
       setError(message);
       throw new Error(message);
     } finally {
@@ -154,7 +169,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
 
       return true;
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to send password reset email';
+      const message = getErrorMessage(e, 'Failed to send password reset email');
       setError(message);
       return false;
     } finally {

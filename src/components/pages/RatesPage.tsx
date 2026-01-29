@@ -185,11 +185,11 @@ export function RatesPage() {
         />
         <MetricCard
           title={`At ${currentYear} Target`}
-          value={rateMetrics.atTargetRateCount}
+          value={rateMetrics.atTargetRateCount.toLocaleString('en-US')}
         />
         <MetricCard
           title="Default"
-          value={rateMetrics.atDefaultRateCount}
+          value={rateMetrics.atDefaultRateCount.toLocaleString('en-US')}
         />
       </div>
 

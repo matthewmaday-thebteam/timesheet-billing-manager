@@ -58,7 +58,7 @@ export function ProjectsPage() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-sm text-vercel-gray-400">Total Hours</div>
-              <div className="text-lg font-semibold text-vercel-gray-600">{hierarchyResult.totalHours.toFixed(2)}</div>
+              <div className="text-lg font-semibold text-vercel-gray-600">{hierarchyResult.totalHours.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
             <div className="text-right">
               <div className="text-sm text-vercel-gray-400">Total Revenue</div>

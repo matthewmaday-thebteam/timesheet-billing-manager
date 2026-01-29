@@ -42,11 +42,10 @@ export function getEffectiveHourlyRate(
  */
 export function formatHours(value: number | null): string {
   if (value == null) return '—';
-  // Show integer if whole number, otherwise show 2 decimals
   if (Number.isInteger(value)) {
-    return value.toString();
+    return value.toLocaleString('en-US');
   }
-  return value.toFixed(2);
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ============================================================================

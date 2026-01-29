@@ -126,10 +126,12 @@ function getInitialAuthView(): AuthView {
 }
 
 function UnauthenticatedApp() {
-  const { isRecoverySession } = useAuth();
+  const { isRecoverySession, clearRecoverySession } = useAuth();
   const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
 
   const handleResetComplete = () => {
+    // Clear recovery state so we don't loop back to reset-password
+    clearRecoverySession();
     // Clear the URL path
     window.history.replaceState({}, '', '/');
     setAuthView('login');

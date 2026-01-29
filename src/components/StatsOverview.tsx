@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { minutesToHours } from '../utils/calculations';
-import { formatCurrency } from '../utils/billing';
 import { ANNUAL_BUDGET, TARGET_RATIO } from '../config/chartConfig';
 import { MetricCard } from './MetricCard';
 import type { ProjectSummary, ResourceSummary } from '../types';
@@ -16,6 +15,7 @@ interface StatsOverviewProps {
   resources: ResourceSummary[];
   underHoursCount: number;
   totalRevenue: number;
+  utilizationPercent: number;
   onUnderHoursClick?: () => void;
 }
 
@@ -25,6 +25,7 @@ export function StatsOverview({
   resources,
   underHoursCount,
   totalRevenue,
+  utilizationPercent,
   onUnderHoursClick,
 }: StatsOverviewProps) {
   const totalMinutes = projects.reduce((sum, p) => sum + p.totalMinutes, 0);
@@ -61,8 +62,8 @@ export function StatsOverview({
 
       <div className="w-[20%]">
         <MetricCard
-          title="Total Revenue"
-          value={formatCurrency(totalRevenue)}
+          title="Utilization"
+          value={`${utilizationPercent.toFixed(1)}%`}
         />
       </div>
 
@@ -78,14 +79,14 @@ export function StatsOverview({
       <div className="w-[10%]">
         <MetricCard
           title="Projects"
-          value={projectCount}
+          value={projectCount.toLocaleString('en-US')}
         />
       </div>
 
       <div className="w-[10%]">
         <MetricCard
           title="Resources"
-          value={resources.length}
+          value={resources.length.toLocaleString('en-US')}
         />
       </div>
 
