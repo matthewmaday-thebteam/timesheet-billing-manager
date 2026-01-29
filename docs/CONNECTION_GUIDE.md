@@ -223,10 +223,12 @@ After changing DNS in Vercel or Supabase, verify **all** of these:
 2. **Vercel Environment Variables**
    - `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` must match the Supabase project
 
-3. **Redeploy Edge Functions** — Edge Functions may cache old secrets after DNS changes:
+3. **Redeploy Edge Functions** — CRITICAL: must use `--no-verify-jwt` since the functions handle JWT verification internally:
    ```bash
-   supabase functions deploy admin-users --project-ref yptbnsegcfpizwhipeep
+   npx supabase functions deploy admin-users --project-ref yptbnsegcfpizwhipeep --no-verify-jwt
+   npx supabase functions deploy chat --project-ref yptbnsegcfpizwhipeep --no-verify-jwt
    ```
+   **WARNING:** Omitting `--no-verify-jwt` will break the functions. Supabase's infrastructure-level JWT check will reject requests before they reach the function code.
 
 4. **Redeploy Frontend** — Ensure the client picks up any env var changes:
    ```bash
@@ -259,13 +261,15 @@ The client-side error handler in `useAdminUsers.ts` extracts the real error mess
 
 **Root Causes Found:**
 1. **Client-side error handling bug** — `supabase.functions.invoke()` in `@supabase/supabase-js` v2 sets `data=null` on non-2xx responses. The old code assumed `data` contained the response body (`data?.error`), so the actual error was never surfaced.
-2. **Schema mismatch** — The Edge Function inserted a `role` column into `user_profiles`, but that column does not exist (role is stored in `auth.users.raw_app_meta_data`).
+2. **Missing `--no-verify-jwt` flag** — Redeploying Edge Functions without this flag enabled Supabase's infrastructure-level JWT verification, which rejected requests before they reached the function code. Both `admin-users` and `chat` handle JWT verification internally, so the infrastructure check must be disabled.
 
-**Fixes Applied (commit `5d0043c`):**
-- `src/hooks/useAdminUsers.ts` — Extract error from `FunctionsHttpError.context.json()` instead of from `data`
-- `supabase/functions/admin-users/index.ts` — Removed `role` from `user_profiles` insert
+**Fixes Applied:**
+- `src/hooks/useAdminUsers.ts` (commit `5d0043c`) — Extract error from `FunctionsHttpError.context.json()` instead of from `data`
+- Edge Functions redeployed with `--no-verify-jwt` flag (commit `41fb9a2`)
 
-**Lesson:** When `supabase.functions.invoke()` fails, always read the error from `error.context` (the Response object), not from `data`.
+**Lessons:**
+1. When `supabase.functions.invoke()` fails, read the error from `error.context` (the Response object), not from `data`.
+2. **Always deploy Edge Functions with `--no-verify-jwt`** when the function handles its own auth. The deploy command is documented in the commit message and in Section 6.2 above.
 
 ### 6.2 Verify Supabase Connection
 ```bash
