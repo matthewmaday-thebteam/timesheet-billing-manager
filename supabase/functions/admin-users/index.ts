@@ -70,7 +70,7 @@ serve(async (req) => {
     if (shouldInvite) {
       // Send invite email — user sets their own password
       const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: { display_name: display_name || email, role: userRole, needs_password_setup: true },
+        data: { display_name: display_name || email, role: userRole },
         redirectTo: redirect_to || undefined,
       });
 
@@ -117,6 +117,7 @@ serve(async (req) => {
       .insert({
         id: newUserId,
         display_name: display_name || email,
+        role: userRole,
       });
 
     if (profileError) {
