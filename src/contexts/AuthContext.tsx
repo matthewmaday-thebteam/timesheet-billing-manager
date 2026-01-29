@@ -16,6 +16,24 @@ let _initialHashType: string | null = (() => {
   }
 })();
 
+// Persist recovery state in sessionStorage so it survives page refreshes.
+// Without this, an invited user can bypass the "Set Password" screen by refreshing
+// the page — the Supabase session is valid (stored in localStorage) but the
+// React-only isRecoverySession flag resets to false on remount.
+const RECOVERY_SESSION_KEY = 'isRecoverySession';
+
+function persistRecoveryFlag(value: boolean) {
+  if (value) {
+    sessionStorage.setItem(RECOVERY_SESSION_KEY, 'true');
+  } else {
+    sessionStorage.removeItem(RECOVERY_SESSION_KEY);
+  }
+}
+
+function readPersistedRecoveryFlag(): boolean {
+  return sessionStorage.getItem(RECOVERY_SESSION_KEY) === 'true';
+}
+
 // Inactivity timeout in milliseconds (15 minutes)
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -45,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isRecoverySession, setIsRecoverySession] = useState(false);
+  const [isRecoverySession, setIsRecoverySession] = useState(readPersistedRecoveryFlag);
   const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sign out function (defined early for use in timeout)
@@ -139,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Detect password recovery flow
         if (event === 'PASSWORD_RECOVERY') {
           setIsRecoverySession(true);
+          persistRecoveryFlag(true);
         }
 
         // Detect invite acceptance — force the user to set a password.
@@ -146,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // so we check the URL hash type we captured at module load time.
         if (event === 'SIGNED_IN' && (_initialHashType === 'invite' || _initialHashType === 'signup')) {
           setIsRecoverySession(true);
+          persistRecoveryFlag(true);
           _initialHashType = null; // consume so subsequent sign-ins don't re-trigger
         }
       }
@@ -163,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    persistRecoveryFlag(false);
     await supabase.auth.signOut();
   };
 
@@ -179,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!error) {
       setIsRecoverySession(false);
+      persistRecoveryFlag(false);
     }
     return { error: error ? new Error(error.message) : null };
   };
@@ -207,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearRecoverySession = useCallback(() => {
     setIsRecoverySession(false);
+    persistRecoveryFlag(false);
     _initialHashType = null;
   }, []);
 
