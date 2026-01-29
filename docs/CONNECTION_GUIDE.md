@@ -210,6 +210,62 @@ const { count } = await supabase
 | Empty dashboard | No data in date range | Verify data exists in Supabase |
 | CORS errors | Invalid API key | Verify service role key is correct |
 | Stale data | Clockify not synced | Check sync process status |
+| "Edge Function returned a non-2xx status code" | Generic error from `supabase.functions.invoke()` | See Section 6.4 below |
+
+### 6.2 DNS / Domain Migration Checklist
+
+After changing DNS in Vercel or Supabase, verify **all** of these:
+
+1. **Supabase Auth → URL Configuration**
+   - **Site URL**: Update to new domain (e.g. `https://manifest.yourbteam.com`)
+   - **Redirect URLs**: Add `https://newdomain.com/**` and `https://newdomain.com/reset-password`
+
+2. **Vercel Environment Variables**
+   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` must match the Supabase project
+
+3. **Redeploy Edge Functions** — Edge Functions may cache old secrets after DNS changes:
+   ```bash
+   supabase functions deploy admin-users --project-ref yptbnsegcfpizwhipeep
+   ```
+
+4. **Redeploy Frontend** — Ensure the client picks up any env var changes:
+   ```bash
+   vercel --prod
+   ```
+
+5. **User Sessions** — Existing JWTs may be stale. Users should sign out and sign back in.
+
+### 6.3 Edge Function Debugging
+
+The `admin-users` Edge Function (`supabase/functions/admin-users/index.ts`) returns these status codes:
+
+| Status | Meaning | Returned When |
+|--------|---------|---------------|
+| 401 | Unauthorized | Missing auth header or invalid JWT |
+| 403 | Forbidden | Caller is not an admin (`is_admin()` RPC returns false) |
+| 400 | Bad Request | Missing email, invite/create error, or missing password |
+| 405 | Method Not Allowed | Non-POST request |
+| 500 | Internal Error | Unexpected exception |
+
+**To see the actual error** (not the generic wrapper), check:
+- **Supabase Dashboard** → Edge Functions → `admin-users` → Logs
+- **Browser DevTools** → Network tab → the `admin-users` request → Response body
+
+The client-side error handler in `useAdminUsers.ts` extracts the real error message from the `FunctionsHttpError.context` response body. If you see only the generic message, the response body parsing may have failed — check the browser console.
+
+### 6.4 Historical Fix: "Edge Function returned a non-2xx status code" (January 2026)
+
+**Problem:** After migrating DNS to `manifest.yourbteam.com`, creating new users via the admin-users Edge Function returned the generic error "Edge Function returned a non-2xx status code" with no actionable details.
+
+**Root Causes Found:**
+1. **Client-side error handling bug** — `supabase.functions.invoke()` in `@supabase/supabase-js` v2 sets `data=null` on non-2xx responses. The old code assumed `data` contained the response body (`data?.error`), so the actual error was never surfaced.
+2. **Schema mismatch** — The Edge Function inserted a `role` column into `user_profiles`, but that column does not exist (role is stored in `auth.users.raw_app_meta_data`).
+
+**Fixes Applied (commit `5d0043c`):**
+- `src/hooks/useAdminUsers.ts` — Extract error from `FunctionsHttpError.context.json()` instead of from `data`
+- `supabase/functions/admin-users/index.ts` — Removed `role` from `user_profiles` insert
+
+**Lesson:** When `supabase.functions.invoke()` fails, always read the error from `error.context` (the Response object), not from `data`.
 
 ### 6.2 Verify Supabase Connection
 ```bash
