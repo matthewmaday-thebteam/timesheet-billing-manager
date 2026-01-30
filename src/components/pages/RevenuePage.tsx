@@ -5,18 +5,13 @@ import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
 import { useCarryoverSync } from '../../hooks/useCarryoverSync';
 import { useBillings } from '../../hooks/useBillings';
-import {
-  formatCurrency,
-  formatHours,
-  applyRounding,
-  calculateBilledHours,
-  DEFAULT_ROUNDING_INCREMENT,
-} from '../../utils/billing';
+import { formatCurrency } from '../../utils/billing';
+import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
-import type { DateRange, MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement } from '../../types';
+import type { DateRange, MonthSelection } from '../../types';
 
 export function RevenuePage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -37,18 +32,6 @@ export function RevenuePage() {
 
   // Fetch monthly rates (which now includes rounding data)
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
-
-  // Build billing data lookup by EXTERNAL project ID (Clockify/ClickUp ID)
-  // This matches the project_id in timesheet entries
-  const billingDataByProjectId = useMemo(() => {
-    const map = new Map<string, ProjectRateDisplayWithBilling>();
-    for (const p of projectsWithRates) {
-      if (p.externalProjectId) {
-        map.set(p.externalProjectId, p);
-      }
-    }
-    return map;
-  }, [projectsWithRates]);
 
   // Use unified billing calculation - single source of truth
   // CRITICAL: Company grouping now uses project's canonical company info (from projectsWithRates)
@@ -162,261 +145,16 @@ export function RevenuePage() {
   // Use filteredBillingCents to exclude linked milestones (they're accounted for in milestoneAdjustment)
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
-  // Check if any projects have billing limits for CSV export
-  const hasBillingLimitsForExport = useMemo(() => {
-    for (const data of billingDataByProjectId.values()) {
-      if (data.minimumHours !== null || data.maximumHours !== null || data.carryoverHoursIn > 0) {
-        return true;
-      }
-    }
-    return false;
-  }, [billingDataByProjectId]);
-
   // Export to CSV
   const handleExportCSV = useCallback(() => {
-    // Build CSV data from entries
-    const csvRows: string[][] = [];
-
-    // Title row
-    csvRows.push([`Revenue for the month of ${format(dateRange.start, 'MMMM yyyy')}`]);
-
-    // Header row - conditionally include billing columns, always include Task/Project/Company Revenue
-    const headerRow = hasBillingLimitsForExport
-      ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue']
-      : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue'];
-    csvRows.push(headerRow);
-
-    // Data rows - aggregate by company/project/task
-    const taskMap = new Map<string, { company: string; project: string; projectId: string | null; task: string; minutes: number; rate: number }>();
-
-    for (const entry of entries) {
-      // Skip entries without project ID (unmatched projects)
-      if (!entry.project_id) continue;
-
-      // Map to canonical project ID (member projects -> primary project)
-      const canonicalProjectId = projectCanonicalIdLookup?.get(entry.project_id) || entry.project_id;
-
-      // Get billing data by canonical ID only
-      const billingData = billingDataByProjectId.get(canonicalProjectId);
-      if (!billingData) continue; // Skip unmatched projects
-
-      // Use canonical company name from the PROJECT (not entry's client_id)
-      const company = billingData.canonicalClientName || billingData.clientName || 'Unassigned';
-      // Use canonical project name from billing data
-      const project = billingData.projectName;
-      const projectId = canonicalProjectId;
-      const task = entry.task_name || 'No Task';
-      const key = `${company}|${project}|${task}`;
-
-      const rate = billingData.effectiveRate;
-
-      if (taskMap.has(key)) {
-        taskMap.get(key)!.minutes += entry.total_minutes;
-      } else {
-        taskMap.set(key, { company, project, projectId, task, minutes: entry.total_minutes, rate });
-      }
-    }
-
-    // Group tasks by project to apply rounding at project level
-    const projectMap = new Map<string, { company: string; project: string; projectId: string | null; tasks: { task: string; minutes: number }[]; rate: number; totalMinutes: number }>();
-
-    for (const item of taskMap.values()) {
-      const projectKey = `${item.company}|${item.project}`;
-      if (!projectMap.has(projectKey)) {
-        projectMap.set(projectKey, {
-          company: item.company,
-          project: item.project,
-          projectId: item.projectId,
-          tasks: [],
-          rate: item.rate,
-          totalMinutes: 0,
-        });
-      }
-      const proj = projectMap.get(projectKey)!;
-      proj.tasks.push({ task: item.task, minutes: item.minutes });
-      proj.totalMinutes += item.minutes;
-    }
-
-    // Convert to array sorted by company, project
-    const sortedProjects = Array.from(projectMap.values()).sort((a, b) => {
-      if (a.company !== b.company) return a.company.localeCompare(b.company);
-      return a.project.localeCompare(b.project);
+    const csvContent = generateRevenueCSV({
+      billingResult,
+      filteredCompanyBillings,
+      milestoneByExternalProjectId,
+      monthLabel: format(dateRange.start, 'MMMM yyyy'),
     });
-
-    // Pre-calculate project revenues and group by company
-    interface ProjectWithRevenue {
-      company: string;
-      project: string;
-      projectId: string | null;
-      tasks: { task: string; minutes: number }[];
-      rate: number;
-      totalMinutes: number;
-      billedRevenue: number;
-      rounding: RoundingIncrement;
-      carryoverIn: number;
-      adjustedHours: number;
-      billedHours: number;
-      unbillableHours: number;
-    }
-
-    const projectsWithRevenue: ProjectWithRevenue[] = [];
-    const companyRevenues = new Map<string, number>();
-
-    for (const proj of sortedProjects) {
-      if (!proj.projectId) continue;
-      const billingData = billingDataByProjectId.get(proj.projectId);
-      if (!billingData) continue;
-
-      const effectiveRate = billingData.effectiveRate;
-      const rounding = billingData.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT;
-
-      // Calculate project-level rounded minutes
-      let projectRoundedMinutes = 0;
-      for (const task of proj.tasks) {
-        projectRoundedMinutes += applyRounding(task.minutes, rounding);
-      }
-
-      // Check for linked milestone
-      const projectMilestone = milestoneByExternalProjectId.get(proj.projectId);
-
-      // Calculate billing result
-      let carryoverIn = 0;
-      let adjustedHours = projectRoundedMinutes / 60;
-      let billedHours = adjustedHours;
-      let unbillableHours = 0;
-      let billedRevenue = billedHours * effectiveRate;
-
-      if (billingData.minimumHours !== null || billingData.maximumHours !== null || billingData.carryoverHoursIn > 0) {
-        carryoverIn = billingData.carryoverHoursIn || 0;
-        const limits = {
-          minimumHours: billingData.minimumHours,
-          maximumHours: billingData.maximumHours,
-          carryoverEnabled: billingData.carryoverEnabled,
-          carryoverMaxHours: billingData.carryoverMaxHours,
-          carryoverExpiryMonths: billingData.carryoverExpiryMonths,
-        };
-
-        const result = calculateBilledHours(
-          projectRoundedMinutes,
-          limits,
-          carryoverIn,
-          effectiveRate,
-          billingData.isActive
-        );
-
-        adjustedHours = result.adjustedHours;
-        billedHours = result.billedHours;
-        unbillableHours = result.unbillableHours;
-        billedRevenue = result.revenue;
-      }
-
-      // If project has a milestone, use milestone amount
-      if (projectMilestone) {
-        billedRevenue = projectMilestone.totalCents / 100;
-      }
-
-      projectsWithRevenue.push({
-        ...proj,
-        billedRevenue,
-        rounding,
-        carryoverIn,
-        adjustedHours,
-        billedHours,
-        unbillableHours,
-      });
-
-      // Accumulate company revenue
-      const currentCompanyRevenue = companyRevenues.get(proj.company) || 0;
-      companyRevenues.set(proj.company, currentCompanyRevenue + billedRevenue);
-    }
-
-    // Track which companies we've already shown revenue for
-    const companyRevenueShown = new Set<string>();
-
-    // Build CSV rows
-    for (const proj of projectsWithRevenue) {
-      const effectiveRate = proj.rate;
-      const rounding = proj.rounding;
-      const incLabel = rounding === 0 ? '—' : `${rounding}m`;
-
-      // Sort tasks by minutes
-      proj.tasks.sort((a, b) => b.minutes - a.minutes);
-
-      // Track if this is the first task for the project
-      let isFirstTaskInProject = true;
-      // Track if this is the first project for the company
-      const isFirstProjectInCompany = !companyRevenueShown.has(proj.company);
-
-      for (const task of proj.tasks) {
-        const roundedTaskMinutes = applyRounding(task.minutes, rounding);
-        const actualHours = (task.minutes / 60).toFixed(2);
-        const roundedHours = (roundedTaskMinutes / 60).toFixed(2);
-        const taskRevenue = (roundedTaskMinutes / 60) * effectiveRate;
-
-        // Determine what to show in each revenue column
-        const taskRevenueStr = taskRevenue.toFixed(2);
-        const projectRevenueStr = isFirstTaskInProject ? proj.billedRevenue.toFixed(2) : '';
-        const companyRevenueStr = (isFirstTaskInProject && isFirstProjectInCompany)
-          ? (companyRevenues.get(proj.company) || 0).toFixed(2)
-          : '';
-
-        if (hasBillingLimitsForExport) {
-          csvRows.push([
-            proj.company,
-            proj.project,
-            task.task,
-            actualHours,
-            roundedHours,
-            isFirstTaskInProject ? formatHours(proj.carryoverIn) : '',
-            isFirstTaskInProject ? formatHours(proj.adjustedHours) : '',
-            isFirstTaskInProject ? formatHours(proj.billedHours) : '',
-            isFirstTaskInProject && proj.unbillableHours > 0 ? formatHours(proj.unbillableHours) : '',
-            incLabel,
-            effectiveRate.toFixed(2),
-            taskRevenueStr,
-            projectRevenueStr,
-            companyRevenueStr,
-          ]);
-        } else {
-          csvRows.push([
-            proj.company,
-            proj.project,
-            task.task,
-            actualHours,
-            roundedHours,
-            incLabel,
-            effectiveRate.toFixed(2),
-            taskRevenueStr,
-            projectRevenueStr,
-            companyRevenueStr,
-          ]);
-        }
-
-        isFirstTaskInProject = false;
-      }
-
-      // Mark company as shown after processing first project
-      if (isFirstProjectInCompany) {
-        companyRevenueShown.add(proj.company);
-      }
-    }
-
-    // Convert to CSV string
-    const csvContent = csvRows
-      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `revenue-${format(dateRange.start, 'yyyy-MM')}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [entries, billingDataByProjectId, hasBillingLimitsForExport, dateRange.start, projectCanonicalIdLookup, milestoneByExternalProjectId]);
+    downloadCSV(csvContent, `revenue-${format(dateRange.start, 'yyyy-MM')}.csv`);
+  }, [billingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
