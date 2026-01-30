@@ -23,6 +23,7 @@ export interface RevenueCSVOptions {
   filteredCompanyBillings: CompanyBillingsGroup[];
   milestoneByExternalProjectId: Map<string, { totalCents: number; billingId: string }>;
   monthLabel: string; // e.g. "January 2026"
+  companyIds?: Set<string>; // if provided, only include these companies
 }
 
 // ---------------------------------------------------------------------------
@@ -76,22 +77,30 @@ function buildMilestoneAdjustmentByCompany(
 // ---------------------------------------------------------------------------
 
 export function generateRevenueCSV(options: RevenueCSVOptions): string {
-  const { billingResult, filteredCompanyBillings, milestoneByExternalProjectId, monthLabel } = options;
+  const { billingResult, filteredCompanyBillings, milestoneByExternalProjectId, monthLabel, companyIds } = options;
+
+  // Apply optional company filter
+  const companies = companyIds
+    ? billingResult.companies.filter(c => companyIds.has(c.companyId))
+    : billingResult.companies;
+  const companyBillings = companyIds
+    ? filteredCompanyBillings.filter(cb => companyIds.has(cb.companyClientId))
+    : filteredCompanyBillings;
 
   // Determine extended vs standard layout
-  const hasBillingLimits = billingResult.companies.some(c =>
+  const hasBillingLimits = companies.some(c =>
     c.projects.some(p => p.hasBillingLimits),
   );
 
   // Build billings lookup by companyId (matching RevenueTable's billingsByClientId)
   const billingsByCompanyId = new Map<string, CompanyBillingsGroup>();
-  for (const cb of filteredCompanyBillings) {
+  for (const cb of companyBillings) {
     billingsByCompanyId.set(cb.companyClientId, cb);
   }
 
   // Build per-company milestone adjustments
   const milestoneAdjustmentByCompany = buildMilestoneAdjustmentByCompany(
-    billingResult.companies,
+    companies,
     milestoneByExternalProjectId,
   );
 
@@ -103,7 +112,7 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
 
   // Total filtered billing cents (for grand total)
   let totalFilteredBillingCents = 0;
-  for (const cb of filteredCompanyBillings) {
+  for (const cb of companyBillings) {
     totalFilteredBillingCents += cb.totalCents;
   }
 
@@ -122,7 +131,7 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
   rows.push(csvRow(header));
 
   // Sort companies alphabetically (matching RevenueTable)
-  const sortedCompanies = [...billingResult.companies].sort((a, b) =>
+  const sortedCompanies = [...companies].sort((a, b) =>
     a.companyName.localeCompare(b.companyName),
   );
 
@@ -248,19 +257,39 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
   }
 
   // --- TOTAL row ---
-  const grandTotal = billingResult.billedRevenue + (totalFilteredBillingCents / 100) + totalMilestoneAdjustment;
+  // When filtering by company, recompute aggregated hours from the filtered set
+  const totalActualHours = companyIds
+    ? companies.reduce((sum, c) => sum + c.actualHours, 0)
+    : billingResult.actualHours;
+  const totalRoundedHours = companyIds
+    ? companies.reduce((sum, c) => sum + c.roundedHours, 0)
+    : billingResult.roundedHours;
+  const totalAdjustedHours = companyIds
+    ? companies.reduce((sum, c) => sum + c.adjustedHours, 0)
+    : billingResult.adjustedHours;
+  const totalBilledHours = companyIds
+    ? companies.reduce((sum, c) => sum + c.billedHours, 0)
+    : billingResult.billedHours;
+  const totalUnbillableHours = companyIds
+    ? companies.reduce((sum, c) => sum + c.unbillableHours, 0)
+    : billingResult.unbillableHours;
+  const totalBilledRevenue = companyIds
+    ? companies.reduce((sum, c) => sum + c.billedRevenue, 0)
+    : billingResult.billedRevenue;
+
+  const grandTotal = totalBilledRevenue + (totalFilteredBillingCents / 100) + totalMilestoneAdjustment;
 
   if (hasBillingLimits) {
     rows.push(csvRow([
       'TOTAL',
       '', // Project
       '', // Task
-      formatHours(billingResult.actualHours),
-      formatHours(billingResult.roundedHours),
+      formatHours(totalActualHours),
+      formatHours(totalRoundedHours),
       '', // Carryover In
-      formatHours(billingResult.adjustedHours),
-      formatHours(billingResult.billedHours),
-      billingResult.unbillableHours > 0 ? formatHours(billingResult.unbillableHours) : '',
+      formatHours(totalAdjustedHours),
+      formatHours(totalBilledHours),
+      totalUnbillableHours > 0 ? formatHours(totalUnbillableHours) : '',
       '', // Rounding
       '', // Rate
       '', // Task Revenue
@@ -272,8 +301,8 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
       'TOTAL',
       '', // Project
       '', // Task
-      formatHours(billingResult.actualHours),
-      formatHours(billingResult.roundedHours),
+      formatHours(totalActualHours),
+      formatHours(totalRoundedHours),
       '', // Rounding
       '', // Rate
       '', // Task Revenue

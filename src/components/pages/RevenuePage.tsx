@@ -11,6 +11,8 @@ import { RangeSelector } from '../atoms/RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
+import { Modal } from '../Modal';
+import { Button } from '../Button';
 import type { DateRange, MonthSelection } from '../../types';
 
 export function RevenuePage() {
@@ -145,16 +147,86 @@ export function RevenuePage() {
   // Use filteredBillingCents to exclude linked milestones (they're accounted for in milestoneAdjustment)
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
-  // Export to CSV
+  // --- Export modal state ---
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
+
+  // Build alphabetized company list with revenue for the modal
+  const sortedCompaniesForExport = useMemo(() => {
+    // Merge time-based companies and fixed-billing-only companies
+    const companyMap = new Map<string, { id: string; name: string; revenue: number }>();
+
+    for (const c of billingResult.companies) {
+      const billingData = filteredCompanyBillings.find(cb => cb.companyClientId === c.companyId);
+      const billingCents = billingData?.totalCents || 0;
+      let adj = 0;
+      for (const project of c.projects) {
+        if (project.projectId) {
+          const milestone = milestoneByExternalProjectId.get(project.projectId);
+          if (milestone) {
+            adj += (milestone.totalCents / 100) - project.billedRevenue;
+          }
+        }
+      }
+      companyMap.set(c.companyId, {
+        id: c.companyId,
+        name: c.companyName,
+        revenue: c.billedRevenue + (billingCents / 100) + adj,
+      });
+    }
+
+    // Include fixed-billing-only companies not already in the time-based set
+    for (const cb of filteredCompanyBillings) {
+      if (!companyMap.has(cb.companyClientId)) {
+        companyMap.set(cb.companyClientId, {
+          id: cb.companyClientId,
+          name: cb.companyName,
+          revenue: cb.totalCents / 100,
+        });
+      }
+    }
+
+    return [...companyMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [billingResult.companies, filteredCompanyBillings, milestoneByExternalProjectId]);
+
+  // Open modal and select all companies by default
+  const handleOpenExportModal = useCallback(() => {
+    setSelectedCompanyIds(new Set(sortedCompaniesForExport.map(c => c.id)));
+    setShowExportModal(true);
+  }, [sortedCompaniesForExport]);
+
+  const handleToggleCompany = useCallback((companyId: string) => {
+    setSelectedCompanyIds(prev => {
+      const next = new Set(prev);
+      if (next.has(companyId)) {
+        next.delete(companyId);
+      } else {
+        next.add(companyId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleAll = useCallback(() => {
+    setSelectedCompanyIds(prev => {
+      if (prev.size === sortedCompaniesForExport.length) {
+        return new Set();
+      }
+      return new Set(sortedCompaniesForExport.map(c => c.id));
+    });
+  }, [sortedCompaniesForExport]);
+
   const handleExportCSV = useCallback(() => {
     const csvContent = generateRevenueCSV({
       billingResult,
       filteredCompanyBillings,
       milestoneByExternalProjectId,
       monthLabel: format(dateRange.start, 'MMMM yyyy'),
+      companyIds: selectedCompanyIds,
     });
     downloadCSV(csvContent, `revenue-${format(dateRange.start, 'yyyy-MM')}.csv`);
-  }, [billingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start]);
+    setShowExportModal(false);
+  }, [billingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start, selectedCompanyIds]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -179,7 +251,7 @@ export function RevenuePage() {
         variant="export"
         dateRange={dateRange}
         onChange={setDateRange}
-        onExport={handleExportCSV}
+        onExport={handleOpenExportModal}
         exportDisabled={loading || entries.length === 0}
       />
 
@@ -229,6 +301,73 @@ export function RevenuePage() {
           milestoneByExternalProjectId={milestoneByExternalProjectId}
         />
       )}
+
+      {/* Export CSV Modal */}
+      <Modal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export Revenue CSV"
+        maxWidth="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowExportModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleExportCSV}
+              disabled={selectedCompanyIds.size === 0}
+            >
+              Export
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-vercel-gray-400">
+            {format(dateRange.start, 'MMMM yyyy')}
+          </p>
+
+          {/* Select All */}
+          <label className="flex items-center gap-3 pb-3 border-b border-vercel-gray-100 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedCompanyIds.size === sortedCompaniesForExport.length}
+              ref={(el) => {
+                if (el) {
+                  el.indeterminate =
+                    selectedCompanyIds.size > 0 &&
+                    selectedCompanyIds.size < sortedCompaniesForExport.length;
+                }
+              }}
+              onChange={handleToggleAll}
+              className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+            />
+            <span className="text-sm font-medium text-vercel-gray-600">Select All</span>
+          </label>
+
+          {/* Company list */}
+          <div className="max-h-72 overflow-y-auto space-y-1 scrollbar-thin">
+            {sortedCompaniesForExport.map(company => (
+              <label
+                key={company.id}
+                className="flex items-center gap-3 py-1.5 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCompanyIds.has(company.id)}
+                  onChange={() => handleToggleCompany(company.id)}
+                  className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+                />
+                <span className="flex-1 text-sm text-vercel-gray-600">{company.name}</span>
+                <span className="text-sm text-vercel-gray-300 tabular-nums">
+                  {formatCurrency(company.revenue)}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
