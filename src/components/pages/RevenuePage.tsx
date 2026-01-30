@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
+import { useCarryoverSync } from '../../hooks/useCarryoverSync';
 import { useBillings } from '../../hooks/useBillings';
 import {
   formatCurrency,
@@ -55,6 +56,14 @@ export function RevenuePage() {
     entries,
     projectsWithRates,
     projectCanonicalIdLookup,
+  });
+
+  // Auto-persist carryover to database so next month can read it
+  useCarryoverSync({
+    billingResult,
+    projectsWithRates,
+    selectedMonth,
+    loading,
   });
 
   // Fetch fixed billings for the date range

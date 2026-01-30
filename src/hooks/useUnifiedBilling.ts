@@ -235,6 +235,43 @@ export function useUnifiedBilling({
       getCanonicalCompanyByProject,
     });
 
+    // Inject carryover-only projects: projects with carryoverHoursIn > 0
+    // but no timesheet entries this month. These still generate revenue
+    // from carried-over hours even with zero new work.
+    const projectIdsInInputs = new Set<string>();
+    for (const company of inputs) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          projectIdsInInputs.add(project.projectId);
+        }
+      }
+    }
+
+    for (const [externalId, config] of billingConfigByProjectId) {
+      if (config.carryoverHoursIn > 0 && !projectIdsInInputs.has(externalId)) {
+        const companyInfo = getCanonicalCompanyByProject(externalId);
+        const projectName = projectNameByCanonicalId.get(externalId) || externalId;
+
+        // Find or create company entry
+        let companyInput = inputs.find(c => c.companyId === companyInfo.canonicalClientId);
+        if (!companyInput) {
+          companyInput = {
+            companyId: companyInfo.canonicalClientId,
+            companyName: companyInfo.canonicalDisplayName,
+            projects: [],
+          };
+          inputs.push(companyInput);
+        }
+
+        companyInput.projects.push({
+          projectId: externalId,
+          projectName,
+          tasks: [],
+          billingConfig: config,
+        });
+      }
+    }
+
     // Calculate billing
     const result = calculateMonthlyBilling(inputs);
 
