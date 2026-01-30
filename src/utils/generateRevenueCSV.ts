@@ -4,13 +4,15 @@
  * Generates a CSV string from pre-computed billing data (MonthlyBillingResult),
  * fixed billings (CompanyBillingsGroup[]), and milestone overrides.
  *
- * Column layout mirrors RevenueTable exactly.
+ * Column layout: Company | Project | Task | hours... | Task Revenue | Project Revenue | Company Revenue
+ * Mirrors the old export structure with added company/project summary rows,
+ * fixed billing rows, and a TOTAL row.
  */
 
 import type { MonthlyBillingResult, CompanyBillingResult } from './billingCalculations';
 import type { CompanyBillingsGroup } from '../types';
 import { TRANSACTION_TYPE_LABELS } from '../types';
-import { minutesToHours } from './calculations';
+import { formatCurrency, formatHours } from './billing';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,23 +38,9 @@ function csvRow(cells: string[]): string {
   return cells.map(csvCell).join(',');
 }
 
-function formatDollars(amount: number): string {
-  return amount.toFixed(2);
-}
-
-function formatCentsAsDollars(cents: number): string {
-  return (cents / 100).toFixed(2);
-}
-
 /** Format cents as display currency string like "$1,234.56" */
 function formatCentsDisplay(cents: number): string {
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(dollars);
+  return formatCurrency(cents / 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +107,9 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
     totalFilteredBillingCents += cb.totalCents;
   }
 
+  // Column counts: Extended = 14, Standard = 10
+  const colCount = hasBillingLimits ? 14 : 10;
+
   const rows: string[] = [];
 
   // --- Title row ---
@@ -126,8 +117,8 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
 
   // --- Header row ---
   const header = hasBillingLimits
-    ? ['Name', 'Actual', 'Rounded', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate', 'Revenue']
-    : ['Name', 'Actual', 'Rounded', 'Rounding', 'Rate', 'Revenue'];
+    ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue']
+    : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue'];
   rows.push(csvRow(header));
 
   // Sort companies alphabetically (matching RevenueTable)
@@ -135,13 +126,16 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
     a.companyName.localeCompare(b.companyName),
   );
 
+  // Helper: build an empty row of the right column count
+  const emptyRow = () => Array(colCount).fill('') as string[];
+
   // --- Company / Project / Task rows ---
   for (let ci = 0; ci < sortedCompanies.length; ci++) {
     const company = sortedCompanies[ci];
 
     // Separator between companies (empty row)
     if (ci > 0) {
-      rows.push(csvRow(hasBillingLimits ? Array(9).fill('') : Array(6).fill('')));
+      rows.push(csvRow(emptyRow()));
     }
 
     // Company billing data
@@ -150,143 +144,104 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
     const milestoneAdj = milestoneAdjustmentByCompany.get(company.companyId) || 0;
     const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
 
-    // Company row
-    if (hasBillingLimits) {
-      rows.push(csvRow([
-        company.companyName,
-        minutesToHours(company.actualMinutes),
-        minutesToHours(company.roundedMinutes),
-        company.adjustedHours.toFixed(2),
-        company.billedHours.toFixed(2),
-        company.unbillableHours > 0 ? company.unbillableHours.toFixed(2) : '\u2014',
-        '\u2014',
-        '\u2014',
-        formatDollars(companyTotalRevenue),
-      ]));
-    } else {
-      rows.push(csvRow([
-        company.companyName,
-        minutesToHours(company.actualMinutes),
-        minutesToHours(company.roundedMinutes),
-        '\u2014',
-        '\u2014',
-        formatDollars(companyTotalRevenue),
-      ]));
-    }
+    // --- Company summary row ---
+    // Company name in col 0, Company Revenue in last col, rest blank
+    const companyRow = emptyRow();
+    companyRow[0] = company.companyName;
+    companyRow[colCount - 1] = formatCurrency(companyTotalRevenue);
+    rows.push(csvRow(companyRow));
 
     // Sort projects alphabetically (matching RevenueTable)
     const sortedProjects = [...company.projects].sort((a, b) =>
       a.projectName.localeCompare(b.projectName),
     );
 
-    // Project rows
+    // --- Project rows ---
     for (const project of sortedProjects) {
-      const roundingLabel = project.rounding === 0 ? '\u2014' : `${project.rounding}m`;
-      const rateStr = `$${project.rate.toFixed(2)}`;
-
-      // Check milestone
+      // Check milestone for revenue display
       const milestone = project.projectId
         ? milestoneByExternalProjectId.get(project.projectId)
         : undefined;
-      const revenueStr = milestone
+      const projectRevenueStr = milestone
         ? `Revenue Milestone ${formatCentsDisplay(milestone.totalCents)}`
-        : formatDollars(project.billedRevenue);
+        : formatCurrency(project.billedRevenue);
 
-      if (hasBillingLimits) {
-        rows.push(csvRow([
-          `  ${project.projectName}`,
-          minutesToHours(project.actualMinutes),
-          minutesToHours(project.roundedMinutes),
-          project.adjustedHours.toFixed(2),
-          project.billedHours.toFixed(2),
-          project.unbillableHours > 0 ? project.unbillableHours.toFixed(2) : '\u2014',
-          roundingLabel,
-          rateStr,
-          revenueStr,
-        ]));
-      } else {
-        rows.push(csvRow([
-          `  ${project.projectName}`,
-          minutesToHours(project.actualMinutes),
-          minutesToHours(project.roundedMinutes),
-          roundingLabel,
-          rateStr,
-          revenueStr,
-        ]));
-      }
+      // Project summary row: Company + Project name, Project Revenue in second-to-last col
+      const projectRow = emptyRow();
+      projectRow[0] = company.companyName;
+      projectRow[1] = project.projectName;
+      projectRow[colCount - 2] = projectRevenueStr; // Project Revenue column
+      rows.push(csvRow(projectRow));
 
-      // Task rows (sorted alphabetically, matching RevenueTable)
+      // Task rows (sorted by hours descending, matching old export)
       const sortedTasks = [...project.tasks].sort((a, b) =>
-        a.taskName.localeCompare(b.taskName),
+        b.actualMinutes - a.actualMinutes,
       );
 
-      for (const task of sortedTasks) {
-        const taskRoundingLabel = project.rounding === 0 ? '\u2014' : `${project.rounding}m`;
-        const taskRateStr = `$${project.rate.toFixed(2)}`;
+      const roundingLabel = project.rounding === 0 ? '\u2014' : `${project.rounding}m`;
 
+      let isFirstTask = true;
+      for (const task of sortedTasks) {
         if (hasBillingLimits) {
           rows.push(csvRow([
-            `    ${task.taskName}`,
-            minutesToHours(task.actualMinutes),
-            minutesToHours(task.roundedMinutes),
-            '\u2014',
-            '\u2014',
-            '\u2014',
-            taskRoundingLabel,
-            taskRateStr,
-            formatDollars(task.baseRevenue),
+            company.companyName,
+            project.projectName,
+            task.taskName,
+            task.actualHours.toFixed(2),
+            task.roundedHours.toFixed(2),
+            // Billing limit columns: project-level data on first task only
+            isFirstTask ? formatHours(project.carryoverIn) : '',
+            isFirstTask ? formatHours(project.adjustedHours) : '',
+            isFirstTask ? formatHours(project.billedHours) : '',
+            isFirstTask && project.unbillableHours > 0 ? formatHours(project.unbillableHours) : '',
+            roundingLabel,
+            project.rate.toFixed(2),
+            formatCurrency(task.baseRevenue),
+            '', // Project Revenue (shown on project summary row)
+            '', // Company Revenue (shown on company summary row)
           ]));
         } else {
           rows.push(csvRow([
-            `    ${task.taskName}`,
-            minutesToHours(task.actualMinutes),
-            minutesToHours(task.roundedMinutes),
-            taskRoundingLabel,
-            taskRateStr,
-            formatDollars(task.baseRevenue),
+            company.companyName,
+            project.projectName,
+            task.taskName,
+            task.actualHours.toFixed(2),
+            task.roundedHours.toFixed(2),
+            roundingLabel,
+            project.rate.toFixed(2),
+            formatCurrency(task.baseRevenue),
+            '', // Project Revenue
+            '', // Company Revenue
           ]));
         }
+        isFirstTask = false;
       }
     }
 
-    // Fixed Billing rows (after projects, matching RevenueTable)
+    // --- Fixed Billing rows (after projects, matching RevenueTable) ---
     if (companyBillingData) {
       for (const billing of companyBillingData.billings) {
         const typeLabel = TRANSACTION_TYPE_LABELS[billing.type];
 
-        if (hasBillingLimits) {
-          rows.push(csvRow([
-            `  ${billing.name}`,
-            '\u2014', '\u2014', '\u2014', '\u2014', '\u2014', '\u2014',
-            typeLabel,
-            formatCentsAsDollars(billing.totalCents),
-          ]));
-        } else {
-          rows.push(csvRow([
-            `  ${billing.name}`,
-            '\u2014', '\u2014', '\u2014',
-            typeLabel,
-            formatCentsAsDollars(billing.totalCents),
-          ]));
-        }
+        // Billing summary row (project-level): billing name in Project col, revenue in Project Revenue col
+        const billingRow = emptyRow();
+        billingRow[0] = company.companyName;
+        billingRow[1] = billing.name;
+        // Rate column = type label
+        billingRow[hasBillingLimits ? 10 : 6] = typeLabel;
+        // Project Revenue column
+        billingRow[colCount - 2] = formatCentsDisplay(billing.totalCents);
+        rows.push(csvRow(billingRow));
 
-        // Transaction rows (nested under billing)
+        // Transaction rows (task-level)
         for (const tx of billing.transactions) {
-          if (hasBillingLimits) {
-            rows.push(csvRow([
-              `    ${tx.description}`,
-              '\u2014', '\u2014', '\u2014', '\u2014', '\u2014', '\u2014',
-              '\u2014',
-              formatCentsAsDollars(tx.amountCents),
-            ]));
-          } else {
-            rows.push(csvRow([
-              `    ${tx.description}`,
-              '\u2014', '\u2014', '\u2014',
-              '\u2014',
-              formatCentsAsDollars(tx.amountCents),
-            ]));
-          }
+          const txRow = emptyRow();
+          txRow[0] = company.companyName;
+          txRow[1] = billing.name;
+          txRow[2] = tx.description;
+          // Task Revenue column
+          txRow[colCount - 3] = formatCentsDisplay(tx.amountCents);
+          rows.push(csvRow(txRow));
         }
       }
     }
@@ -298,23 +253,32 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
   if (hasBillingLimits) {
     rows.push(csvRow([
       'TOTAL',
-      minutesToHours(billingResult.actualMinutes),
-      minutesToHours(billingResult.roundedMinutes),
-      billingResult.adjustedHours.toFixed(2),
-      billingResult.billedHours.toFixed(2),
-      billingResult.unbillableHours > 0 ? billingResult.unbillableHours.toFixed(2) : '\u2014',
-      '\u2014',
-      '\u2014',
-      formatDollars(grandTotal),
+      '', // Project
+      '', // Task
+      formatHours(billingResult.actualHours),
+      formatHours(billingResult.roundedHours),
+      '', // Carryover In
+      formatHours(billingResult.adjustedHours),
+      formatHours(billingResult.billedHours),
+      billingResult.unbillableHours > 0 ? formatHours(billingResult.unbillableHours) : '',
+      '', // Rounding
+      '', // Rate
+      '', // Task Revenue
+      '', // Project Revenue
+      formatCurrency(grandTotal),
     ]));
   } else {
     rows.push(csvRow([
       'TOTAL',
-      minutesToHours(billingResult.actualMinutes),
-      minutesToHours(billingResult.roundedMinutes),
-      '\u2014',
-      '\u2014',
-      formatDollars(grandTotal),
+      '', // Project
+      '', // Task
+      formatHours(billingResult.actualHours),
+      formatHours(billingResult.roundedHours),
+      '', // Rounding
+      '', // Rate
+      '', // Task Revenue
+      '', // Project Revenue
+      formatCurrency(grandTotal),
     ]));
   }
 
