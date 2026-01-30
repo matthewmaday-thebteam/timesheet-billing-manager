@@ -163,7 +163,7 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
         ? milestoneByExternalProjectId.get(project.projectId)
         : undefined;
       const projectRevenueStr = milestone
-        ? `Revenue Milestone ${formatCentsDisplay(milestone.totalCents)}`
+        ? formatCentsDisplay(milestone.totalCents)
         : formatCurrency(project.billedRevenue);
 
       // Project summary row: Company + Project name, Project Revenue in second-to-last col
