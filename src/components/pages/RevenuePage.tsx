@@ -147,6 +147,21 @@ export function RevenuePage() {
   // Use filteredBillingCents to exclude linked milestones (they're accounted for in milestoneAdjustment)
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Earned revenue: billed revenue + dollar value of hours rolled over or lost to max cap
+  // For milestone projects the milestone IS the earned amount (no rollover concept)
+  const rolledOverRevenue = useMemo(() => {
+    let extra = 0;
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        // Skip milestone-linked projects — milestone amount is the earned amount
+        if (project.projectId && milestoneByExternalProjectId.has(project.projectId)) continue;
+        extra += (project.carryoverOut + project.unbillableHours) * project.rate;
+      }
+    }
+    return extra;
+  }, [billingResult.companies, milestoneByExternalProjectId]);
+  const earnedTotalRevenue = combinedTotalRevenue + rolledOverRevenue;
+
   // --- Export modal state ---
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
@@ -239,9 +254,17 @@ export function RevenuePage() {
           </p>
         </div>
         {!loading && !billingsLoading && (
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-success" />
-            <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(combinedTotalRevenue)}</span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-success" />
+              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(combinedTotalRevenue)}</span>
+            </div>
+            {Math.round(earnedTotalRevenue * 100) !== Math.round(combinedTotalRevenue * 100) && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-vercel-gray-300 uppercase tracking-wide">Earned</span>
+                <span className="text-lg font-semibold text-vercel-gray-400">{formatCurrency(earnedTotalRevenue)}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
