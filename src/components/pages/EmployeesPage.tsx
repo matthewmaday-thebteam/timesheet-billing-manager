@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
@@ -7,6 +7,7 @@ import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMappi
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { supabase } from '../../lib/supabase';
+import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { EmployeePerformance } from '../EmployeePerformance';
 import { MetricCard } from '../MetricCard';
@@ -14,7 +15,7 @@ import { Spinner } from '../Spinner';
 import { DEFAULT_ROUNDING_INCREMENT, formatCurrency } from '../../utils/billing';
 import { minutesToHours } from '../../utils/calculations';
 import { useUtilizationMetrics } from '../../hooks/useUtilizationMetrics';
-import type { DateRange, MonthSelection, RoundingIncrement, BulgarianHoliday } from '../../types';
+import type { MonthSelection, RoundingIncrement, BulgarianHoliday } from '../../types';
 
 /**
  * Round minutes up to the nearest increment (matching billingCalculations.ts)
@@ -25,13 +26,7 @@ function roundMinutes(minutes: number, increment: RoundingIncrement): number {
 }
 
 export function EmployeesPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
   const { entries, userIdToDisplayNameLookup, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
 
@@ -269,6 +264,9 @@ export function EmployeesPage() {
         onChange={setDateRange}
         onExport={handleExportCSV}
         exportDisabled={loading || entries.length === 0}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
       />
 
       {/* Utilization Metrics */}

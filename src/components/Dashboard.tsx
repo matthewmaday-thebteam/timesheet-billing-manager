@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { format } from 'date-fns';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
 import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
@@ -11,6 +11,7 @@ import { useEmployeeTableEntities } from '../hooks/useEmployeeTableEntities';
 import { useTimeOff } from '../hooks/useTimeOff';
 import { useUtilizationMetrics } from '../hooks/useUtilizationMetrics';
 import { useAuth } from '../contexts/AuthContext';
+import { useDateFilter } from '../contexts/DateFilterContext';
 import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
@@ -23,7 +24,7 @@ import { Spinner } from './Spinner';
 import { Button } from './Button';
 import { Card } from './Card';
 import { DailyHoursChart } from './atoms/charts/DailyHoursChart';
-import type { DateRange, MonthSelection } from '../types';
+import type { MonthSelection } from '../types';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
 function getGreeting(): string {
@@ -35,13 +36,7 @@ function getGreeting(): string {
 
 export function Dashboard() {
   const { user } = useAuth();
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
   // Modal state for under hours
   const [isUnderHoursModalOpen, setIsUnderHoursModalOpen] = useState(false);
@@ -222,7 +217,14 @@ export function Dashboard() {
           </div>
         </section>
 
-        <RangeSelector variant="dateRange" dateRange={dateRange} onChange={setDateRange} />
+        <RangeSelector
+          variant="dateRange"
+          dateRange={dateRange}
+          onChange={setDateRange}
+          controlledMode={mode}
+          controlledSelectedMonth={filterSelectedMonth}
+          onFilterChange={setFilter}
+        />
 
         {/* Stats Overview - Above Charts */}
         {loading || billingsLoading ? (

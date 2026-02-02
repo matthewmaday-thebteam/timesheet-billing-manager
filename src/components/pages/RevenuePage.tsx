@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
@@ -7,22 +7,17 @@ import { useCarryoverSync } from '../../hooks/useCarryoverSync';
 import { useBillings } from '../../hooks/useBillings';
 import { formatCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
+import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
-import type { DateRange, MonthSelection } from '../../types';
+import type { MonthSelection } from '../../types';
 
 export function RevenuePage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
   const { entries, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
 
@@ -276,6 +271,9 @@ export function RevenuePage() {
         onChange={setDateRange}
         onExport={handleOpenExportModal}
         exportDisabled={loading || entries.length === 0}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
       />
 
       {/* Error State */}

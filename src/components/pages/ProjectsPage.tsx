@@ -1,23 +1,18 @@
-import { useState, useMemo } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { useMemo } from 'react';
+import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useProjectHierarchy } from '../../hooks/useProjectHierarchy';
 import { formatCurrency } from '../../utils/billing';
+import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { ProjectHierarchyTable } from '../atoms/ProjectHierarchyTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
-import type { DateRange, MonthSelection } from '../../types';
+import type { MonthSelection } from '../../types';
 
 export function ProjectsPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
   const {
     entries,
@@ -76,6 +71,9 @@ export function ProjectsPage() {
         variant="dateRange"
         dateRange={dateRange}
         onChange={setDateRange}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
       />
 
       {/* Error State */}

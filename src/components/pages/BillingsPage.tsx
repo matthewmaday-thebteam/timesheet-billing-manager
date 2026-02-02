@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { startOfMonth, endOfMonth, format, parse } from 'date-fns';
+import { startOfMonth, format, parse } from 'date-fns';
 import { useBillings, formatCentsToDisplay, parseMoneyToCents } from '../../hooks/useBillings';
 import { useCompanies } from '../../hooks/useCompanies';
+import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
@@ -13,7 +14,6 @@ import { DatePicker } from '../DatePicker';
 import { DropdownMenu } from '../DropdownMenu';
 import { supabase } from '../../lib/supabase';
 import type {
-  DateRange,
   BillingDisplay,
   BillingTransactionDisplay,
   TransactionType,
@@ -60,14 +60,8 @@ async function fetchProjectsForCompany(companyId: string): Promise<ProjectWithGr
 }
 
 export function BillingsPage() {
-  // Date range state
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  // Date range from shared context
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
   // Fetch billings data
   const {
@@ -442,6 +436,9 @@ export function BillingsPage() {
         onChange={setDateRange}
         onExport={() => {}}
         onAddBilling={handleOpenCreateBilling}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
       />
 
       {/* Error State */}

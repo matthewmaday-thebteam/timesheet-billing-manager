@@ -36,6 +36,12 @@ interface RangeSelectorProps {
     current?: string;
     month?: string;
   };
+  /** Controlled mode — when provided, overrides internal state */
+  controlledMode?: RangeSelectorMode;
+  /** Controlled selectedMonth — when provided, overrides internal state */
+  controlledSelectedMonth?: Date;
+  /** Callback when mode/selectedMonth change (for controlled usage) */
+  onFilterChange?: (mode: RangeSelectorMode, selectedMonth: Date, dateRange: DateRange) => void;
 }
 
 export function RangeSelector({
@@ -46,25 +52,38 @@ export function RangeSelector({
   exportDisabled = false,
   onAddBilling,
   labels = {},
+  controlledMode,
+  controlledSelectedMonth,
+  onFilterChange,
 }: RangeSelectorProps) {
-  const [mode, setMode] = useState<RangeSelectorMode>('current');
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [internalMode, setInternalMode] = useState<RangeSelectorMode>('current');
+  const [internalSelectedMonth, setInternalSelectedMonth] = useState(new Date());
 
-  // Sync selectedMonth with dateRange when it changes externally
+  const isControlled = controlledMode !== undefined;
+  const mode = isControlled ? controlledMode : internalMode;
+  const selectedMonth = isControlled ? controlledSelectedMonth! : internalSelectedMonth;
+
+  // Sync internal selectedMonth with dateRange when it changes externally (uncontrolled only)
   useEffect(() => {
-    if (dateRange) {
-      setSelectedMonth(dateRange.start);
+    if (!isControlled && dateRange) {
+      setInternalSelectedMonth(dateRange.start);
     }
-  }, [dateRange?.start]);
+  }, [isControlled, dateRange?.start]);
 
   const handleModeChange = (newMode: RangeSelectorMode) => {
-    setMode(newMode);
-    if (newMode === 'current' && onChange) {
+    if (!isControlled) {
+      setInternalMode(newMode);
+    }
+    if (newMode === 'current') {
       const now = new Date();
-      onChange({
-        start: startOfMonth(now),
-        end: endOfMonth(now),
-      });
+      const newRange = { start: startOfMonth(now), end: endOfMonth(now) };
+      onChange?.(newRange);
+      onFilterChange?.(newMode, now, newRange);
+    } else {
+      // Switching to 'month' mode — keep current dateRange, just notify mode change
+      if (dateRange) {
+        onFilterChange?.(newMode, selectedMonth, dateRange);
+      }
     }
   };
 
@@ -72,13 +91,12 @@ export function RangeSelector({
     const newMonth = direction === 'prev'
       ? subMonths(selectedMonth, 1)
       : addMonths(selectedMonth, 1);
-    setSelectedMonth(newMonth);
-    if (onChange) {
-      onChange({
-        start: startOfMonth(newMonth),
-        end: endOfMonth(newMonth),
-      });
+    if (!isControlled) {
+      setInternalSelectedMonth(newMonth);
     }
+    const newRange = { start: startOfMonth(newMonth), end: endOfMonth(newMonth) };
+    onChange?.(newRange);
+    onFilterChange?.('month', newMonth, newRange);
   };
 
   const currentLabel = labels.current || 'Current Month';
