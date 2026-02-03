@@ -126,7 +126,7 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
 
   // --- Header row ---
   const header = hasBillingLimits
-    ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover In', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue']
+    ? ['Company', 'Project', 'Task', 'Actual', 'Rounded', 'Carryover', 'Adjusted', 'Billed', 'Unbillable', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue']
     : ['Company', 'Project', 'Task', 'Actual', 'Hours', 'Rounding', 'Rate ($/hr)', 'Task Revenue', 'Project Revenue', 'Company Revenue'];
   rows.push(csvRow(header));
 
@@ -154,9 +154,22 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
     const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
 
     // --- Company summary row ---
-    // Company name in col 0, Company Revenue in last col, rest blank
+    // Show all hour columns: Actual, Rounded, Carryover, Adjusted, Billed
+    const companyCarryoverIn = company.projects.reduce((sum, p) => sum + p.carryoverIn, 0);
     const companyRow = emptyRow();
     companyRow[0] = company.companyName;
+    if (hasBillingLimits) {
+      companyRow[3] = formatHours(company.actualHours); // Actual
+      companyRow[4] = formatHours(company.roundedHours); // Rounded
+      if (companyCarryoverIn > 0) {
+        companyRow[5] = formatHours(companyCarryoverIn); // Carryover
+      }
+      companyRow[6] = formatHours(company.adjustedHours); // Adjusted
+      companyRow[7] = formatHours(company.billedHours); // Billed
+    } else {
+      companyRow[3] = formatHours(company.actualHours); // Actual
+      companyRow[4] = formatHours(company.billedHours); // Hours column
+    }
     companyRow[colCount - 1] = formatCurrency(companyTotalRevenue);
     rows.push(csvRow(companyRow));
 
@@ -175,10 +188,23 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
         ? formatCentsDisplay(milestone.totalCents)
         : formatCurrency(project.billedRevenue);
 
-      // Project summary row: Company + Project name, Project Revenue in second-to-last col
+      // Project summary row: Show all hour columns: Actual, Rounded, Carryover, Adjusted, Billed
       const projectRow = emptyRow();
       projectRow[0] = company.companyName;
       projectRow[1] = project.projectName;
+      if (hasBillingLimits) {
+        projectRow[3] = formatHours(project.actualHours); // Actual
+        projectRow[4] = formatHours(project.roundedHours); // Rounded
+        if (project.carryoverIn > 0) {
+          projectRow[5] = formatHours(project.carryoverIn); // Carryover (hours from previous months)
+        }
+        projectRow[6] = formatHours(project.adjustedHours); // Adjusted
+        projectRow[7] = formatHours(project.billedHours); // Billed
+      } else {
+        // Standard layout: show actual and billed hours
+        projectRow[3] = formatHours(project.actualHours); // Actual
+        projectRow[4] = formatHours(project.billedHours); // Hours column
+      }
       projectRow[colCount - 2] = projectRevenueStr; // Project Revenue column
       rows.push(csvRow(projectRow));
 
@@ -189,7 +215,6 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
 
       const roundingLabel = project.rounding === 0 ? '\u2014' : `${project.rounding}m`;
 
-      let isFirstTask = true;
       for (const task of sortedTasks) {
         if (hasBillingLimits) {
           rows.push(csvRow([
@@ -198,11 +223,10 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
             task.taskName,
             task.actualHours.toFixed(2),
             task.roundedHours.toFixed(2),
-            // Billing limit columns: project-level data on first task only
-            isFirstTask ? formatHours(project.carryoverIn) : '',
-            isFirstTask ? formatHours(project.adjustedHours) : '',
-            isFirstTask ? formatHours(project.billedHours) : '',
-            isFirstTask && project.unbillableHours > 0 ? formatHours(project.unbillableHours) : '',
+            '', // Carryover In (shown on project row)
+            '', // Adjusted (shown on project row)
+            '', // Billed (shown on project row)
+            '', // Unbillable (shown on project row)
             roundingLabel,
             project.rate.toFixed(2),
             formatCurrency(task.baseRevenue),
@@ -223,7 +247,6 @@ export function generateRevenueCSV(options: RevenueCSVOptions): string {
             '', // Company Revenue
           ]));
         }
-        isFirstTask = false;
       }
     }
 
