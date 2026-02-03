@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { RangeSelector } from '../atoms/RangeSelector';
+import { RangeSelector } from '../molecules/RangeSelector';
 import { BillingRatesTable } from '../BillingRatesTable';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';

@@ -3,7 +3,7 @@ import { startOfMonth, format, parse } from 'date-fns';
 import { useBillings, formatCentsToDisplay, parseMoneyToCents } from '../../hooks/useBillings';
 import { useCompanies } from '../../hooks/useCompanies';
 import { useDateFilter } from '../../contexts/DateFilterContext';
-import { RangeSelector } from '../atoms/RangeSelector';
+import { RangeSelector } from '../molecules/RangeSelector';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
 import { Spinner } from '../Spinner';

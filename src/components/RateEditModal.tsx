@@ -2,6 +2,7 @@
  * RateEditModal - Edit project rate, rounding, billing limits, and active status
  *
  * Features:
+ * - Month navigation via DateCycle to view/edit different months
  * - Rate input field
  * - Rounding increment select
  * - Billing limits (minimum/maximum hours, carryover)
@@ -11,18 +12,23 @@
  * @category Component
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
 import { Toggle } from './Toggle';
 import { Select } from './Select';
+import { Input } from './Input';
+import { DateCycle } from './molecules/DateCycle';
+import { useSingleProjectRate } from '../hooks/useSingleProjectRate';
 import type { MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement, ProjectBillingLimits } from '../types';
 
 interface RateEditModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Initial project data (for the initial month) */
   project: ProjectRateDisplayWithBilling | null;
+  /** Initial month from the Rates page selection */
   initialMonth: MonthSelection;
   onSave: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
   onSaveRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
@@ -38,6 +44,23 @@ const ROUNDING_OPTIONS = [
   { value: '30', label: '30 minutes' },
 ];
 
+/**
+ * Convert MonthSelection to Date (first of month)
+ */
+function monthToDate(month: MonthSelection): Date {
+  return new Date(month.year, month.month - 1, 1);
+}
+
+/**
+ * Convert Date to MonthSelection
+ */
+function dateToMonth(date: Date): MonthSelection {
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+  };
+}
+
 export function RateEditModal({
   isOpen,
   onClose,
@@ -49,6 +72,25 @@ export function RateEditModal({
   onSaveActiveStatus,
   isSaving,
 }: RateEditModalProps) {
+  // Current month being viewed/edited (can differ from initialMonth via DateCycle)
+  const [currentMonth, setCurrentMonth] = useState<MonthSelection>(initialMonth);
+
+  // Fetch rate data for currentMonth when it differs from initialMonth
+  const isInitialMonth = currentMonth.year === initialMonth.year && currentMonth.month === initialMonth.month;
+  const { projectRate: fetchedProjectRate, isLoading: isLoadingRate } = useSingleProjectRate({
+    projectId: project?.projectId ?? null,
+    month: currentMonth,
+    enabled: isOpen && !isInitialMonth,
+  });
+
+  // Use fetched data when viewing a different month, otherwise use the passed project prop
+  const displayProject = useMemo(() => {
+    if (isInitialMonth) {
+      return project;
+    }
+    return fetchedProjectRate;
+  }, [isInitialMonth, project, fetchedProjectRate]);
+
   // Rate and rounding state
   const [rateValue, setRateValue] = useState<string>('');
   const [roundingValue, setRoundingValue] = useState<RoundingIncrement>(15);
@@ -61,24 +103,37 @@ export function RateEditModal({
   // Active status state
   const [isActiveValue, setIsActiveValue] = useState(true);
 
+  // Track the last key used for form reset to avoid redundant resets
   const [lastResetKey, setLastResetKey] = useState<string>('');
 
-  // Reset form when project/isOpen changes
-  const resetKey = `${project?.projectId ?? 'none'}-${isOpen}`;
+  // Reset currentMonth when modal opens with a new project or the initialMonth changes
   useEffect(() => {
-    if (resetKey !== lastResetKey) {
+    if (isOpen) {
+      setCurrentMonth(initialMonth);
+    }
+  }, [isOpen, initialMonth.year, initialMonth.month, project?.projectId]);
+
+  // Reset form when displayProject changes (different month or different project)
+  const resetKey = `${displayProject?.projectId ?? 'none'}-${currentMonth.year}-${currentMonth.month}-${isOpen}`;
+  useEffect(() => {
+    if (resetKey !== lastResetKey && !isLoadingRate) {
       setLastResetKey(resetKey);
       // Rate and rounding
-      setRateValue(project?.effectiveRate?.toString() || '');
-      setRoundingValue(project?.effectiveRounding ?? 15);
+      setRateValue(displayProject?.effectiveRate?.toString() || '');
+      setRoundingValue(displayProject?.effectiveRounding ?? 15);
       // Billing limits
-      setMinHoursValue(project?.minimumHours?.toString() || '');
-      setMaxHoursValue(project?.maximumHours?.toString() || '');
-      setCarryoverEnabled(project?.carryoverEnabled ?? false);
+      setMinHoursValue(displayProject?.minimumHours?.toString() || '');
+      setMaxHoursValue(displayProject?.maximumHours?.toString() || '');
+      setCarryoverEnabled(displayProject?.carryoverEnabled ?? false);
       // Active status
-      setIsActiveValue(project?.isActive ?? true);
+      setIsActiveValue(displayProject?.isActive ?? true);
     }
-  }, [resetKey, lastResetKey, project]);
+  }, [resetKey, lastResetKey, displayProject, isLoadingRate]);
+
+  const handleMonthChange = (newDate: Date) => {
+    const newMonth = dateToMonth(newDate);
+    setCurrentMonth(newMonth);
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -99,30 +154,31 @@ export function RateEditModal({
       return; // Invalid configuration
     }
 
-    // Check what changed
-    const rateChanged = rate !== project.effectiveRate;
-    const roundingChanged = roundingValue !== project.effectiveRounding;
-    const limitsChanged =
-      minHours !== project.minimumHours ||
-      maxHours !== project.maximumHours ||
-      carryoverEnabled !== project.carryoverEnabled;
-    const activeChanged = isActiveValue !== project.isActive;
+    // Compare against displayProject (the data for currentMonth)
+    const rateChanged = displayProject ? rate !== displayProject.effectiveRate : true;
+    const roundingChanged = displayProject ? roundingValue !== displayProject.effectiveRounding : true;
+    const limitsChanged = displayProject
+      ? minHours !== displayProject.minimumHours ||
+        maxHours !== displayProject.maximumHours ||
+        carryoverEnabled !== displayProject.carryoverEnabled
+      : true;
+    const activeChanged = displayProject ? isActiveValue !== displayProject.isActive : true;
 
     let success = true;
 
-    // Save rate if changed
+    // Save rate if changed - use currentMonth, not initialMonth
     if (rateChanged) {
-      success = await onSave(project.projectId, initialMonth, rate);
+      success = await onSave(project.projectId, currentMonth, rate);
     }
 
     // Save rounding if changed
     if (success && roundingChanged) {
-      success = await onSaveRounding(project.projectId, initialMonth, roundingValue);
+      success = await onSaveRounding(project.projectId, currentMonth, roundingValue);
     }
 
     // Save billing limits if changed
     if (success && limitsChanged) {
-      success = await onSaveBillingLimits(project.projectId, initialMonth, {
+      success = await onSaveBillingLimits(project.projectId, currentMonth, {
         minimumHours: minHours,
         maximumHours: maxHours,
         carryoverEnabled,
@@ -131,7 +187,7 @@ export function RateEditModal({
 
     // Save active status if changed
     if (success && activeChanged) {
-      success = await onSaveActiveStatus(project.projectId, initialMonth, isActiveValue);
+      success = await onSaveActiveStatus(project.projectId, currentMonth, isActiveValue);
     }
 
     if (success) {
@@ -139,19 +195,30 @@ export function RateEditModal({
     }
   };
 
-  const handleRateChange = (value: string) => {
+  const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     // Allow empty string, numbers, and decimal
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setRateValue(value);
     }
   };
 
-  const handleHoursChange = (value: string, setter: (v: string) => void) => {
+  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
+    const value = e.target.value;
     // Allow empty string, numbers, and decimal
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setter(value);
     }
   };
+
+  // Validation for min/max hours
+  const showMinMaxError = (() => {
+    if (minHoursValue.trim() === '' || maxHoursValue.trim() === '') return false;
+    const min = parseFloat(minHoursValue);
+    const max = parseFloat(maxHoursValue);
+    if (isNaN(min) || isNaN(max)) return false;
+    return min > max;
+  })();
 
   if (!project) return null;
 
@@ -163,7 +230,7 @@ export function RateEditModal({
       <Button
         variant="primary"
         onClick={() => handleSubmit()}
-        disabled={isSaving || rateValue === ''}
+        disabled={isSaving || isLoadingRate || rateValue === ''}
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
@@ -191,114 +258,104 @@ export function RateEditModal({
           {project.projectName}
         </div>
 
-        {/* Rate Input */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Hourly Rate (USD)
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vercel-gray-400">$</span>
-            <input
+        {/* Month Navigation */}
+        <div className="flex items-center justify-center py-2">
+          <DateCycle
+            selectedDate={monthToDate(currentMonth)}
+            onDateChange={handleMonthChange}
+            size="sm"
+            disabled={isSaving}
+          />
+        </div>
+
+        {/* Loading state when fetching different month's data */}
+        {isLoadingRate ? (
+          <div className="flex items-center justify-center py-8">
+            <Spinner size="md" />
+          </div>
+        ) : (
+          <>
+            {/* Rate Input */}
+            <Input
+              label="Hourly Rate (USD)"
               type="text"
               inputMode="decimal"
               value={rateValue}
-              onChange={(e) => handleRateChange(e.target.value)}
-              className="w-full pl-7 pr-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
+              onChange={handleRateChange}
               placeholder="45.00"
+              prefix="$"
             />
-          </div>
-        </div>
 
-        {/* Divider */}
-        <div className="border-t border-vercel-gray-100" />
+            {/* Divider */}
+            <div className="border-t border-vercel-gray-200" />
 
-        {/* Rounding Select */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Time Rounding
-          </label>
-          <Select
-            value={String(roundingValue)}
-            onChange={(value) => setRoundingValue(Number(value) as RoundingIncrement)}
-            options={ROUNDING_OPTIONS}
-            className="w-full"
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-vercel-gray-100" />
-
-        {/* Active Status Section */}
-        <div>
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-            Minimum Billing Status
-          </label>
-          <Toggle
-            label="Apply minimum billing"
-            description="When off, only bill actual hours worked (no minimum padding)"
-            checked={isActiveValue}
-            onChange={setIsActiveValue}
-          />
-        </div>
-
-        {/* Billing Limits Section (always visible) */}
-        <div className="space-y-4">
-          <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-            Billing Limits
-          </label>
-
-          {/* Min/Max Hours Inputs */}
-          <div className="grid grid-cols-2 gap-4">
+            {/* Rounding Select */}
             <div>
-              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-                Minimum Hours
+              <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                Time Rounding
               </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={minHoursValue}
-                onChange={(e) => handleHoursChange(e.target.value, setMinHoursValue)}
-                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
-                placeholder="0"
+              <Select
+                value={String(roundingValue)}
+                onChange={(value) => setRoundingValue(Number(value) as RoundingIncrement)}
+                options={ROUNDING_OPTIONS}
+                className="w-full"
               />
             </div>
+
+            {/* Divider */}
+            <div className="border-t border-vercel-gray-200" />
+
+            {/* Active Status Section */}
             <div>
-              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
-                Maximum Hours
+              <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                Minimum Billing Status
               </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={maxHoursValue}
-                onChange={(e) => handleHoursChange(e.target.value, setMaxHoursValue)}
-                className="w-full px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-vercel-gray-600 placeholder-vercel-gray-300 focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none transition-colors duration-200 ease-out"
-                placeholder="0"
+              <Toggle
+                label="Apply minimum billing"
+                description="When off, only bill actual hours worked (no minimum padding)"
+                checked={isActiveValue}
+                onChange={setIsActiveValue}
               />
             </div>
-          </div>
 
-          {/* Validation warning - only show if both values are non-empty valid numbers */}
-          {(() => {
-            if (minHoursValue.trim() === '' || maxHoursValue.trim() === '') return false;
-            const min = parseFloat(minHoursValue);
-            const max = parseFloat(maxHoursValue);
-            if (isNaN(min) || isNaN(max)) return false;
-            return min > max;
-          })() && (
-            <p className="text-xs text-error">
-              Minimum hours cannot exceed maximum hours
-            </p>
-          )}
+            {/* Billing Limits Section (always visible) */}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-vercel-gray-600">
+                Billing Limits
+              </label>
 
-          {/* Carryover Toggle */}
-          <Toggle
-            label="Enable carry-over"
-            description="Excess hours roll to next month when maximum is set"
-            checked={carryoverEnabled}
-            onChange={setCarryoverEnabled}
-            disabled={maxHoursValue === ''}
-          />
-        </div>
+              {/* Min/Max Hours Inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Minimum Hours"
+                  type="text"
+                  inputMode="decimal"
+                  value={minHoursValue}
+                  onChange={(e) => handleHoursChange(e, setMinHoursValue)}
+                  placeholder="0"
+                  error={showMinMaxError ? 'Must be less than maximum' : undefined}
+                />
+                <Input
+                  label="Maximum Hours"
+                  type="text"
+                  inputMode="decimal"
+                  value={maxHoursValue}
+                  onChange={(e) => handleHoursChange(e, setMaxHoursValue)}
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Carryover Toggle */}
+              <Toggle
+                label="Enable carry-over"
+                description="Excess hours roll to next month when maximum is set"
+                checked={carryoverEnabled}
+                onChange={setCarryoverEnabled}
+                disabled={maxHoursValue === ''}
+              />
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

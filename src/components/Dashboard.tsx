@@ -16,7 +16,7 @@ import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { buildDbRateLookup } from '../utils/billing';
-import { RangeSelector } from './atoms/RangeSelector';
+import { RangeSelector } from './molecules/RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { UnderHoursModal } from './UnderHoursModal';
@@ -187,6 +187,9 @@ export function Dashboard() {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Month key for the selected date range (used to correct chart data for the right month)
+  const selectedMonthKey = `${dateRange.start.getFullYear()}-${String(dateRange.start.getMonth() + 1).padStart(2, '0')}`;
+
   // Utilization metrics (shared hook — same calculation as EmployeesPage)
   const utilizationMetrics = useUtilizationMetrics({
     dateRange,
@@ -258,6 +261,7 @@ export function Dashboard() {
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
             currentMonthRevenue={combinedTotalRevenue}
+            selectedMonthKey={selectedMonthKey}
             loading={loading || billingsLoading}
             section="resources"
           />
@@ -287,6 +291,7 @@ export function Dashboard() {
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
             currentMonthRevenue={combinedTotalRevenue}
+            selectedMonthKey={selectedMonthKey}
             loading={loading || billingsLoading}
             section="trends"
           />
