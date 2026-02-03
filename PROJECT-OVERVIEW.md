@@ -76,13 +76,14 @@ React 19 + TypeScript 5.9 + Vite 7.2 application for timesheet tracking, billing
 ```
 src/
   components/
-    atoms/           # Reusable atoms (DatePicker, Badge, etc.)
+    atoms/           # Foundational atoms (charts, tables)
+    molecules/       # Composed components (DateCycle, RangeSelector)
     chat/            # Chat-related components
     pages/           # 18 page components (see list below)
     [modals, tables] # EditorModals, Tables, Sections
-  hooks/             # 31 custom React hooks
+  hooks/             # 32 custom React hooks
   utils/             # Billing calcs, formatting, holidays, diagnostics
-  contexts/          # AuthContext (auth state + inactivity timeout)
+  contexts/          # AuthContext, DateFilterContext
   lib/
     supabase.ts      # Supabase client initialization
   types/
@@ -146,3 +147,42 @@ src/
 - `project_id` or `id` for projects, `client_id` for companies, `user_id` for users
 - Failed ID lookups are DATA ERRORS - never silently fall back to name matching
 - All billing calculations must be traceable by ID through the entire pipeline
+
+---
+
+## Design System Components
+
+### Atoms (src/components/)
+| Component | Purpose |
+|-----------|---------|
+| `Button` | Primary, secondary, ghost, danger variants with sizes |
+| `Input` | Form input with label, error, helperText, startAddon/endAddon |
+| `Select` | Dropdown select |
+| `Toggle` | Switch component with label/description |
+| `Spinner` | Loading indicator |
+| `ChevronIcon` | Directional chevron (left/right/up/down) with animation |
+| `Modal` | Dialog component |
+| `Badge` | Status badges |
+| `Card` | Container component |
+
+### Molecules (src/components/molecules/)
+| Component | Purpose |
+|-----------|---------|
+| `DateCycle` | Month navigation (left arrow, date display, right arrow) |
+| `RangeSelector` | Date range selection with mode buttons and export options |
+
+---
+
+## Recent Changes (2026-02-03)
+
+### DateCycle & RateEditModal Integration
+- **New molecule:** `DateCycle` - Reusable month navigation component
+- **New hook:** `useSingleProjectRate` - Fetches rate data for a single project/month
+- **RateEditModal** now supports navigating between months to view/edit rates for different periods
+- Users can change months within the modal and save to the displayed month
+
+### Design System Improvements
+- Extended `Input` atom with `startAddon`/`endAddon` props for currency symbols
+- Extended `ChevronIcon` atom with `direction` prop (left/right/up/down)
+- Reclassified `RangeSelector` from Atom to Molecule (moved to molecules/ folder)
+- Standardized label styling and border colors across modal forms
