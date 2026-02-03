@@ -283,7 +283,7 @@ export function RateEditModal({
               value={rateValue}
               onChange={handleRateChange}
               placeholder="45.00"
-              prefix="$"
+              startAddon="$"
             />
 
             {/* Divider */}
