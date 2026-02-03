@@ -3,20 +3,28 @@
  *
  * A reusable component for selecting time ranges with four variants:
  * - 'dateRange': Current Month / Select Month buttons + date range text
- * - 'export': Current Month / Select Month buttons + Export CSV button
- * - 'exportOnly': Just the Export CSV button (no month selection)
- * - 'billings': Current Month / Select Month buttons + Export CSV + Add Billing buttons
+ * - 'export': Current Month / Select Month buttons + Export dropdown
+ * - 'exportOnly': Just the Export dropdown (no month selection)
+ * - 'billings': Current Month / Select Month buttons + Export dropdown + Add Billing buttons
  *
  * @category Atom
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { Button } from '../Button';
+import { DropdownMenu } from '../DropdownMenu';
+import type { DropdownMenuItem } from '../DropdownMenu';
 import type { DateRange } from '../../types';
 
 export type RangeSelectorMode = 'current' | 'month';
 export type RangeSelectorVariant = 'export' | 'dateRange' | 'exportOnly' | 'billings';
+
+/** Export option for the dropdown */
+export interface ExportOption {
+  label: string;
+  onClick: () => void;
+}
 
 interface RangeSelectorProps {
   /** Variant determines the component layout and right-side content */
@@ -25,7 +33,9 @@ interface RangeSelectorProps {
   dateRange?: DateRange;
   /** Callback when date range changes (not required for 'exportOnly' variant) */
   onChange?: (range: DateRange) => void;
-  /** Callback when Export CSV is clicked (required when variant='export', 'exportOnly', or 'billings') */
+  /** Export options for dropdown (preferred over onExport) */
+  exportOptions?: ExportOption[];
+  /** @deprecated Use exportOptions instead. Callback when Export CSV is clicked */
   onExport?: () => void;
   /** Disable the export button (only applies when variant='export', 'exportOnly', or 'billings') */
   exportDisabled?: boolean;
@@ -44,10 +54,31 @@ interface RangeSelectorProps {
   onFilterChange?: (mode: RangeSelectorMode, selectedMonth: Date, dateRange: DateRange) => void;
 }
 
+/** Download icon for export menu items */
+const DownloadIcon = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
+/** Export CSV button trigger for dropdown */
+const ExportTrigger = (
+  <span className="inline-flex items-center">
+    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    Export CSV
+    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </span>
+);
+
 export function RangeSelector({
   variant,
   dateRange,
   onChange,
+  exportOptions,
   onExport,
   exportDisabled = false,
   onAddBilling,
@@ -99,24 +130,36 @@ export function RangeSelector({
     onFilterChange?.('month', newMonth, newRange);
   };
 
+  // Convert exportOptions to DropdownMenuItem format
+  const dropdownItems: DropdownMenuItem[] = useMemo(() => {
+    if (exportOptions) {
+      return exportOptions.map(opt => ({
+        label: opt.label,
+        onClick: opt.onClick,
+        icon: DownloadIcon,
+      }));
+    }
+    // Legacy support: single onExport callback
+    if (onExport) {
+      return [{ label: 'Export CSV', onClick: onExport, icon: DownloadIcon }];
+    }
+    return [];
+  }, [exportOptions, onExport]);
+
   const currentLabel = labels.current || 'Current Month';
   const monthLabel = labels.month || 'Select Month';
 
-  // Export-only variant: just the container with Export CSV button
+  // Export-only variant: just the container with Export dropdown
   if (variant === 'exportOnly') {
     return (
       <div className="flex flex-wrap items-center gap-4 p-6 bg-white rounded-lg border border-vercel-gray-100">
         <div className="ml-auto">
-          <Button
-            variant="secondary"
-            onClick={onExport}
+          <DropdownMenu
+            items={dropdownItems}
+            trigger={ExportTrigger}
+            menuWidth={220}
             disabled={exportDisabled}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export CSV
-          </Button>
+          />
         </div>
       </div>
     );
@@ -170,29 +213,21 @@ export function RangeSelector({
       {/* Right Content */}
       <div className="ml-auto flex items-center gap-3">
         {variant === 'export' && (
-          <Button
-            variant="secondary"
-            onClick={onExport}
+          <DropdownMenu
+            items={dropdownItems}
+            trigger={ExportTrigger}
+            menuWidth={220}
             disabled={exportDisabled}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export CSV
-          </Button>
+          />
         )}
         {variant === 'billings' && (
           <>
-            <Button
-              variant="secondary"
-              onClick={onExport}
+            <DropdownMenu
+              items={dropdownItems}
+              trigger={ExportTrigger}
+              menuWidth={220}
               disabled={exportDisabled}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export CSV
-            </Button>
+            />
             <Button
               variant="primary"
               onClick={onAddBilling}

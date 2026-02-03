@@ -5,6 +5,15 @@ import type { RangeSelectorMode } from '../components/atoms/RangeSelector';
 
 const STORAGE_KEY = 'dateFilter';
 
+/** Clear the persisted date filter from sessionStorage (call on login/logout) */
+export function clearDateFilterStorage() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 interface DateFilterState {
   dateRange: DateRange;
   mode: RangeSelectorMode;
@@ -53,7 +62,7 @@ function getDefaultState(): DateFilterState {
   const now = new Date();
   return {
     dateRange: { start: startOfMonth(now), end: endOfMonth(now) },
-    mode: 'current',
+    mode: 'month',
     selectedMonth: now,
   };
 }

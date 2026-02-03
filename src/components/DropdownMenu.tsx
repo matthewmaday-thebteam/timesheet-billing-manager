@@ -13,9 +13,13 @@ interface DropdownMenuProps {
   items: DropdownMenuItem[];
   trigger?: ReactNode;
   align?: 'left' | 'right';
+  /** Menu width in pixels (default: 144) */
+  menuWidth?: number;
+  /** If true, disables the trigger */
+  disabled?: boolean;
 }
 
-export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuProps) {
+export function DropdownMenu({ items, trigger, align = 'right', menuWidth = 144, disabled = false }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -25,14 +29,13 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
   const updatePosition = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const menuWidth = 144; // w-36 = 9rem = 144px
 
       setDropdownPosition({
         top: rect.bottom + 4,
         left: align === 'right' ? rect.right - menuWidth : rect.left,
       });
     }
-  }, [align]);
+  }, [align, menuWidth]);
 
   // Update position when opening and on scroll/resize
   useEffect(() => {
@@ -99,11 +102,12 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="bg-white rounded-lg overflow-hidden w-36"
+      className="bg-white rounded-lg overflow-hidden"
       style={{
         position: 'fixed',
         top: dropdownPosition.top,
         left: dropdownPosition.left,
+        width: menuWidth,
         zIndex: 9999,
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
         backdropFilter: 'blur(8px)',
@@ -138,8 +142,9 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 rounded-md hover:bg-vercel-gray-100 transition-colors focus:outline-none"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className="p-1.5 rounded-md hover:bg-vercel-gray-100 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         title="More actions"
       >
         {trigger || defaultTrigger}

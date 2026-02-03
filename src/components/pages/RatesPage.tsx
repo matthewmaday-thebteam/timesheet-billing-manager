@@ -165,7 +165,9 @@ export function RatesPage() {
         variant="export"
         dateRange={dateRange}
         onChange={setDateRange}
-        onExport={handleExportCSV}
+        exportOptions={[
+          { label: 'Current Rate Card', onClick: handleExportCSV },
+        ]}
         exportDisabled={isLoading || projectsWithRates.length === 0}
       />
 

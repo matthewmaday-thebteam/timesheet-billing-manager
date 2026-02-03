@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useProjectHierarchy } from '../../hooks/useProjectHierarchy';
-import { formatCurrency } from '../../utils/billing';
+import { formatCurrency, formatHours } from '../../utils/billing';
 import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../atoms/RangeSelector';
 import { ProjectHierarchyTable } from '../atoms/ProjectHierarchyTable';
@@ -39,6 +39,67 @@ export function ProjectsPage() {
     userIdToDisplayNameLookup,
   });
 
+  // Export to CSV - Revenue By Project
+  const handleExportCSV = useCallback(() => {
+    const csvRows: string[][] = [];
+
+    // Title row
+    csvRows.push([`Revenue By Project - ${format(dateRange.start, 'MMMM yyyy')}`]);
+
+    // Header row
+    csvRows.push(['Company', 'Project', 'Employee', 'Date', 'Task', 'Hours', 'Revenue']);
+
+    // Iterate through the 5-tier hierarchy
+    for (const company of hierarchyResult.companies) {
+      // Company summary row
+      csvRows.push([company.companyName, '', '', '', '', formatHours(company.hours), formatCurrency(company.revenue)]);
+
+      for (const project of company.projects) {
+        // Project row
+        csvRows.push([company.companyName, project.projectName, '', '', '', formatHours(project.hours), formatCurrency(project.revenue)]);
+
+        for (const employee of project.employees) {
+          for (const day of employee.days) {
+            for (const task of day.tasks) {
+              // Task row (full detail)
+              csvRows.push([
+                company.companyName,
+                project.projectName,
+                employee.employeeName,
+                day.displayDate,
+                task.taskName,
+                formatHours(task.hours),
+                formatCurrency(task.revenue),
+              ]);
+            }
+          }
+        }
+      }
+
+      // Empty row between companies
+      csvRows.push(['']);
+    }
+
+    // Total row
+    csvRows.push(['TOTAL', '', '', '', '', formatHours(hierarchyResult.totalHours), formatCurrency(hierarchyResult.totalRevenue)]);
+
+    // Convert to CSV string
+    const csvContent = csvRows
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Create and download file
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `revenue-by-project-${format(dateRange.start, 'yyyy-MM')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [hierarchyResult, dateRange.start]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -66,11 +127,15 @@ export function ProjectsPage() {
         )}
       </div>
 
-      {/* Range Selector */}
+      {/* Range Selector with Export */}
       <RangeSelector
-        variant="dateRange"
+        variant="export"
         dateRange={dateRange}
         onChange={setDateRange}
+        exportOptions={[
+          { label: 'Revenue By Project', onClick: handleExportCSV },
+        ]}
+        exportDisabled={loading || hierarchyResult.companies.length === 0}
         controlledMode={mode}
         controlledSelectedMonth={filterSelectedMonth}
         onFilterChange={setFilter}

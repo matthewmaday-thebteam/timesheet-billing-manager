@@ -262,7 +262,9 @@ export function EmployeesPage() {
         variant="export"
         dateRange={dateRange}
         onChange={setDateRange}
-        onExport={handleExportCSV}
+        exportOptions={[
+          { label: 'Employee Performance Report', onClick: handleExportCSV },
+        ]}
         exportDisabled={loading || entries.length === 0}
         controlledMode={mode}
         controlledSelectedMonth={filterSelectedMonth}

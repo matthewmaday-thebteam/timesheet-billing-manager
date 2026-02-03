@@ -238,6 +238,123 @@ export function RevenuePage() {
     setShowExportModal(false);
   }, [billingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start, selectedCompanyIds]);
 
+  // Export Customer Revenue Report
+  const handleExportCustomerRevenue = useCallback(() => {
+    const csvRows: string[][] = [];
+
+    // Title row
+    csvRows.push([`Customer Revenue Report - ${format(dateRange.start, 'MMMM yyyy')}`]);
+
+    // Header row
+    csvRows.push(['Company', 'Project', 'Task', 'Hours', 'Rate ($/hr)', 'Project Revenue', 'Company Revenue']);
+
+    // Sort companies alphabetically
+    const sortedCompanies = [...billingResult.companies].sort((a, b) =>
+      a.companyName.localeCompare(b.companyName)
+    );
+
+    for (const company of sortedCompanies) {
+      // Calculate company revenue including milestone adjustments
+      const companyBillingData = filteredCompanyBillings.find(cb => cb.companyClientId === company.companyId);
+      const companyBillingCents = companyBillingData?.totalCents || 0;
+      let milestoneAdj = 0;
+      for (const project of company.projects) {
+        if (project.projectId) {
+          const milestone = milestoneByExternalProjectId.get(project.projectId);
+          if (milestone) {
+            milestoneAdj += (milestone.totalCents / 100) - project.billedRevenue;
+          }
+        }
+      }
+      const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
+      const companyTotalHours = company.billedHours;
+
+      // Company summary row
+      csvRows.push([
+        company.companyName,
+        '',
+        '',
+        companyTotalHours.toFixed(2),
+        '',
+        '',
+        formatCurrency(companyTotalRevenue),
+      ]);
+
+      // Sort projects alphabetically
+      const sortedProjects = [...company.projects].sort((a, b) =>
+        a.projectName.localeCompare(b.projectName)
+      );
+
+      for (const project of sortedProjects) {
+        // Check for milestone override
+        const milestone = project.projectId
+          ? milestoneByExternalProjectId.get(project.projectId)
+          : undefined;
+        const projectRevenue = milestone
+          ? milestone.totalCents / 100
+          : project.billedRevenue;
+
+        // Project summary row
+        csvRows.push([
+          company.companyName,
+          project.projectName,
+          '',
+          project.billedHours.toFixed(2),
+          project.rate.toFixed(2),
+          formatCurrency(projectRevenue),
+          '',
+        ]);
+
+        // Task rows
+        const sortedTasks = [...project.tasks].sort((a, b) =>
+          b.roundedHours - a.roundedHours
+        );
+
+        for (const task of sortedTasks) {
+          csvRows.push([
+            company.companyName,
+            project.projectName,
+            task.taskName,
+            task.roundedHours.toFixed(2),
+            project.rate.toFixed(2),
+            '',
+            '',
+          ]);
+        }
+      }
+
+      // Empty row between companies
+      csvRows.push(['']);
+    }
+
+    // Total row
+    csvRows.push([
+      'TOTAL',
+      '',
+      '',
+      billingResult.billedHours.toFixed(2),
+      '',
+      '',
+      formatCurrency(totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment),
+    ]);
+
+    // Convert to CSV string
+    const csvContent = csvRows
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Download
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `customer-revenue-${format(dateRange.start, 'yyyy-MM')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [billingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start, totalRevenue, filteredBillingCents, milestoneAdjustment]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -269,7 +386,10 @@ export function RevenuePage() {
         variant="export"
         dateRange={dateRange}
         onChange={setDateRange}
-        onExport={handleOpenExportModal}
+        exportOptions={[
+          { label: 'Detailed Revenue', onClick: handleOpenExportModal },
+          { label: 'Customer Revenue Report', onClick: handleExportCustomerRevenue },
+        ]}
         exportDisabled={loading || entries.length === 0}
         controlledMode={mode}
         controlledSelectedMonth={filterSelectedMonth}

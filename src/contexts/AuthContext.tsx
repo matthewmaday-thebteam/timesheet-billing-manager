@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import type { ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { clearDateFilterStorage } from './DateFilterContext';
 
 // Capture the URL hash at module load time, before the Supabase client clears it.
 // Invite links arrive with type=invite (or type=signup) in the hash fragment.
@@ -206,11 +207,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
     });
+    if (!error) {
+      clearDateFilterStorage();
+    }
     return { error: error ? new Error(error.message) : null };
   };
 
   const signOut = async () => {
     persistRecoveryFlag(false);
+    clearDateFilterStorage();
     await supabase.auth.signOut();
   };
 
