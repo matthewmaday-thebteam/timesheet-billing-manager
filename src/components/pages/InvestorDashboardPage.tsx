@@ -239,41 +239,40 @@ export function InvestorDashboardPage() {
   }, [projectsWithRates]);
 
   // ========== CHART DATA ==========
-  // Create corrected monthlyAggregates with current month revenue
+  // Month key for the selected date range (used to correct chart data for the right month)
+  const selectedMonthKey = `${dateRange.start.getFullYear()}-${String(dateRange.start.getMonth() + 1).padStart(2, '0')}`;
+
+  // Create corrected monthlyAggregates with selected month revenue
   const correctedMonthlyAggregates = useMemo(() => {
     if (monthlyAggregates.length === 0) return monthlyAggregates;
 
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
-    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-
     return monthlyAggregates.map(agg => {
-      if (agg.month === currentMonthKey) {
+      if (agg.month === selectedMonthKey) {
         return { ...agg, totalRevenue: combinedTotalRevenue };
       }
       return agg;
     });
-  }, [monthlyAggregates, combinedTotalRevenue]);
+  }, [monthlyAggregates, combinedTotalRevenue, selectedMonthKey]);
 
   // Line chart data
   const lineData = useMemo(() => {
     const baseData = transformToLineChartData(correctedMonthlyAggregates);
 
     if (correctedMonthlyAggregates.length > 0) {
-      const currentMonthIndex = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
+      const selectedMonthIndex = parseInt(selectedMonthKey.split('-')[1]) - 1;
+      const selectedYear = parseInt(selectedMonthKey.split('-')[0]);
 
       let cumulativeRevenue = 0;
       for (const agg of correctedMonthlyAggregates) {
         const [aggYear, aggMonth] = agg.month.split('-').map(Number);
-        if (aggYear === currentYear && aggMonth - 1 <= currentMonthIndex) {
+        if (aggYear === selectedYear && aggMonth - 1 <= selectedMonthIndex) {
           cumulativeRevenue += agg.totalRevenue;
         }
       }
 
-      for (let i = currentMonthIndex + 1; i < 12; i++) {
+      for (let i = selectedMonthIndex + 1; i < 12; i++) {
         if (baseData[i].bestCase !== null) {
-          const monthsAhead = i - currentMonthIndex;
+          const monthsAhead = i - selectedMonthIndex;
           const avgMonthlyRevenue = combinedTotalRevenue;
           baseData[i] = {
             ...baseData[i],
@@ -286,7 +285,7 @@ export function InvestorDashboardPage() {
     }
 
     return baseData;
-  }, [correctedMonthlyAggregates, combinedTotalRevenue]);
+  }, [correctedMonthlyAggregates, combinedTotalRevenue, selectedMonthKey]);
 
   // MoM Growth data
   const momGrowthData = useMemo(

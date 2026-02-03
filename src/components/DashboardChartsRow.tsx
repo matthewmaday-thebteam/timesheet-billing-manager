@@ -63,8 +63,10 @@ export interface DashboardChartsRowProps {
   userIdToDisplayNameLookup?: Map<string, string>;
   /** Unified billing result from useUnifiedBilling */
   billingResult?: MonthlyBillingResult;
-  /** Pre-calculated total revenue for the current month (with billing limits applied) */
+  /** Pre-calculated total revenue for the selected month (with billing limits applied) */
   currentMonthRevenue?: number;
+  /** The month key (YYYY-MM) that currentMonthRevenue corresponds to */
+  selectedMonthKey?: string;
   /** Loading state */
   loading?: boolean;
   /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
@@ -207,30 +209,31 @@ export function DashboardChartsRow({
   userIdToDisplayNameLookup,
   billingResult,
   currentMonthRevenue,
+  selectedMonthKey,
   loading = false,
   section = 'all',
 }: DashboardChartsRowProps) {
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
 
-  // Create corrected monthlyAggregates with current month revenue updated
+  // Create corrected monthlyAggregates with selected month revenue updated
   // This ensures MoM, CAGR, and all charts use the accurate combined total revenue
+  // Uses selectedMonthKey to target the correct month (not necessarily today's month)
   const correctedMonthlyAggregates = useMemo(() => {
     if (currentMonthRevenue === undefined || monthlyAggregates.length === 0) {
       return monthlyAggregates;
     }
 
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // 1-12
-    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const monthKey = selectedMonthKey
+      || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
     return monthlyAggregates.map(agg => {
-      if (agg.month === currentMonthKey) {
+      if (agg.month === monthKey) {
         return { ...agg, totalRevenue: currentMonthRevenue };
       }
       return agg;
     });
-  }, [monthlyAggregates, currentMonthRevenue]);
+  }, [monthlyAggregates, currentMonthRevenue, selectedMonthKey]);
 
   // Transform data for charts
   const pieData = useMemo(
@@ -242,28 +245,33 @@ export function DashboardChartsRow({
   const lineData = useMemo(() => {
     const baseData = transformToLineChartData(correctedMonthlyAggregates);
 
-    // Update future months projections based on current month revenue
+    // Update future months projections based on selected month revenue
     if (currentMonthRevenue !== undefined && correctedMonthlyAggregates.length > 0) {
-      const currentMonthIndex = new Date().getMonth(); // 0-11
-      const currentYear = new Date().getFullYear();
+      // Use selected month for projection base, fall back to today's month
+      const selectedMonthIndex = selectedMonthKey
+        ? parseInt(selectedMonthKey.split('-')[1]) - 1
+        : new Date().getMonth();
+      const selectedYear = selectedMonthKey
+        ? parseInt(selectedMonthKey.split('-')[0])
+        : new Date().getFullYear();
 
-      // Find cumulative revenue up to and including current month
+      // Find cumulative revenue up to and including selected month
       let cumulativeRevenue = 0;
       for (const agg of correctedMonthlyAggregates) {
         const [aggYear, aggMonth] = agg.month.split('-').map(Number);
-        if (aggYear === currentYear && aggMonth - 1 <= currentMonthIndex) {
+        if (aggYear === selectedYear && aggMonth - 1 <= selectedMonthIndex) {
           cumulativeRevenue += agg.totalRevenue;
         }
       }
 
       // Update future months to extend from the correct base
-      for (let i = currentMonthIndex + 1; i < 12; i++) {
+      for (let i = selectedMonthIndex + 1; i < 12; i++) {
         if (baseData[i].bestCase !== null) {
-          const monthsAhead = i - currentMonthIndex;
-          const avgMonthlyRevenue = currentMonthRevenue; // Use current month as baseline
+          const monthsAhead = i - selectedMonthIndex;
+          const avgMonthlyRevenue = currentMonthRevenue;
           baseData[i] = {
             ...baseData[i],
-            revenue: Math.round(cumulativeRevenue), // Flat line extends current cumulative
+            revenue: Math.round(cumulativeRevenue),
             bestCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 1.2)),
             worstCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 0.8)),
           };
@@ -272,7 +280,7 @@ export function DashboardChartsRow({
     }
 
     return baseData;
-  }, [correctedMonthlyAggregates, currentMonthRevenue]);
+  }, [correctedMonthlyAggregates, currentMonthRevenue, selectedMonthKey]);
 
   // MoM Growth Rate data - uses corrected aggregates for accurate current month
   const momGrowthData = useMemo(

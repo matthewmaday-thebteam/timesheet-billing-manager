@@ -32,14 +32,16 @@ for (var i = 0; i < items.length; i++) {
   rows.push({
     clockify_workspace_id: CLICKUP_TEAM_ID,
     work_date: e.work_date,
-    project_id: e.space_id ? String(e.space_id) : null,
+
+    // Project = Folder in ClickUp hierarchy, fallback to Space for folderless lists
+    project_id: e.folder_id ? String(e.folder_id) : (e.space_id ? String(e.space_id) : null),
     project_name: e.project_name || "No Project",
     user_id: e.user_id,
     user_name: e.user_name || "Unknown",
     task_id: String(e.entry_id),  // USE entry_id - unique per time entry
     task_name: e.task_name || "No Task",
 
-    // Client/Company fields (Space = Client in ClickUp hierarchy)
+    // Client/Company = Space in ClickUp hierarchy
     client_id: e.space_id ? String(e.space_id) : null,
     client_name: e.space_name || null,
 

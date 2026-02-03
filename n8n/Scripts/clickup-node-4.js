@@ -49,8 +49,9 @@ for (var i = 0; i < items.length; i++) {
   var spaceName = spaceLookup[spaceId] || null;
   var folderName = folderLookup[folderId] || null;
 
-  // Use space name as project_name (ClickUp spaces = clients/projects), fallback to folder name
-  var projectName = spaceName || folderName || "No Project";
+  // ClickUp hierarchy: Space = Company, Folder = Project
+  // Use folder name as project_name, fallback to space name for folderless lists
+  var projectName = folderName || spaceName || "No Project";
 
   out.push({
     json: {
