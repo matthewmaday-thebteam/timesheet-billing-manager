@@ -263,7 +263,8 @@ export function RateEditModal({
           <DateCycle
             selectedDate={monthToDate(currentMonth)}
             onDateChange={handleMonthChange}
-            size="sm"
+            size="lg"
+            variant="boxed"
             disabled={isSaving}
           />
         </div>
