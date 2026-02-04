@@ -5,7 +5,7 @@ import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useProjectHierarchy } from '../../hooks/useProjectHierarchy';
 import { formatCurrency, formatHours } from '../../utils/billing';
 import { useDateFilter } from '../../contexts/DateFilterContext';
-import { RangeSelector } from '../molecules/RangeSelector';
+import { RangeSelector } from '../RangeSelector';
 import { ProjectHierarchyTable } from '../atoms/ProjectHierarchyTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';

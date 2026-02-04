@@ -56,22 +56,26 @@ for (const item of items) {
   });
 }
 
-// Output rows AND metadata for Node 6 cleanup decision
+// Store metadata in workflow static data for Node 6 to retrieve
+// (Supabase upsert node doesn't pass through _meta, so we use static data)
+const staticData = $getWorkflowStaticData('global');
+staticData.lastSyncMeta = {
+  sync_run_id: syncRunId,
+  sync_run_at: syncRunAt,
+  fetch_complete: syncMeta.fetch_complete ?? false,
+  source: 'clockify',
+  workspace_id: CLOCKIFY_WORKSPACE_ID,
+  range_start: syncMeta.range_start || null,
+  range_end: syncMeta.range_end || null,
+  total_entries_fetched: syncMeta.total_entries || 0,
+  rows_to_upsert: rows.length,
+  error_count: syncMeta.error_count || 0,
+  errors: syncMeta.errors || [],
+};
+
+// Output rows for Supabase upsert
 return [{
   json: {
     rows: rows,
-    _meta: {
-      sync_run_id: syncRunId,
-      sync_run_at: syncRunAt,
-      fetch_complete: syncMeta.fetch_complete ?? false,
-      source: 'clockify',
-      workspace_id: CLOCKIFY_WORKSPACE_ID,
-      range_start: syncMeta.range_start || null,
-      range_end: syncMeta.range_end || null,
-      total_entries_fetched: syncMeta.total_entries || 0,
-      rows_to_upsert: rows.length,
-      error_count: syncMeta.error_count || 0,
-      errors: syncMeta.errors || [],
-    }
   }
 }];

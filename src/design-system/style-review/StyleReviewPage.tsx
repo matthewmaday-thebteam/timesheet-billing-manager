@@ -33,7 +33,7 @@ import { AccordionListTable } from '../../components/AccordionListTable';
 import type { AccordionListTableColumn, AccordionListTableItem } from '../../components/AccordionListTable';
 import { PieChartAtom } from '../../components/atoms/charts/PieChartAtom';
 import { LineGraphAtom } from '../../components/atoms/charts/LineGraphAtom';
-import { RangeSelector } from '../../components/molecules/RangeSelector';
+import { RangeSelector } from '../../components/RangeSelector';
 import { DateCycle } from '../../components/molecules/DateCycle';
 import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
 import type { DateRange } from '../../types';

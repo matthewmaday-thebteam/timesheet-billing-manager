@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import type { DateRange } from '../types';
-import type { RangeSelectorMode } from '../components/molecules/RangeSelector';
+import type { RangeSelectorMode } from '../components/RangeSelector';
 
 const STORAGE_KEY = 'dateFilter';
 

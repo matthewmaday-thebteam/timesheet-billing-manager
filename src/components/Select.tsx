@@ -13,9 +13,11 @@ interface SelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** Icon to display on the left side of the select */
+  icon?: React.ReactNode;
 }
 
-export function Select({ value, onChange, options, placeholder = 'Select...', className = '', disabled = false }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = 'Select...', className = '', disabled = false, icon }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -139,17 +141,18 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
         type="button"
         onClick={handleClick}
         disabled={disabled}
-        className={`px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center justify-between transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${
+        className={`px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center justify-between gap-2 transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${
           disabled
             ? 'bg-vercel-gray-50 cursor-not-allowed'
             : 'hover:border-vercel-gray-300'
         } ${className}`}
       >
-        <span className={disabled ? 'text-vercel-gray-300' : selectedOption ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
+        <span className={`flex items-center gap-2 ${disabled ? 'text-vercel-gray-300' : selectedOption ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}`}>
+          {icon && <span className={disabled ? 'text-vercel-gray-200' : 'text-vercel-gray-400'}>{icon}</span>}
           {selectedOption?.label || placeholder}
         </span>
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${disabled ? 'text-vercel-gray-200' : 'text-vercel-gray-400'}`}
+          className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${disabled ? 'text-vercel-gray-200' : 'text-vercel-gray-400'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

@@ -14,7 +14,9 @@
 //   Connect: Node 5 -> Supabase Upsert -> Node 6
 // =============================================================================
 
-const meta = items[0]?.json?._meta || {};
+// Retrieve metadata from workflow static data (stored by Node 5)
+const staticData = $getWorkflowStaticData('global');
+const meta = staticData.lastSyncMeta || {};
 
 // SAFETY CHECK: Do not cleanup if fetch was incomplete
 if (!meta.fetch_complete) {

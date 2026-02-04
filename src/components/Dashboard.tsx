@@ -16,7 +16,7 @@ import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
 import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import { buildDbRateLookup } from '../utils/billing';
-import { RangeSelector } from './molecules/RangeSelector';
+import { RangeSelector } from './RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
 import { UnderHoursModal } from './UnderHoursModal';

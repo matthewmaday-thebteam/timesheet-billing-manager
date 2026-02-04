@@ -8,7 +8,7 @@ import { useBillings } from '../../hooks/useBillings';
 import { formatCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
 import { useDateFilter } from '../../contexts/DateFilterContext';
-import { RangeSelector } from '../molecules/RangeSelector';
+import { RangeSelector } from '../RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';

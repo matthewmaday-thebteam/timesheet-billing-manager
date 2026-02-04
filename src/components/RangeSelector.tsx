@@ -7,17 +7,17 @@
  * - 'exportOnly': Just the Export dropdown (no month selection)
  * - 'billings': Current Month / Select Month buttons + Export dropdown + Add Billing buttons
  *
- * @category Molecule
+ * @category Atom
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
-import { Button } from '../Button';
-import { DropdownMenu } from '../DropdownMenu';
-import { ChevronIcon } from '../ChevronIcon';
-import { DateCycle } from './DateCycle';
-import type { DropdownMenuItem } from '../DropdownMenu';
-import type { DateRange } from '../../types';
+import { Button } from './Button';
+import { DropdownMenu } from './DropdownMenu';
+import { ChevronIcon } from './ChevronIcon';
+import { DateCycle } from './molecules/DateCycle';
+import type { DropdownMenuItem } from './DropdownMenu';
+import type { DateRange } from '../types';
 
 export type RangeSelectorMode = 'current' | 'month';
 export type RangeSelectorVariant = 'export' | 'dateRange' | 'exportOnly' | 'billings';
@@ -56,21 +56,21 @@ interface RangeSelectorProps {
   onFilterChange?: (mode: RangeSelectorMode, selectedMonth: Date, dateRange: DateRange) => void;
 }
 
-/** Download icon for export menu items */
+/** Download icon for export menu items and trigger */
 const DownloadIcon = (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   </svg>
 );
 
-/** Export CSV button trigger for dropdown */
+/** Export CSV button trigger for dropdown (Select-style with icon) */
 const ExportTrigger = (
-  <span className="inline-flex items-center">
-    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-    Export CSV
-    <ChevronIcon direction="down" size="md" className="ml-1" />
+  <span className="inline-flex items-center gap-2">
+    <span className="text-vercel-gray-400">
+      {DownloadIcon}
+    </span>
+    <span>Export CSV</span>
+    <ChevronIcon direction="down" size="sm" />
   </span>
 );
 
@@ -157,6 +157,7 @@ export function RangeSelector({
           <DropdownMenu
             items={dropdownItems}
             trigger={ExportTrigger}
+            triggerVariant="select"
             menuWidth={220}
             disabled={exportDisabled}
           />
@@ -200,6 +201,7 @@ export function RangeSelector({
           <DropdownMenu
             items={dropdownItems}
             trigger={ExportTrigger}
+            triggerVariant="select"
             menuWidth={220}
             disabled={exportDisabled}
           />
@@ -209,6 +211,7 @@ export function RangeSelector({
             <DropdownMenu
               items={dropdownItems}
               trigger={ExportTrigger}
+              triggerVariant="select"
               menuWidth={220}
               disabled={exportDisabled}
             />

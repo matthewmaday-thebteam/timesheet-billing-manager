@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Spinner } from '../Spinner';
 import { DropdownMenu } from '../DropdownMenu';
-import { RangeSelector } from '../molecules/RangeSelector';
+import { RangeSelector } from '../RangeSelector';
 import { ProjectEditorModal } from '../ProjectEditorModal';
 import type { Project, ProjectWithGrouping } from '../../types';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';

@@ -253,29 +253,46 @@ export function RateEditModal({
       footer={footerContent}
     >
       <div className="space-y-6">
-        {/* Project Name */}
-        <div className="text-sm font-medium text-vercel-gray-600">
-          {project.projectName}
-        </div>
-
         {/* Month Navigation */}
-        <div className="flex items-center justify-center py-2">
-          <DateCycle
-            selectedDate={monthToDate(currentMonth)}
-            onDateChange={handleMonthChange}
-            size="lg"
-            variant="boxed"
-            disabled={isSaving}
-          />
+        <DateCycle
+          selectedDate={monthToDate(currentMonth)}
+          onDateChange={handleMonthChange}
+          size="md"
+          variant="boxed"
+          fullWidth
+          disabled={isSaving}
+        />
+
+        {/* Company Name */}
+        <div>
+          <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+            Company
+          </label>
+          <div className="text-sm text-vercel-gray-400">
+            {project.canonicalClientName || project.clientName || 'Unassigned'}
+          </div>
         </div>
 
-        {/* Loading state when fetching different month's data */}
-        {isLoadingRate ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner size="md" />
+        {/* Project Name */}
+        <div>
+          <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+            Project
+          </label>
+          <div className="text-sm text-vercel-gray-400">
+            {project.projectName}
           </div>
-        ) : (
-          <>
+        </div>
+
+        {/* Form content with loading overlay */}
+        <div className="relative">
+          {/* Loading overlay */}
+          {isLoadingRate && (
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
+              <Spinner size="md" />
+            </div>
+          )}
+
+          <div className={`space-y-6 ${isLoadingRate ? 'pointer-events-none' : ''}`}>
             {/* Rate Input */}
             <Input
               label="Hourly Rate (USD)"
@@ -285,10 +302,11 @@ export function RateEditModal({
               onChange={handleRateChange}
               placeholder="45.00"
               startAddon="$"
+              disabled={isLoadingRate}
             />
 
             {/* Divider */}
-            <div className="border-t border-vercel-gray-200" />
+            <div className="border-t border-vercel-gray-100" />
 
             {/* Rounding Select */}
             <div>
@@ -300,11 +318,12 @@ export function RateEditModal({
                 onChange={(value) => setRoundingValue(Number(value) as RoundingIncrement)}
                 options={ROUNDING_OPTIONS}
                 className="w-full"
+                disabled={isLoadingRate}
               />
             </div>
 
             {/* Divider */}
-            <div className="border-t border-vercel-gray-200" />
+            <div className="border-t border-vercel-gray-100" />
 
             {/* Active Status Section */}
             <div>
@@ -316,6 +335,7 @@ export function RateEditModal({
                 description="When off, only bill actual hours worked (no minimum padding)"
                 checked={isActiveValue}
                 onChange={setIsActiveValue}
+                disabled={isLoadingRate}
               />
             </div>
 
@@ -335,6 +355,7 @@ export function RateEditModal({
                   onChange={(e) => handleHoursChange(e, setMinHoursValue)}
                   placeholder="0"
                   error={showMinMaxError ? 'Must be less than maximum' : undefined}
+                  disabled={isLoadingRate}
                 />
                 <Input
                   label="Maximum Hours"
@@ -343,6 +364,7 @@ export function RateEditModal({
                   value={maxHoursValue}
                   onChange={(e) => handleHoursChange(e, setMaxHoursValue)}
                   placeholder="0"
+                  disabled={isLoadingRate}
                 />
               </div>
 
@@ -352,11 +374,11 @@ export function RateEditModal({
                 description="Excess hours roll to next month when maximum is set"
                 checked={carryoverEnabled}
                 onChange={setCarryoverEnabled}
-                disabled={maxHoursValue === ''}
+                disabled={isLoadingRate || maxHoursValue === ''}
               />
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </Modal>
   );

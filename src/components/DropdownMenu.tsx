@@ -17,9 +17,11 @@ interface DropdownMenuProps {
   menuWidth?: number;
   /** If true, disables the trigger */
   disabled?: boolean;
+  /** Trigger visual variant: 'icon' (minimal) or 'select' (bordered like Select atom) */
+  triggerVariant?: 'icon' | 'select';
 }
 
-export function DropdownMenu({ items, trigger, align = 'right', menuWidth = 144, disabled = false }: DropdownMenuProps) {
+export function DropdownMenu({ items, trigger, align = 'right', menuWidth = 144, disabled = false, triggerVariant = 'icon' }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +139,12 @@ export function DropdownMenu({ items, trigger, align = 'right', menuWidth = 144,
     </div>
   );
 
+  const triggerClasses = triggerVariant === 'select'
+    ? `px-3 py-2 bg-white border border-vercel-gray-100 rounded-md text-sm text-left flex items-center gap-2 transition-colors duration-200 ease-out focus:ring-1 focus:ring-black focus:border-vercel-gray-600 focus:outline-none ${
+        disabled ? 'bg-vercel-gray-50 cursor-not-allowed text-vercel-gray-300' : 'hover:border-vercel-gray-300 text-vercel-gray-600'
+      }`
+    : 'p-1.5 rounded-md hover:bg-vercel-gray-100 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
+
   return (
     <>
       <button
@@ -144,7 +152,7 @@ export function DropdownMenu({ items, trigger, align = 'right', menuWidth = 144,
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="p-1.5 rounded-md hover:bg-vercel-gray-100 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        className={triggerClasses}
         title="More actions"
       >
         {trigger || defaultTrigger}

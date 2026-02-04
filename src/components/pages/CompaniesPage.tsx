@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Spinner } from '../Spinner';
 import { DropdownMenu } from '../DropdownMenu';
-import { RangeSelector } from '../molecules/RangeSelector';
+import { RangeSelector } from '../RangeSelector';
 import { CompanyEditorModal } from '../CompanyEditorModal';
 import { useCompanies } from '../../hooks/useCompanies';
 import type { CompanyWithGrouping, CompanyFormData } from '../../types';

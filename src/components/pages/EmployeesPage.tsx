@@ -8,7 +8,7 @@ import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { supabase } from '../../lib/supabase';
 import { useDateFilter } from '../../contexts/DateFilterContext';
-import { RangeSelector } from '../molecules/RangeSelector';
+import { RangeSelector } from '../RangeSelector';
 import { EmployeePerformance } from '../EmployeePerformance';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';

@@ -24,6 +24,8 @@ export interface DateCycleProps {
   variant?: 'default' | 'boxed';
   /** Disable navigation */
   disabled?: boolean;
+  /** Fill container width (default: false) */
+  fullWidth?: boolean;
 }
 
 export function DateCycle({
@@ -33,6 +35,7 @@ export function DateCycle({
   size = 'md',
   variant = 'default',
   disabled = false,
+  fullWidth = false,
 }: DateCycleProps) {
   const handlePrevious = () => {
     onDateChange(subMonths(selectedDate, 1));
@@ -72,10 +75,11 @@ export function DateCycle({
 
   const config = sizeConfig[size];
 
-  // Container classes based on variant
+  // Container classes based on variant and fullWidth
+  const widthClass = fullWidth ? 'w-full' : '';
   const containerClasses = variant === 'boxed'
-    ? `flex items-center ${config.gap} ${config.padding} border border-vercel-gray-100 rounded-lg bg-white`
-    : `flex items-center ${config.gap}`;
+    ? `flex items-center ${config.gap} ${config.padding} border border-vercel-gray-100 rounded-lg bg-white ${widthClass}`
+    : `flex items-center ${config.gap} ${widthClass}`;
 
   return (
     <div className={containerClasses}>
@@ -89,7 +93,7 @@ export function DateCycle({
       >
         <ChevronIcon direction="left" size={config.chevronSize} />
       </Button>
-      <span className={`${config.textSize} font-medium text-vercel-gray-600 ${config.minWidth} text-center`}>
+      <span className={`${config.textSize} font-medium text-vercel-gray-600 ${fullWidth ? 'flex-1' : config.minWidth} text-center`}>
         {format(selectedDate, formatString)}
       </span>
       <Button
