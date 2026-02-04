@@ -34,6 +34,7 @@ import type { AccordionListTableColumn, AccordionListTableItem } from '../../com
 import { PieChartAtom } from '../../components/atoms/charts/PieChartAtom';
 import { LineGraphAtom } from '../../components/atoms/charts/LineGraphAtom';
 import { RangeSelector } from '../../components/molecules/RangeSelector';
+import { DateCycle } from '../../components/molecules/DateCycle';
 import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
 import type { DateRange } from '../../types';
 
@@ -234,13 +235,6 @@ function TokensSection() {
 function AtomsSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState('');
-  const [rangeSelectorValue, setRangeSelectorValue] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: new Date(now.getFullYear(), now.getMonth(), 1),
-      end: new Date(now.getFullYear(), now.getMonth() + 1, 0),
-    };
-  });
 
   // Sample data for AccordionFlat demo
   const sampleFlatColumns: AccordionFlatColumn[] = [
@@ -981,12 +975,115 @@ function AtomsSection() {
             </ul>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Molecules Section
+function MoleculesSection() {
+  const [dateCycleDate, setDateCycleDate] = useState(new Date());
+  const [rangeSelectorValue, setRangeSelectorValue] = useState<DateRange>(() => {
+    const now = new Date();
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+    };
+  });
+
+  return (
+    <div className="space-y-12">
+      {/* Official Molecules */}
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-6">Official Molecules</h2>
+
+        {/* DateCycle */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">DateCycle</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/molecules/DateCycle.tsx</p>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Default (size="md", variant="default")</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Small (size="sm")</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                size="sm"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Large (size="lg") - 50% larger than md</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                size="lg"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Boxed variant (variant="boxed", size="md")</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                variant="boxed"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Boxed Large (variant="boxed", size="lg")</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                variant="boxed"
+                size="lg"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Custom format ("MMM yyyy")</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                formatString="MMM yyyy"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-3">Disabled</p>
+              <DateCycle
+                selectedDate={dateCycleDate}
+                onDateChange={setDateCycleDate}
+                disabled
+              />
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Features:</span> Month navigation with left/right arrows and centered date display. Three sizes (sm, md, lg), two variants (default, boxed), customizable date format via date-fns format string.
+            </p>
+          </div>
+          <div className="mt-2 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs font-medium text-vercel-gray-600 mb-2">Props:</p>
+            <ul className="text-xs text-vercel-gray-400 space-y-1">
+              <li><span className="font-mono text-brand-indigo">selectedDate</span>: Currently selected date</li>
+              <li><span className="font-mono text-brand-indigo">onDateChange</span>: Callback when date changes</li>
+              <li><span className="font-mono text-brand-indigo">formatString</span>: date-fns format string (default: 'MMMM yyyy')</li>
+              <li><span className="font-mono text-brand-indigo">size</span>: 'sm' | 'md' | 'lg' (default: 'md')</li>
+              <li><span className="font-mono text-brand-indigo">variant</span>: 'default' | 'boxed' (default: 'default')</li>
+              <li><span className="font-mono text-brand-indigo">disabled</span>: Disable navigation</li>
+            </ul>
+          </div>
+        </div>
 
         {/* RangeSelector */}
         <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
           <div className="mb-4">
             <h3 className="text-sm font-medium text-vercel-gray-600">RangeSelector</h3>
-            <p className="text-xs text-vercel-gray-400">Component: src/components/atoms/RangeSelector.tsx</p>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/molecules/RangeSelector.tsx</p>
           </div>
           <div className="space-y-6">
             <div>
@@ -1026,7 +1123,7 @@ function AtomsSection() {
           </div>
           <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
             <p className="text-xs text-vercel-gray-400">
-              <span className="font-medium">Features:</span> Four variants - dateRange (month selection + date text), export (month selection + CSV button), exportOnly (just CSV button), billings (month selection + CSV + Add Billing).
+              <span className="font-medium">Features:</span> Four variants - dateRange (month selection + date text), export (month selection + CSV button), exportOnly (just CSV button), billings (month selection + CSV + Add Billing). Integrates DateCycle molecule for month navigation.
             </p>
           </div>
           <div className="mt-2 p-3 bg-vercel-gray-50 rounded-lg">
@@ -1043,70 +1140,59 @@ function AtomsSection() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-// Molecules Section
-function MoleculesSection() {
-  return (
-    <div className="space-y-8">
-      <div className="grid gap-6">
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">DateRangeFilter</h3>
-          <p className="text-xs text-vercel-gray-400">
-            Combines buttons, date inputs, and navigation arrows for date selection.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/DateRangeFilter.tsx</p>
-        </div>
-
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">MainHeader</h3>
-          <p className="text-xs text-vercel-gray-400">
-            Unified navigation header with NavItem atoms, Docs dropdown, user avatar, and profile menu.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/MainHeader.tsx</p>
-        </div>
-
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">*Table Components</h3>
-          <p className="text-xs text-vercel-gray-400">
-            HolidayTable, UserTable, ResourceTable - Data tables with sorting, actions, and row rendering.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*Table.tsx</p>
-        </div>
-
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">*EditorModal Components</h3>
-          <p className="text-xs text-vercel-gray-400">
-            HolidayEditorModal, UserEditorModal, EmployeeEditorModal, ProjectEditorModal - Form modals for CRUD operations.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*EditorModal.tsx</p>
-        </div>
-
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">ProfileEditorModal</h3>
-          <p className="text-xs text-vercel-gray-400">
-            User profile editor with avatar upload/crop, name fields, and email change with confirmation flow.
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/ProfileEditorModal.tsx</p>
-          <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+      {/* Other Molecule Components */}
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-6">Other Molecule Components</h2>
+        <div className="grid gap-6">
+          <div className="p-6 border border-vercel-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">MainHeader</h3>
             <p className="text-xs text-vercel-gray-400">
-              <span className="font-medium">Combines:</span> Modal, AvatarUpload, Input, Button, Spinner. Integrates with AuthContext for profile updates.
+              Unified navigation header with NavItem atoms, Docs dropdown, user avatar, and profile menu.
             </p>
+            <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/MainHeader.tsx</p>
           </div>
-        </div>
 
-        <div className="p-6 border border-vercel-gray-100 rounded-lg">
-          <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">DashboardChartsRow</h3>
-          <p className="text-xs text-vercel-gray-400">
-            Two-column responsive grid with PieChartAtom (hours by resource) and LineGraphAtom (12-month revenue trend).
-          </p>
-          <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/DashboardChartsRow.tsx</p>
-          <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+          <div className="p-6 border border-vercel-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">DashboardChartsRow</h3>
             <p className="text-xs text-vercel-gray-400">
-              <span className="font-medium">Layout:</span> grid-cols-1 md:grid-cols-2 gap-4. Uses Card component with padding="lg".
+              Two-column responsive grid with PieChartAtom (hours by resource) and LineGraphAtom (12-month revenue trend).
             </p>
+            <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/DashboardChartsRow.tsx</p>
+            <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+              <p className="text-xs text-vercel-gray-400">
+                <span className="font-medium">Layout:</span> grid-cols-1 md:grid-cols-2 gap-4. Uses Card component with padding="lg".
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 border border-vercel-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">*Table Components</h3>
+            <p className="text-xs text-vercel-gray-400">
+              HolidayTable, UserTable, ResourceTable - Data tables with sorting, actions, and row rendering.
+            </p>
+            <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*Table.tsx</p>
+          </div>
+
+          <div className="p-6 border border-vercel-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">*EditorModal Components</h3>
+            <p className="text-xs text-vercel-gray-400">
+              HolidayEditorModal, UserEditorModal, EmployeeEditorModal, ProjectEditorModal - Form modals for CRUD operations.
+            </p>
+            <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/*EditorModal.tsx</p>
+          </div>
+
+          <div className="p-6 border border-vercel-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-vercel-gray-600 mb-2">ProfileEditorModal</h3>
+            <p className="text-xs text-vercel-gray-400">
+              User profile editor with avatar upload/crop, name fields, and email change with confirmation flow.
+            </p>
+            <p className="text-2xs text-vercel-gray-200 mt-2 font-mono">src/components/ProfileEditorModal.tsx</p>
+            <div className="mt-3 p-3 bg-vercel-gray-50 rounded-lg">
+              <p className="text-xs text-vercel-gray-400">
+                <span className="font-medium">Combines:</span> Modal, AvatarUpload, Input, Button, Spinner. Integrates with AuthContext for profile updates.
+              </p>
+            </div>
           </div>
         </div>
       </div>

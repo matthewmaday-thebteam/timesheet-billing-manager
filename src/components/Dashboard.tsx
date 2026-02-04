@@ -94,11 +94,47 @@ export function Dashboard() {
   // Get canonical company mapping
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
-  // Use the earlier of: end of selected range or today
-  const effectiveEndDate = dateRange.end > new Date() ? new Date() : dateRange.end;
+  // For under-hours calculation, use yesterday to avoid partial day issues
+  // (e.g., at 7am no hours are booked yet, making everyone appear behind)
+  // Exception: first day of month - use today since there's no yesterday in this month
+  const now = new Date();
+  const isFirstDayOfMonth = now.getDate() === 1;
+  let effectiveToday: Date;
+  if (isFirstDayOfMonth) {
+    effectiveToday = now;
+  } else {
+    effectiveToday = new Date(now);
+    effectiveToday.setDate(effectiveToday.getDate() - 1);
+  }
+  const effectiveEndDate = dateRange.end > effectiveToday ? effectiveToday : dateRange.end;
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
-  const underHoursItems = getUnderHoursResources(resourceSummaries, effectiveEndDate);
+  const allUnderHoursItems = getUnderHoursResources(resourceSummaries, effectiveEndDate);
+
+  // Build set of billable employee names (Full-time/Part-time only, excludes vendors/contractors)
+  const billableEmployeeNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const emp of employees) {
+      const empType = emp.employment_type?.name;
+      if (empType === 'Full-time' || empType === 'Part-time') {
+        const displayName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.external_label;
+        names.add(displayName);
+        // Also add external_label in case that's used for matching
+        if (emp.external_label) {
+          names.add(emp.external_label);
+        }
+      }
+    }
+    return names;
+  }, [employees]);
+
+  // Filter under hours items to exclude vendors/contractors
+  const underHoursItems = useMemo(() =>
+    allUnderHoursItems.filter(item =>
+      billableEmployeeNames.has(item.displayName) || billableEmployeeNames.has(item.userName)
+    ),
+    [allUnderHoursItems, billableEmployeeNames]
+  );
 
   // Build database rate lookup by external project_id (fallback for projects not in monthly rates)
   const dbRateLookup = useMemo(() => buildDbRateLookup(dbProjects), [dbProjects]);
@@ -196,7 +232,7 @@ export function Dashboard() {
     holidays,
     employees,
     timeOff,
-    roundedHours: billingResult.roundedHours,
+    entries,
     projectsWithRates,
   });
 

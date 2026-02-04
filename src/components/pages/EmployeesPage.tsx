@@ -125,7 +125,7 @@ export function EmployeesPage() {
     holidays,
     employees,
     timeOff,
-    roundedHours: billingResult.roundedHours,
+    entries,
     projectsWithRates,
   });
 

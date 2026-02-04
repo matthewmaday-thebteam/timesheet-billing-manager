@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import { eachDayOfInterval, isWeekend, isSameDay, min } from 'date-fns';
-import type { DateRange, BulgarianHoliday, Resource, EmployeeTimeOff, ProjectRateDisplay } from '../types';
+import { eachDayOfInterval, isWeekend, isSameDay, min, format } from 'date-fns';
+import type { DateRange, BulgarianHoliday, Resource, EmployeeTimeOff, ProjectRateDisplay, TimesheetEntry } from '../types';
 
 interface UseUtilizationMetricsParams {
   dateRange: DateRange;
   holidays: BulgarianHoliday[];
   employees: Resource[];
   timeOff: EmployeeTimeOff[];
-  roundedHours: number;
+  entries: TimesheetEntry[];
   projectsWithRates: ProjectRateDisplay[];
 }
 
@@ -23,13 +23,23 @@ export function useUtilizationMetrics({
   holidays,
   employees,
   timeOff,
-  roundedHours,
+  entries,
   projectsWithRates,
 }: UseUtilizationMetricsParams): UtilizationMetrics {
   return useMemo(() => {
-    // Use current date or end of month, whichever is earlier (MTD calculation)
-    const today = new Date();
-    const effectiveEndDate = min([dateRange.end, today]);
+    // Use yesterday to avoid partial day issues (e.g., at 7am no hours booked yet)
+    // Exception: first day of month - use today since there's no yesterday in this month
+    const now = new Date();
+    const isFirstDayOfMonth = now.getDate() === 1;
+    let effectiveToday: Date;
+    if (isFirstDayOfMonth) {
+      effectiveToday = now;
+    } else {
+      effectiveToday = new Date(now);
+      effectiveToday.setDate(effectiveToday.getDate() - 1);
+    }
+    const effectiveEndDate = min([dateRange.end, effectiveToday]);
+    const effectiveEndDateStr = format(effectiveEndDate, 'yyyy-MM-dd');
 
     // Get all days from start of month to effective end date
     const daysInPeriod = eachDayOfInterval({
@@ -91,8 +101,10 @@ export function useUtilizationMetrics({
       totalAvailableHours += (workingDays - ptoDays) * hoursPerDay;
     }
 
-    // Use rounded hours from billing result (matches Revenue page)
-    const totalWorkedHours = roundedHours;
+    // Filter entries to only those up to effective end date (month-to-yesterday)
+    // This ensures worked hours matches the same period as available hours
+    const filteredEntries = entries.filter(e => e.work_date <= effectiveEndDateStr);
+    const totalWorkedHours = filteredEntries.reduce((sum, e) => sum + e.total_minutes, 0) / 60;
 
     // Calculate underutilization (available - worked)
     const totalUnderutilizationHours = Math.max(0, totalAvailableHours - totalWorkedHours);
@@ -141,5 +153,5 @@ export function useUtilizationMetrics({
       utilizationPercent,
       timeOffDays: totalTimeOffDays,
     };
-  }, [dateRange, holidays, employees, timeOff, roundedHours, projectsWithRates]);
+  }, [dateRange, holidays, employees, timeOff, entries, projectsWithRates]);
 }

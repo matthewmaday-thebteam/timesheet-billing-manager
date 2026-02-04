@@ -21,7 +21,7 @@ interface ChevronIconProps {
   /** Whether the chevron is in expanded state (rotated 90° clockwise from direction) */
   expanded?: boolean;
   /** Icon size */
-  size?: 'xs' | 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   /** Additional CSS classes */
   className?: string;
 }
@@ -44,6 +44,7 @@ export function ChevronIcon({
     xs: 'w-2.5 h-2.5',
     sm: 'w-3 h-3',
     md: 'w-4 h-4',
+    lg: 'w-6 h-6',
   };
 
   // When expanded is true, rotate 90° clockwise from the current direction
