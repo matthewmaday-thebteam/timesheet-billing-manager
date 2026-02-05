@@ -97,26 +97,27 @@ src/
 
 ---
 
-## Pages (18)
+## Pages (19)
 
 1. **Dashboard** - Main overview with metrics
 2. **EmployeesPage** - Performance metrics (utilization, revenue, time-off)
-3. **EmployeeManagementPage** - CRUD for employee data
-4. **CompaniesPage** - Company management with grouping
-5. **ProjectsPage** - Projects organized by company
-6. **ProjectManagementPage** - Project CRUD
-7. **RatesPage** - Monthly rate management
-8. **RevenuePage** - Billable hours and revenue tracking
-9. **BillingsPage** - Billing transactions management
-10. **HolidaysPage** - Bulgarian holiday management
-11. **EOMReportsPage** - End-of-month reporting
-12. **UsersPage** - Admin user management
-13. **DiagnosticsPage** - Data validation diagnostics
-14. **FormulasPage** - Billing formula documentation
-15. **InvestorDashboardPage** - Key investor metrics
-16. **LegalPage** - Versioned legal documents (Terms, Privacy)
-17. **LoginPage** - Authentication
-18. **ForgotPasswordPage / ResetPasswordPage** - Password recovery
+3. **BurnPage** - Resource utilization chart and daily hours grid per employee
+4. **EmployeeManagementPage** - CRUD for employee data
+5. **CompaniesPage** - Company management with grouping
+6. **ProjectsPage** - Projects organized by company
+7. **ProjectManagementPage** - Project CRUD
+8. **RatesPage** - Monthly rate management
+9. **RevenuePage** - Billable hours and revenue tracking
+10. **BillingsPage** - Billing transactions management
+11. **HolidaysPage** - Bulgarian holiday management
+12. **EOMReportsPage** - End-of-month reporting
+13. **UsersPage** - Admin user management
+14. **DiagnosticsPage** - Data validation diagnostics
+15. **FormulasPage** - Billing formula documentation
+16. **InvestorDashboardPage** - Key investor metrics
+17. **LegalPage** - Versioned legal documents (Terms, Privacy)
+18. **LoginPage** - Authentication
+19. **ForgotPasswordPage / ResetPasswordPage** - Password recovery
 
 ---
 

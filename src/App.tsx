@@ -20,6 +20,7 @@ import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
 import { FormulasPage } from './components/pages/FormulasPage';
 import { InvestorDashboardPage } from './components/pages/InvestorDashboardPage';
 import { LegalPage } from './components/pages/LegalPage';
+import { BurnPage } from './components/pages/BurnPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
@@ -72,6 +73,8 @@ function AuthenticatedApp() {
         return <HolidaysPage />;
       case 'employees':
         return <EmployeesPage />;
+      case 'burn':
+        return <BurnPage />;
       case 'projects':
         return <ProjectsPage />;
       case 'companies':

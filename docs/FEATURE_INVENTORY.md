@@ -45,6 +45,7 @@
 | F039 | Best/Worst Case Projections | Complete | P1 | LineGraphAtom.tsx |
 | F040 | Canonical Project Mapping | Complete | P0 | useUnifiedBilling.ts, useTimesheetData.ts |
 | F041 | Project Target Hours | Complete | P2 | ProjectEditorModal.tsx, useProjectUpdate.ts |
+| F042 | Burn Page | Complete | P1 | BurnPage.tsx, BurnGrid.tsx |
 
 ---
 
@@ -354,6 +355,8 @@ Utils:
 | `src/hooks/useAdminUsers.ts` | Hook | 170 | Admin user operations |
 | `src/components/pages/HolidaysPage.tsx` | Component | 250 | Holiday management |
 | `src/components/pages/EmployeesPage.tsx` | Component | 200 | Employee management |
+| `src/components/pages/BurnPage.tsx` | Component | 145 | Resource utilization and daily hours grid |
+| `src/components/atoms/BurnGrid.tsx` | Component | 117 | Employee × day hours matrix |
 | `src/components/pages/RatesPage.tsx` | Component | 200 | Project rates |
 | `src/components/MainHeader.tsx` | Component | 220 | Unified nav header with tabs, docs dropdown, user menu |
 | `src/components/NavItem.tsx` | Component | 45 | Navigation tab item with active indicator |
@@ -475,8 +478,12 @@ Utils:
 |-------|------|
 | home | Dashboard |
 | holidays | Bulgarian Holidays |
-| employees | Employee Management |
+| employees | Employee Performance |
+| burn | Burn (Resource Utilization) |
+| projects | Projects |
 | rates | Project Rates |
+| revenue | Revenue |
+| billings | Fixed Billing |
 | eom-reports | EOM Reports |
 | users | User Management |
 
@@ -826,3 +833,43 @@ ALTER TABLE projects ADD COLUMN target_hours NUMERIC(10, 2) NOT NULL DEFAULT 0;
 2. Value of 0 means no target
 3. Only admins can edit (existing RLS applies)
 4. All new auto-provisioned projects get target_hours = 0
+
+---
+
+### F042: Burn Page
+**Components**: `src/components/pages/BurnPage.tsx`, `src/components/atoms/BurnGrid.tsx`
+**Description**: Resource utilization page showing daily hours worked per employee.
+
+| Feature | Details |
+|---------|---------|
+| Chart | DailyHoursChart showing actual vs expected hours per day |
+| Grid | Employee × Day matrix with hours worked |
+| Date Range | RangeSelector with DateFilterContext integration |
+| Layout | Grid breaks out of page container for full-width display |
+
+**BurnGrid Component**:
+- Sticky employee name column for horizontal scrolling
+- Day numbers (1-31) as column headers
+- Hours formatted to 1 decimal place (or `—` for zero)
+- Follows ProjectHierarchyTable design pattern
+
+**Styling** (Design System):
+- Container: `bg-white rounded-lg border border-vercel-gray-100 overflow-hidden`
+- Header: `bg-vercel-gray-50` with uppercase tracking-wider text
+- Body: `divide-y divide-vercel-gray-100` row dividers
+- Rows: `hover:bg-vercel-gray-50 transition-colors`
+
+**Full-Width Breakout**:
+```css
+width: 100vw;
+margin-left: calc(-50vw + 50%);
+margin-right: calc(-50vw + 50%);
+```
+
+**Data Aggregation**:
+- Groups timesheet entries by employee name and date
+- Uses `userIdToDisplayNameLookup` for canonical employee names
+- Sorts employees alphabetically
+- Converts minutes to hours for display
+
+**Navigation**: Located between Employees and Projects in main nav
