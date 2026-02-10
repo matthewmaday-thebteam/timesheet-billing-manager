@@ -25,6 +25,7 @@ import type {
   BillingConfigLookup,
 } from '../../utils/diagnostics';
 import { useSummaryBilling } from '../../hooks/useSummaryBilling';
+import { useBillingSource, type BillingSource } from '../../contexts/BillingSourceContext';
 import { formatCurrency } from '../../utils/billing';
 import type { MonthSelection } from '../../types';
 import type { ProjectBillingResult, MonthlyBillingResult } from '../../utils/billingCalculations';
@@ -612,7 +613,14 @@ function MonthSelector({
 /**
  * Diagnostics page component
  */
+const BILLING_SOURCE_OPTIONS: { value: BillingSource; label: string; description: string }[] = [
+  { value: 'frontend', label: 'Frontend', description: 'In-browser calculation (current)' },
+  { value: 'summary', label: 'Summary', description: 'Database summary table' },
+  { value: 'parallel', label: 'Parallel', description: 'Frontend data + console diff logging' },
+];
+
 export function DiagnosticsPage() {
+  const { source: billingSource, setSource: setBillingSource } = useBillingSource();
   const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
   const [fileState, setFileState] = useState<FileUploadState>({
     clockifyContent: null,
@@ -838,6 +846,36 @@ export function DiagnosticsPage() {
         </div>
         <MonthSelector selectedMonth={selectedMonth} onChange={setSelectedMonth} />
       </div>
+
+      {/* Billing Source Toggle */}
+      <Card variant="subtle" padding="md">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-vercel-gray-600 uppercase tracking-wide">
+              Billing Data Source
+            </h2>
+            <p className="text-xs text-vercel-gray-400 mt-0.5">
+              Controls which billing engine all pages use. Change takes effect immediately.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-vercel-gray-50 rounded-lg p-0.5">
+            {BILLING_SOURCE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setBillingSource(option.value)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  billingSource === option.value
+                    ? 'bg-white text-vercel-gray-600 shadow-sm'
+                    : 'text-vercel-gray-400 hover:text-vercel-gray-600'
+                }`}
+                title={option.description}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       {/* Error States */}
       {ratesError && <Alert message={ratesError} icon="error" variant="error" />}

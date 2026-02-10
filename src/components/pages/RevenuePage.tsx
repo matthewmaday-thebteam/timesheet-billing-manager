@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
-import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
+import { useBilling } from '../../hooks/useBilling';
 import { useCarryoverSync } from '../../hooks/useCarryoverSync';
 import { useBillings } from '../../hooks/useBillings';
 import { formatCurrency } from '../../utils/billing';
@@ -30,12 +30,12 @@ export function RevenuePage() {
   // Fetch monthly rates (which now includes rounding data)
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
-  // Use unified billing calculation - single source of truth
-  // CRITICAL: Company grouping now uses project's canonical company info (from projectsWithRates)
-  const { totalRevenue, billingResult, unmatchedProjects, allProjectsMatched } = useUnifiedBilling({
+  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  const { totalRevenue, billingResult, unmatchedProjects, allProjectsMatched } = useBilling({
     entries,
     projectsWithRates,
     projectCanonicalIdLookup,
+    selectedMonth,
   });
 
   // Auto-persist carryover to database so next month can read it

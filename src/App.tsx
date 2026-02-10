@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BillingSourceProvider } from './contexts/BillingSourceContext';
 import { DateFilterProvider } from './contexts/DateFilterContext';
 import { MainHeader, type NavRoute } from './components/MainHeader';
 import { Footer } from './components/Footer';
@@ -107,19 +108,21 @@ function AuthenticatedApp() {
   };
 
   return (
-    <DateFilterProvider>
-      <div className="min-h-screen bg-vercel-gray-50 flex flex-col">
-        <MainHeader
-          activeRoute={activeRoute}
-          onRouteChange={setActiveRoute}
-          onOpenDocs={handleOpenDocs}
-        />
-        <main className="flex-1">
-          {renderPage()}
-        </main>
-        <Footer onNavigate={setActiveRoute} />
-      </div>
-    </DateFilterProvider>
+    <BillingSourceProvider>
+      <DateFilterProvider>
+        <div className="min-h-screen bg-vercel-gray-50 flex flex-col">
+          <MainHeader
+            activeRoute={activeRoute}
+            onRouteChange={setActiveRoute}
+            onOpenDocs={handleOpenDocs}
+          />
+          <main className="flex-1">
+            {renderPage()}
+          </main>
+          <Footer onNavigate={setActiveRoute} />
+        </div>
+      </DateFilterProvider>
+    </BillingSourceProvider>
   );
 }
 

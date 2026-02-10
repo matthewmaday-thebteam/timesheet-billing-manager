@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
-import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
+import { useBilling } from '../../hooks/useBilling';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
@@ -72,12 +72,12 @@ export function EmployeesPage() {
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
-  // Use unified billing calculation
-  // Company grouping now uses project's canonical company info (from projectsWithRates)
-  const { billingResult } = useUnifiedBilling({
+  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  const { billingResult } = useBilling({
     entries,
     projectsWithRates,
     projectCanonicalIdLookup,
+    selectedMonth,
   });
 
   // Build project config map for rounding lookup (keyed by external project ID)

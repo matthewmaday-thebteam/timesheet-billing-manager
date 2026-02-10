@@ -4,9 +4,9 @@ import { useTimesheetData } from '../hooks/useTimesheetData';
 import { useProjects } from '../hooks/useProjects';
 import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
-import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
+import { useBilling } from '../hooks/useBilling';
 import { useBillings } from '../hooks/useBillings';
-import { useCombinedRevenueByMonth } from '../hooks/useCombinedRevenueByMonth';
+import { useCombinedRevenue } from '../hooks/useCombinedRevenue';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import { useEmployeeTableEntities } from '../hooks/useEmployeeTableEntities';
 import { useTimeOff } from '../hooks/useTimeOff';
@@ -93,7 +93,7 @@ export function Dashboard() {
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
 
   // Compute combined revenue for all 12 chart months using same calculation as Revenue page
-  const { combinedRevenueByMonth } = useCombinedRevenueByMonth({
+  const { combinedRevenueByMonth } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
     extendedEntries,
@@ -154,12 +154,12 @@ export function Dashboard() {
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
-  // Use unified billing calculation - single source of truth
-  // Company grouping now uses project's canonical company info (from projectsWithRates)
-  const { totalRevenue, billingResult } = useUnifiedBilling({
+  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  const { totalRevenue, billingResult } = useBilling({
     entries,
     projectsWithRates,
     projectCanonicalIdLookup,
+    selectedMonth,
   });
 
   // Build lookup: internal UUID -> externalProjectId (same as Revenue page)

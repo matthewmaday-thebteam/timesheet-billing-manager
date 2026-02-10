@@ -3,9 +3,9 @@ import { startOfMonth, endOfMonth, format, eachDayOfInterval, isWeekend, isSameD
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
-import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
+import { useBilling } from '../../hooks/useBilling';
 import { useBillings } from '../../hooks/useBillings';
-import { useCombinedRevenueByMonth } from '../../hooks/useCombinedRevenueByMonth';
+import { useCombinedRevenue } from '../../hooks/useCombinedRevenue';
 import { useResources } from '../../hooks/useResources';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
@@ -65,18 +65,19 @@ export function InvestorDashboardPage() {
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
 
   // Compute combined revenue for all 12 chart months using same calculation as Revenue page
-  const { combinedRevenueByMonth } = useCombinedRevenueByMonth({
+  const { combinedRevenueByMonth } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
     extendedEntries,
     projectCanonicalIdLookup,
   });
 
-  // Use unified billing calculation
-  const { totalRevenue, billingResult } = useUnifiedBilling({
+  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  const { totalRevenue, billingResult } = useBilling({
     entries,
     projectsWithRates,
     projectCanonicalIdLookup,
+    selectedMonth,
   });
 
   // Build lookup: internal UUID -> externalProjectId
