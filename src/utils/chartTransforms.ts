@@ -215,6 +215,47 @@ export function aggregateEntriesByMonth(
 }
 
 /**
+ * Aggregate per-project revenue by month from timesheet entries.
+ * Returns a nested map: month key (YYYY-MM) → canonical project ID → revenue (dollars).
+ * Used for milestone adjustment calculations across all chart months.
+ *
+ * @param entries - Array of timesheet entries (extended range)
+ * @param projectRates - Map of external project_id to hourly rate (base rates)
+ * @param projectCanonicalIdLookup - Optional map from external project_id to canonical project_id
+ * @returns Nested map of month → project → revenue
+ */
+export function aggregateProjectRevenueByMonth(
+  entries: Array<{
+    work_date: string;
+    project_id: string | null;
+    total_minutes: number;
+  }>,
+  projectRates: Map<string, number>,
+  projectCanonicalIdLookup?: Map<string, string>
+): Map<string, Map<string, number>> {
+  const result = new Map<string, Map<string, number>>();
+
+  for (const entry of entries) {
+    const month = entry.work_date.substring(0, 7);
+    const projectId = entry.project_id || '';
+    const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
+    const rate = projectRates.get(canonicalProjectId) ?? 0;
+    const revenue = (entry.total_minutes / 60) * rate;
+
+    if (!result.has(month)) {
+      result.set(month, new Map());
+    }
+    const monthMap = result.get(month)!;
+    monthMap.set(
+      canonicalProjectId,
+      (monthMap.get(canonicalProjectId) || 0) + revenue
+    );
+  }
+
+  return result;
+}
+
+/**
  * Generate mock line chart data for preview/testing.
  * Shows cumulative values with revenue extending as flat line into future months.
  *

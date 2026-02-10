@@ -8,11 +8,7 @@ import { Alert } from '../Alert';
 import { useMonthlyRates, getCurrentMonth, formatMonthDisplay } from '../../hooks/useMonthlyRates';
 import { useCompanies } from '../../hooks/useCompanies';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
-import {
-  calculateMonthlyBilling,
-  buildBillingInputs,
-  type ProjectBillingConfig,
-} from '../../utils/billingCalculations';
+import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
 import {
   parseClockify,
   parseClickUp,
@@ -28,7 +24,10 @@ import type {
   ProjectValidationResult,
   BillingConfigLookup,
 } from '../../utils/diagnostics';
+import { useSummaryBilling } from '../../hooks/useSummaryBilling';
+import { formatCurrency } from '../../utils/billing';
 import type { MonthSelection } from '../../types';
+import type { ProjectBillingResult, MonthlyBillingResult } from '../../utils/billingCalculations';
 
 /**
  * App billing data for a project (from database)
@@ -310,6 +309,254 @@ function ValidationSummary({ report }: { report: ValidationReport }) {
 }
 
 /**
+ * Comparison row for a single field
+ */
+function ComparisonRow({
+  label,
+  frontendValue,
+  summaryValue,
+  formatFn = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+}: {
+  label: string;
+  frontendValue: number;
+  summaryValue: number;
+  formatFn?: (v: number) => string;
+}) {
+  const diff = Math.abs(frontendValue - summaryValue);
+  const hasDiff = diff > 0.005; // Tolerance for float display
+
+  return (
+    <tr className={hasDiff ? 'bg-error/5' : ''}>
+      <td className="py-1 pr-3 text-vercel-gray-400">{label}</td>
+      <td className="py-1 pr-3 text-right font-mono text-vercel-gray-600">{formatFn(frontendValue)}</td>
+      <td className="py-1 pr-3 text-right font-mono text-vercel-gray-600">{formatFn(summaryValue)}</td>
+      <td className={`py-1 text-right font-mono ${hasDiff ? 'text-error font-medium' : 'text-success'}`}>
+        {hasDiff ? formatFn(frontendValue - summaryValue) : '0'}
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Summary vs Frontend comparison panel
+ */
+function SummaryComparisonPanel({
+  frontendResult,
+  summaryResult,
+  summaryLoading,
+  summaryError,
+}: {
+  frontendResult: MonthlyBillingResult | null;
+  summaryResult: MonthlyBillingResult | null;
+  summaryLoading: boolean;
+  summaryError: string | null;
+}) {
+  // Build project lookup from frontend result (keyed by projectId)
+  const frontendProjects = useMemo(() => {
+    const map = new Map<string, ProjectBillingResult>();
+    if (!frontendResult) return map;
+    for (const company of frontendResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          map.set(project.projectId, project);
+        }
+      }
+    }
+    return map;
+  }, [frontendResult]);
+
+  // Build project lookup from summary result (keyed by projectId)
+  const summaryProjects = useMemo(() => {
+    const map = new Map<string, ProjectBillingResult>();
+    if (!summaryResult) return map;
+    for (const company of summaryResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          map.set(project.projectId, project);
+        }
+      }
+    }
+    return map;
+  }, [summaryResult]);
+
+  // Merge all project IDs from both sources
+  const allProjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of frontendProjects.keys()) ids.add(id);
+    for (const id of summaryProjects.keys()) ids.add(id);
+    return Array.from(ids).sort();
+  }, [frontendProjects, summaryProjects]);
+
+  // Count discrepancies (ignore DB-only projects with 0 hours/0 revenue — noise from SQL
+  // creating rows for all canonical projects even when there are no entries)
+  const discrepancyCount = useMemo(() => {
+    let count = 0;
+    for (const id of allProjectIds) {
+      const fe = frontendProjects.get(id);
+      const su = summaryProjects.get(id);
+      // DB-only with 0 hours and 0 revenue is noise, not a real discrepancy
+      if (!fe && su && su.billedHours === 0 && su.billedRevenue === 0) continue;
+      // FE-only with 0 hours and 0 revenue is also noise
+      if (fe && !su && fe.billedHours === 0 && fe.billedRevenue === 0) continue;
+      if (!fe || !su) { count++; continue; }
+      if (
+        Math.abs(fe.roundedMinutes - su.roundedMinutes) > 0 ||
+        Math.abs(fe.billedHours - su.billedHours) > 0.005 ||
+        Math.abs(fe.billedRevenue - su.billedRevenue) > 0.005
+      ) {
+        count++;
+      }
+    }
+    return count;
+  }, [allProjectIds, frontendProjects, summaryProjects]);
+
+  const fmtCurrency = (v: number) => formatCurrency(v) ?? '$0.00';
+  const fmtHours = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtMinutes = (v: number) => v.toLocaleString('en-US');
+
+  if (summaryLoading) {
+    return (
+      <Card variant="default" padding="md">
+        <div className="flex items-center gap-2">
+          <Spinner size="sm" />
+          <span className="text-sm text-vercel-gray-400">Loading summary table data...</span>
+        </div>
+      </Card>
+    );
+  }
+
+  if (summaryError) {
+    return (
+      <Card variant="default" padding="md">
+        <Alert message={`Summary table error: ${summaryError}`} icon="error" variant="error" />
+      </Card>
+    );
+  }
+
+  return (
+    <Card variant="default" padding="md" className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-vercel-gray-600 uppercase tracking-wide">
+            Frontend vs Summary Table
+          </h2>
+          <p className="text-xs text-vercel-gray-400 mt-0.5">
+            Compares in-browser billing (useUnifiedBilling) against pre-calculated summary table
+          </p>
+        </div>
+        <Badge
+          variant={discrepancyCount === 0 ? 'success' : 'error'}
+          size="md"
+        >
+          {discrepancyCount === 0 ? 'All Match' : `${discrepancyCount} Discrepancies`}
+        </Badge>
+      </div>
+
+      {/* Monthly Totals Comparison */}
+      {frontendResult && summaryResult && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-vercel-gray-400 uppercase tracking-wide">
+            Monthly Totals
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-vercel-gray-400 border-b border-vercel-gray-100">
+                <tr>
+                  <th className="text-left py-1 pr-3">Metric</th>
+                  <th className="text-right py-1 pr-3">Frontend</th>
+                  <th className="text-right py-1 pr-3">Summary</th>
+                  <th className="text-right py-1">Diff</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ComparisonRow label="Actual Minutes" frontendValue={frontendResult.actualMinutes} summaryValue={summaryResult.actualMinutes} formatFn={fmtMinutes} />
+                <ComparisonRow label="Rounded Minutes" frontendValue={frontendResult.roundedMinutes} summaryValue={summaryResult.roundedMinutes} formatFn={fmtMinutes} />
+                <ComparisonRow label="Rounded Hours" frontendValue={frontendResult.roundedHours} summaryValue={summaryResult.roundedHours} formatFn={fmtHours} />
+                <ComparisonRow label="Billed Hours" frontendValue={frontendResult.billedHours} summaryValue={summaryResult.billedHours} formatFn={fmtHours} />
+                <ComparisonRow label="Unbillable Hours" frontendValue={frontendResult.unbillableHours} summaryValue={summaryResult.unbillableHours} formatFn={fmtHours} />
+                <ComparisonRow label="Base Revenue" frontendValue={frontendResult.baseRevenue} summaryValue={summaryResult.baseRevenue} formatFn={fmtCurrency} />
+                <ComparisonRow label="Billed Revenue" frontendValue={frontendResult.billedRevenue} summaryValue={summaryResult.billedRevenue} formatFn={fmtCurrency} />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Per-Project Comparison */}
+      {allProjectIds.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-vercel-gray-400 uppercase tracking-wide">
+            Per-Project ({allProjectIds.length} projects)
+          </h3>
+          <div className="max-h-96 overflow-y-auto">
+            <table className="w-full text-xs">
+              <thead className="text-vercel-gray-400 border-b border-vercel-gray-100 sticky top-0 bg-white">
+                <tr>
+                  <th className="text-left py-1 pr-2">Project</th>
+                  <th className="text-right py-1 pr-2">FE Hours</th>
+                  <th className="text-right py-1 pr-2">DB Hours</th>
+                  <th className="text-right py-1 pr-2">FE Revenue</th>
+                  <th className="text-right py-1 pr-2">DB Revenue</th>
+                  <th className="text-right py-1">Status</th>
+                </tr>
+              </thead>
+              <tbody className="text-vercel-gray-600">
+                {allProjectIds.map((projectId) => {
+                  const fe = frontendProjects.get(projectId);
+                  const su = summaryProjects.get(projectId);
+
+                  const hoursDiff = fe && su ? Math.abs(fe.billedHours - su.billedHours) : -1;
+                  const revDiff = fe && su ? Math.abs(fe.billedRevenue - su.billedRevenue) : -1;
+                  const hasIssue = !fe || !su || hoursDiff > 0.005 || revDiff > 0.005;
+                  const projectName = fe?.projectName || su?.projectName || projectId;
+
+                  return (
+                    <tr key={projectId} className={`border-b border-vercel-gray-50 ${hasIssue ? 'bg-error/5' : ''}`}>
+                      <td className="py-1 pr-2 font-medium truncate max-w-[200px]" title={projectName}>
+                        {projectName}
+                      </td>
+                      <td className="py-1 pr-2 text-right font-mono">
+                        {fe ? fmtHours(fe.billedHours) : '—'}
+                      </td>
+                      <td className="py-1 pr-2 text-right font-mono">
+                        {su ? fmtHours(su.billedHours) : '—'}
+                      </td>
+                      <td className="py-1 pr-2 text-right font-mono">
+                        {fe ? fmtCurrency(fe.billedRevenue) : '—'}
+                      </td>
+                      <td className="py-1 pr-2 text-right font-mono">
+                        {su ? fmtCurrency(su.billedRevenue) : '—'}
+                      </td>
+                      <td className="py-1 text-right">
+                        {!fe ? (
+                          <Badge variant="warning" size="sm">DB only</Badge>
+                        ) : !su ? (
+                          <Badge variant="warning" size="sm">FE only</Badge>
+                        ) : hasIssue ? (
+                          <Badge variant="error" size="sm">Diff</Badge>
+                        ) : (
+                          <Badge variant="success" size="sm">Match</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {!frontendResult && !summaryResult && (
+        <p className="text-sm text-vercel-gray-400 text-center py-4">
+          No billing data available for this month.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/**
  * Month selector component
  */
 function MonthSelector({
@@ -397,89 +644,27 @@ export function DiagnosticsPage() {
   }, [selectedMonth]);
 
   // Fetch timesheet entries from database for the selected month
-  const { entries: dbEntries, loading: entriesLoading } = useTimesheetData(dateRange);
+  const { entries: dbEntries, projectCanonicalIdLookup, loading: entriesLoading } = useTimesheetData(dateRange);
 
-  // Calculate app billing from database entries
+  // Fetch summary table data for comparison
+  const {
+    billingResult: summaryBillingResult,
+    isLoading: summaryLoading,
+    error: summaryError,
+  } = useSummaryBilling({ selectedMonth });
+
+  // Use the SAME billing engine as Dashboard/RevenuePage (canonical grouping, carryover injection, etc.)
+  const { billingResult: frontendBillingResult } = useUnifiedBilling({
+    entries: dbEntries,
+    projectsWithRates,
+    projectCanonicalIdLookup,
+  });
+
+  // Build per-project lookup from unified billing result (for file-based validation cards)
   const appBillingByProject = useMemo(() => {
     const lookup = new Map<string, AppBillingData>();
-
-    if (dbEntries.length === 0 || projectsWithRates.length === 0) {
-      return lookup;
-    }
-
-    // Build billing config getter from projectsWithRates (ID-only lookup)
-    const getBillingConfig = (projectId: string): ProjectBillingConfig => {
-      // Only look up by ID - no name fallbacks
-      const project = projectsWithRates.find(p => p.externalProjectId === projectId);
-
-      if (project) {
-        return {
-          rate: project.effectiveRate,
-          rounding: project.effectiveRounding,
-          minimumHours: project.minimumHours,
-          maximumHours: project.maximumHours,
-          isActive: project.isActive,
-          carryoverEnabled: project.carryoverEnabled,
-          carryoverHoursIn: project.carryoverHoursIn,
-          carryoverMaxHours: project.carryoverMaxHours,
-          carryoverExpiryMonths: project.carryoverExpiryMonths,
-        };
-      }
-
-      // Default config - no match by ID
-      return {
-        rate: 0,
-        rounding: 15,
-        minimumHours: null,
-        maximumHours: null,
-        isActive: true,
-        carryoverEnabled: false,
-        carryoverHoursIn: 0,
-        carryoverMaxHours: null,
-        carryoverExpiryMonths: null,
-      };
-    };
-
-    // Build project_id -> company info lookup from entries
-    // NOTE: DiagnosticsPage intentionally uses raw company data for debugging
-    const projectToCompanyMap = new Map<string, { canonicalClientId: string; canonicalDisplayName: string }>();
-    for (const e of dbEntries) {
-      if (e.project_id && !projectToCompanyMap.has(e.project_id)) {
-        const company = companies.find(c => c.client_id === e.client_id);
-        projectToCompanyMap.set(e.project_id, {
-          canonicalClientId: e.client_id || '__UNASSIGNED__',
-          canonicalDisplayName: company?.display_name || 'Unknown',
-        });
-      }
-    }
-
-    // Getter by project ID (matches new buildBillingInputs interface)
-    const getCanonicalCompanyByProject = (projectId: string) => {
-      return projectToCompanyMap.get(projectId) || {
-        canonicalClientId: '__UNASSIGNED__',
-        canonicalDisplayName: 'Unknown',
-      };
-    };
-
-    // Build billing inputs from database entries
-    const billingInputs = buildBillingInputs({
-      entries: dbEntries.map(e => ({
-        project_id: e.project_id,
-        project_name: e.project_name,
-        task_name: e.task_name,
-        total_minutes: e.total_minutes,
-      })),
-      getBillingConfig,
-      getCanonicalCompanyByProject,
-    });
-
-    // Calculate monthly billing
-    const billingResult = calculateMonthlyBilling(billingInputs);
-
-    // Build lookup by project ID (canonical)
-    for (const company of billingResult.companies) {
+    for (const company of frontendBillingResult.companies) {
       for (const project of company.projects) {
-        // Key by project ID only - no name-based lookups
         if (project.projectId) {
           lookup.set(project.projectId, {
             roundedHours: project.roundedHours,
@@ -490,9 +675,8 @@ export function DiagnosticsPage() {
         }
       }
     }
-
     return lookup;
-  }, [dbEntries, projectsWithRates, companies]);
+  }, [frontendBillingResult]);
 
   // Build billing config lookup (ID-only)
   const billingConfigLookup = useMemo(() => {
@@ -709,6 +893,14 @@ export function DiagnosticsPage() {
               )}
             </div>
           </Card>
+
+          {/* Frontend vs Summary Table Comparison */}
+          <SummaryComparisonPanel
+            frontendResult={frontendBillingResult}
+            summaryResult={summaryBillingResult}
+            summaryLoading={summaryLoading}
+            summaryError={summaryError}
+          />
 
           {/* Upload Section */}
           <Card variant="default" padding="md" className="space-y-4">

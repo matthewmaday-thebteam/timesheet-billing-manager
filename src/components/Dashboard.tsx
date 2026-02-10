@@ -6,6 +6,7 @@ import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../hooks/useUnifiedBilling';
 import { useBillings } from '../hooks/useBillings';
+import { useCombinedRevenueByMonth } from '../hooks/useCombinedRevenueByMonth';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import { useEmployeeTableEntities } from '../hooks/useEmployeeTableEntities';
 import { useTimeOff } from '../hooks/useTimeOff';
@@ -46,7 +47,7 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, extendedEntries, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
@@ -90,6 +91,14 @@ export function Dashboard() {
 
   // Fetch fixed billings for the date range (same as Revenue page)
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
+
+  // Compute combined revenue for all 12 chart months using same calculation as Revenue page
+  const { combinedRevenueByMonth } = useCombinedRevenueByMonth({
+    dateRange,
+    extendedMonths: HISTORICAL_MONTHS,
+    extendedEntries,
+    projectCanonicalIdLookup,
+  });
 
   // Get canonical company mapping
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
@@ -298,6 +307,7 @@ export function Dashboard() {
             billingResult={billingResult}
             currentMonthRevenue={combinedTotalRevenue}
             selectedMonthKey={selectedMonthKey}
+            combinedRevenueByMonth={combinedRevenueByMonth}
             loading={loading || billingsLoading}
             section="resources"
           />
@@ -328,6 +338,7 @@ export function Dashboard() {
             billingResult={billingResult}
             currentMonthRevenue={combinedTotalRevenue}
             selectedMonthKey={selectedMonthKey}
+            combinedRevenueByMonth={combinedRevenueByMonth}
             loading={loading || billingsLoading}
             section="trends"
           />

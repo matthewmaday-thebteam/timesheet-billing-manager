@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import {
   buildBillingInputs,
   calculateMonthlyBilling,
+  DEFAULT_BILLING_CONFIG,
   type CompanyInput,
   type MonthlyBillingResult,
   type ProjectBillingConfig,
@@ -200,18 +201,14 @@ export function useUnifiedBilling({
       }
     }
 
-    // Filter and transform entries to use canonical project IDs and names
-    const matchedEntries = entries
-      .filter(entry => {
-        const projectId = entry.project_id;
-        if (!projectId) return false;
-        const canonicalId = getCanonicalProjectId(projectId);
-        return billingConfigByProjectId.has(canonicalId);
-      })
+    // Transform ALL entries to use canonical project IDs and names
+    // Non-billable projects (not in projectsWithRates) get DEFAULT_BILLING_CONFIG (rate=0)
+    // so their hours are included in billing results even though they generate no revenue
+    const allEntries = entries
+      .filter(entry => !!entry.project_id)
       .map(entry => {
-        // Transform entry to use canonical project ID and name
         const canonicalId = getCanonicalProjectId(entry.project_id!);
-        const canonicalName = projectNameByCanonicalId.get(canonicalId) || canonicalId;
+        const canonicalName = projectNameByCanonicalId.get(canonicalId) || entry.project_name;
         return {
           ...entry,
           project_id: canonicalId,
@@ -219,25 +216,19 @@ export function useUnifiedBilling({
         };
       });
 
-    // Build inputs with matched entries (now using canonical project IDs and names)
+    // Build inputs with ALL entries (using canonical project IDs and names)
+    // Projects without billing config get DEFAULT_BILLING_CONFIG (rate=0, default rounding)
     const inputs = buildBillingInputs({
-      entries: matchedEntries,
+      entries: allEntries,
       getBillingConfig: (projectId) => {
-        // This should always succeed since we filtered to matched entries
-        // projectId is now the canonical ID
-        const config = billingConfigByProjectId.get(projectId);
-        if (!config) {
-          // This should never happen after filtering, but be defensive
-          throw new Error(`Data integrity error: project ${projectId} not found after filtering`);
-        }
-        return config;
+        return billingConfigByProjectId.get(projectId) || DEFAULT_BILLING_CONFIG;
       },
       getCanonicalCompanyByProject,
     });
 
-    // Inject carryover-only projects: projects with carryoverHoursIn > 0
-    // but no timesheet entries this month. These still generate revenue
-    // from carried-over hours even with zero new work.
+    // Inject zero-entry projects that still generate billing:
+    // - Carryover-only: carryoverHoursIn > 0 (revenue from carried-over hours)
+    // - Minimum-only: active projects with minimumHours set (SLA minimums apply even with 0 work)
     const projectIdsInInputs = new Set<string>();
     for (const company of inputs) {
       for (const project of company.projects) {
@@ -248,7 +239,10 @@ export function useUnifiedBilling({
     }
 
     for (const [externalId, config] of billingConfigByProjectId) {
-      if (config.carryoverHoursIn > 0 && !projectIdsInInputs.has(externalId)) {
+      const hasCarryover = config.carryoverHoursIn > 0;
+      const hasMinimum = config.isActive && config.minimumHours !== null && config.minimumHours > 0;
+      if ((hasCarryover || hasMinimum) && !projectIdsInInputs.has(externalId)) {
+        console.debug('[useUnifiedBilling] Injecting zero-entry project:', externalId, { hasCarryover, hasMinimum, minimumHours: config.minimumHours });
         const companyInfo = getCanonicalCompanyByProject(externalId);
         const projectName = projectNameByCanonicalId.get(externalId) || externalId;
 

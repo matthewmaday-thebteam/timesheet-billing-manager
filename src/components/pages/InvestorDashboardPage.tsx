@@ -5,6 +5,7 @@ import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useUnifiedBilling } from '../../hooks/useUnifiedBilling';
 import { useBillings } from '../../hooks/useBillings';
+import { useCombinedRevenueByMonth } from '../../hooks/useCombinedRevenueByMonth';
 import { useResources } from '../../hooks/useResources';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
@@ -41,6 +42,7 @@ export function InvestorDashboardPage() {
     entries,
     monthlyAggregates,
     projectCanonicalIdLookup,
+    extendedEntries,
     loading,
   } = useTimesheetData(dateRange, { extendedMonths: HISTORICAL_MONTHS });
 
@@ -61,6 +63,14 @@ export function InvestorDashboardPage() {
 
   // Fetch fixed billings
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
+
+  // Compute combined revenue for all 12 chart months using same calculation as Revenue page
+  const { combinedRevenueByMonth } = useCombinedRevenueByMonth({
+    dateRange,
+    extendedMonths: HISTORICAL_MONTHS,
+    extendedEntries,
+    projectCanonicalIdLookup,
+  });
 
   // Use unified billing calculation
   const { totalRevenue, billingResult } = useUnifiedBilling({
@@ -242,17 +252,18 @@ export function InvestorDashboardPage() {
   // Month key for the selected date range (used to correct chart data for the right month)
   const selectedMonthKey = `${dateRange.start.getFullYear()}-${String(dateRange.start.getMonth() + 1).padStart(2, '0')}`;
 
-  // Create corrected monthlyAggregates with selected month revenue
+  // Create corrected monthlyAggregates using pre-computed combined revenue
+  // (replicates the Revenue page formula for every month in the chart range)
   const correctedMonthlyAggregates = useMemo(() => {
     if (monthlyAggregates.length === 0) return monthlyAggregates;
 
     return monthlyAggregates.map(agg => {
-      if (agg.month === selectedMonthKey) {
-        return { ...agg, totalRevenue: combinedTotalRevenue };
+      if (combinedRevenueByMonth.has(agg.month)) {
+        return { ...agg, totalRevenue: combinedRevenueByMonth.get(agg.month)! };
       }
       return agg;
     });
-  }, [monthlyAggregates, combinedTotalRevenue, selectedMonthKey]);
+  }, [monthlyAggregates, combinedRevenueByMonth]);
 
   // Line chart data
   const lineData = useMemo(() => {

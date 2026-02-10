@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { format, subMonths, startOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { aggregateByProject, aggregateByResource } from '../utils/calculations';
-import { aggregateEntriesByMonth } from '../utils/chartTransforms';
+import { aggregateEntriesByMonth, aggregateProjectRevenueByMonth } from '../utils/chartTransforms';
 import type { TimesheetEntry, ProjectSummary, ResourceSummary, DateRange } from '../types';
 import type { MonthlyAggregate } from '../types/charts';
 
@@ -73,6 +73,10 @@ interface UseTimesheetDataResult {
   userIdToDisplayNameLookup: Map<string, string>;
   /** Lookup from external project_id to CANONICAL external project_id (for billing lookups) */
   projectCanonicalIdLookup: Map<string, string>;
+  /** Per-project revenue by month for extended range (month → canonicalProjectId → revenue in dollars) */
+  projectRevenueByMonth: Map<string, Map<string, number>>;
+  /** Extended timesheet entries covering the full chart range (12+ months) */
+  extendedEntries: TimesheetEntry[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -104,6 +108,11 @@ export function useTimesheetData(
   const extendedStartDate = extendedMonths > 0
     ? format(startOfMonth(subMonths(dateRange.start, extendedMonths)), 'yyyy-MM-dd')
     : startDateStr;
+
+  // Extended end date always includes the current month (so the chart shows MTD)
+  const extendedEndDate = extendedMonths > 0
+    ? format(new Date(Math.max(dateRange.end.getTime(), endOfMonth(new Date()).getTime())), 'yyyy-MM-dd')
+    : endDateStr;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -157,12 +166,13 @@ export function useTimesheetData(
         .select('project_id, canonical_project_id, role');
 
       // If extended months requested, fetch historical entries too
+      // Always extends to the current month so the chart shows MTD data
       const extendedPromise = extendedMonths > 0
         ? supabase
             .from('v_timesheet_entries')
             .select('*')
             .gte('work_date', extendedStartDate)
-            .lte('work_date', endDateStr)
+            .lte('work_date', extendedEndDate)
             .order('work_date', { ascending: false })
         : null;
 
@@ -240,7 +250,7 @@ export function useTimesheetData(
     } finally {
       setLoading(false);
     }
-  }, [startDateStr, endDateStr, extendedMonths, extendedStartDate]);
+  }, [startDateStr, endDateStr, extendedMonths, extendedStartDate, extendedEndDate]);
 
   useEffect(() => {
     fetchData();
@@ -407,9 +417,16 @@ export function useTimesheetData(
 
   // Calculate monthly aggregates for line chart (uses extended entries if available)
   // Uses canonical project mapping for proper rate lookups
+  const effectiveEntries = extendedEntries.length > 0 ? extendedEntries : entries;
   const monthlyAggregates = useMemo(
-    () => aggregateEntriesByMonth(extendedEntries.length > 0 ? extendedEntries : entries, projectRates, projectCanonicalIdLookup),
-    [extendedEntries, entries, projectRates, projectCanonicalIdLookup]
+    () => aggregateEntriesByMonth(effectiveEntries, projectRates, projectCanonicalIdLookup),
+    [effectiveEntries, projectRates, projectCanonicalIdLookup]
+  );
+
+  // Calculate per-project revenue by month (for milestone adjustment in chart corrections)
+  const projectRevenueByMonth = useMemo(
+    () => aggregateProjectRevenueByMonth(effectiveEntries, projectRates, projectCanonicalIdLookup),
+    [effectiveEntries, projectRates, projectCanonicalIdLookup]
   );
 
   return {
@@ -420,6 +437,8 @@ export function useTimesheetData(
     displayNameLookup,
     userIdToDisplayNameLookup,
     projectCanonicalIdLookup,
+    projectRevenueByMonth,
+    extendedEntries: extendedEntries.length > 0 ? extendedEntries : entries,
     loading,
     error,
     refetch: fetchData,

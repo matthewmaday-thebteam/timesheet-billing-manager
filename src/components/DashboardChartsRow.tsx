@@ -67,6 +67,8 @@ export interface DashboardChartsRowProps {
   currentMonthRevenue?: number;
   /** The month key (YYYY-MM) that currentMonthRevenue corresponds to */
   selectedMonthKey?: string;
+  /** Pre-computed combined revenue by month key (YYYY-MM -> dollars) — replicates Revenue page formula */
+  combinedRevenueByMonth?: Map<string, number>;
   /** Loading state */
   loading?: boolean;
   /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
@@ -210,30 +212,26 @@ export function DashboardChartsRow({
   billingResult,
   currentMonthRevenue,
   selectedMonthKey,
+  combinedRevenueByMonth,
   loading = false,
   section = 'all',
 }: DashboardChartsRowProps) {
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
 
-  // Create corrected monthlyAggregates with selected month revenue updated
-  // This ensures MoM, CAGR, and all charts use the accurate combined total revenue
-  // Uses selectedMonthKey to target the correct month (not necessarily today's month)
+  // Create corrected monthlyAggregates using pre-computed combined revenue
+  // (replicates the Revenue page formula for every month in the chart range)
   const correctedMonthlyAggregates = useMemo(() => {
-    if (currentMonthRevenue === undefined || monthlyAggregates.length === 0) {
-      return monthlyAggregates;
-    }
-
-    const monthKey = selectedMonthKey
-      || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    if (monthlyAggregates.length === 0) return monthlyAggregates;
 
     return monthlyAggregates.map(agg => {
-      if (agg.month === monthKey) {
-        return { ...agg, totalRevenue: currentMonthRevenue };
+      // Use pre-computed combined revenue (same calculation as Revenue page)
+      if (combinedRevenueByMonth && combinedRevenueByMonth.has(agg.month)) {
+        return { ...agg, totalRevenue: combinedRevenueByMonth.get(agg.month)! };
       }
       return agg;
     });
-  }, [monthlyAggregates, currentMonthRevenue, selectedMonthKey]);
+  }, [monthlyAggregates, combinedRevenueByMonth]);
 
   // Transform data for charts
   const pieData = useMemo(
