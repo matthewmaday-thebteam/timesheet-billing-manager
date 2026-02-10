@@ -72,11 +72,8 @@ export function EmployeesPage() {
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
-  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  // Use billing from summary table
   const { billingResult } = useBilling({
-    entries,
-    projectsWithRates,
-    projectCanonicalIdLookup,
     selectedMonth,
   });
 

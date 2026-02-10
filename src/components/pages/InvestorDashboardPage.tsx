@@ -39,10 +39,7 @@ export function InvestorDashboardPage() {
 
   // Fetch timesheet data with extended months for trend charts
   const {
-    entries,
     monthlyAggregates,
-    projectCanonicalIdLookup,
-    extendedEntries,
     loading,
   } = useTimesheetData(dateRange, { extendedMonths: HISTORICAL_MONTHS });
 
@@ -64,19 +61,14 @@ export function InvestorDashboardPage() {
   // Fetch fixed billings
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
 
-  // Compute combined revenue for all 12 chart months using same calculation as Revenue page
+  // Compute combined revenue for all 12 chart months
   const { combinedRevenueByMonth } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
-    extendedEntries,
-    projectCanonicalIdLookup,
   });
 
-  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  // Use billing from summary table
   const { totalRevenue, billingResult } = useBilling({
-    entries,
-    projectsWithRates,
-    projectCanonicalIdLookup,
     selectedMonth,
   });
 

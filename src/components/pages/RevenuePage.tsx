@@ -3,7 +3,6 @@ import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useBilling } from '../../hooks/useBilling';
-import { useCarryoverSync } from '../../hooks/useCarryoverSync';
 import { useBillings } from '../../hooks/useBillings';
 import { formatCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
@@ -19,7 +18,7 @@ import type { MonthSelection } from '../../types';
 export function RevenuePage() {
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
-  const { entries, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
+  const { entries, loading, error } = useTimesheetData(dateRange);
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -30,20 +29,9 @@ export function RevenuePage() {
   // Fetch monthly rates (which now includes rounding data)
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
-  // Use billing wrapper (delegates to frontend or summary based on feature flag)
-  const { totalRevenue, billingResult, unmatchedProjects, allProjectsMatched } = useBilling({
-    entries,
-    projectsWithRates,
-    projectCanonicalIdLookup,
+  // Use billing from summary table
+  const { totalRevenue, billingResult } = useBilling({
     selectedMonth,
-  });
-
-  // Auto-persist carryover to database so next month can read it
-  useCarryoverSync({
-    billingResult,
-    projectsWithRates,
-    selectedMonth,
-    loading,
   });
 
   // Fetch fixed billings for the date range
@@ -398,30 +386,6 @@ export function RevenuePage() {
 
       {/* Error State */}
       {error && <Alert message={error} icon="error" variant="error" />}
-
-      {/* Unmatched Projects Warning */}
-      {!allProjectsMatched && (
-        <Alert
-          message={`Data integrity error: ${unmatchedProjects.length} project(s) could not be matched by ID and are excluded from billing.`}
-          icon="warning"
-          variant="warning"
-        >
-          <div className="mt-2 text-sm">
-            <p className="font-medium mb-1">Unmatched projects:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {unmatchedProjects.map((p, i) => (
-                <li key={i}>
-                  <span className="font-mono text-xs">{p.entryProjectId}</span>
-                  {' - '}
-                  {p.entryProjectName}
-                  {' '}
-                  <span className="text-vercel-gray-400">({(p.totalMinutes / 60).toFixed(2)} hrs)</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Alert>
-      )}
 
       {/* Billings Error */}
       {billingsError && <Alert message={billingsError} icon="error" variant="error" />}

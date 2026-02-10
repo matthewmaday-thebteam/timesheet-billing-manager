@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
-import { useMonthlyRates } from '../../hooks/useMonthlyRates';
+import { useBilling } from '../../hooks/useBilling';
 import { useProjectHierarchy } from '../../hooks/useProjectHierarchy';
 import { formatCurrency, formatHours } from '../../utils/billing';
 import { useDateFilter } from '../../contexts/DateFilterContext';
@@ -28,13 +28,13 @@ export function ProjectsPage() {
     month: dateRange.start.getMonth() + 1,
   }), [dateRange.start]);
 
-  // Fetch monthly rates (which includes canonical company info)
-  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
+  // Fetch billing result from summary table
+  const { billingResult } = useBilling({ selectedMonth });
 
   // Build 5-tier hierarchy
   const hierarchyResult = useProjectHierarchy({
     entries,
-    projectsWithRates,
+    billingResult,
     projectCanonicalIdLookup,
     userIdToDisplayNameLookup,
   });

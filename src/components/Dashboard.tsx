@@ -47,7 +47,7 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, extendedEntries, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
@@ -96,8 +96,6 @@ export function Dashboard() {
   const { combinedRevenueByMonth } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
-    extendedEntries,
-    projectCanonicalIdLookup,
   });
 
   // Get canonical company mapping
@@ -154,11 +152,8 @@ export function Dashboard() {
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
-  // Use billing wrapper (delegates to frontend or summary based on feature flag)
+  // Use billing from summary table
   const { totalRevenue, billingResult } = useBilling({
-    entries,
-    projectsWithRates,
-    projectCanonicalIdLookup,
     selectedMonth,
   });
 

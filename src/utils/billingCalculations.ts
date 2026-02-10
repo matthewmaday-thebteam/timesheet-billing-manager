@@ -1,28 +1,21 @@
 /**
- * Unified Billing Calculations
+ * Billing Calculation Types
  *
- * This module provides a single source of truth for all billing calculations.
- * All revenue/hours calculations across the app should use these functions.
+ * Type definitions for the billing hierarchy.
+ * Calculation functions have been removed — billing is now computed by
+ * the SQL summary table (project_monthly_summary) and read via useSummaryBilling.
  *
  * Hierarchy:
- * 1. Task → calculateTaskBilling()
- * 2. Project → calculateProjectBilling() - applies MIN/MAX/CARRYOVER
- * 3. Company → calculateCompanyBilling()
- * 4. Monthly → calculateMonthlyBilling()
+ * 1. Task → TaskBillingResult
+ * 2. Project → ProjectBillingResult (MIN/MAX/CARRYOVER)
+ * 3. Company → CompanyBillingResult
+ * 4. Monthly → MonthlyBillingResult
  *
- * @official 2026-01-24
+ * @official 2026-02-10
  */
 
-import {
-  applyRounding,
-  calculateBilledHours,
-  roundHours,
-  roundCurrency,
-  DEFAULT_ROUNDING_INCREMENT,
-} from './billing';
 import type {
   RoundingIncrement,
-  ProjectBillingLimits,
   BilledHoursResult,
 } from '../types';
 
@@ -59,19 +52,6 @@ export interface ProjectBillingConfig {
   carryoverMaxHours: number | null;
   carryoverExpiryMonths: number | null;
 }
-
-/** Default billing config when none is specified */
-export const DEFAULT_BILLING_CONFIG: ProjectBillingConfig = {
-  rate: 0,
-  rounding: DEFAULT_ROUNDING_INCREMENT,
-  minimumHours: null,
-  maximumHours: null,
-  isActive: true,
-  carryoverEnabled: false,
-  carryoverHoursIn: 0,
-  carryoverMaxHours: null,
-  carryoverExpiryMonths: null,
-};
 
 /** Input for a project */
 export interface ProjectInput {
@@ -168,240 +148,6 @@ export interface MonthlyBillingResult {
   companies: CompanyBillingResult[];
 }
 
-// ============================================================================
-// LEVEL 1: TASK BILLING
-// ============================================================================
-
-/**
- * Calculate billing for a single task.
- *
- * Formula:
- * 1. actualMinutes = task.totalMinutes
- * 2. roundedMinutes = ROUND_UP(actualMinutes, rounding increment)
- * 3. roundedHours = roundedMinutes / 60
- * 4. baseRevenue = roundedHours * rate
- *
- * Note: Task-level revenue is "base" revenue. Actual billed revenue is
- * determined at the project level after MIN/MAX adjustments.
- */
-export function calculateTaskBilling(
-  task: TaskInput,
-  rounding: RoundingIncrement,
-  rate: number
-): TaskBillingResult {
-  const actualMinutes = task.totalMinutes;
-  const roundedMinutes = applyRounding(actualMinutes, rounding);
-  const actualHours = roundHours(actualMinutes / 60);
-  const roundedHours = roundHours(roundedMinutes / 60);
-  const baseRevenue = roundCurrency(roundedHours * rate);
-
-  return {
-    taskName: task.taskName,
-    actualMinutes,
-    roundedMinutes,
-    actualHours,
-    roundedHours,
-    baseRevenue,
-  };
-}
-
-// ============================================================================
-// LEVEL 2: PROJECT BILLING
-// ============================================================================
-
-/**
- * Calculate billing for a project (collection of tasks).
- *
- * Formula:
- * 1. For each task: calculate task billing (with rounding)
- * 2. Sum all task roundedMinutes → project roundedMinutes
- * 3. roundedHours = roundedMinutes / 60
- * 4. adjustedHours = roundedHours + carryoverIn
- * 5. Apply MIN: if isActive && adjustedHours < minimumHours → billedHours = minimumHours
- * 6. Apply MAX: if adjustedHours > maximumHours → billedHours = maximumHours
- *    - If carryoverEnabled: excess goes to carryoverOut
- *    - If !carryoverEnabled: excess becomes unbillableHours
- * 7. billedRevenue = billedHours * rate
- */
-export function calculateProjectBilling(project: ProjectInput): ProjectBillingResult {
-  const { projectId, projectName, tasks, billingConfig } = project;
-  const { rate, rounding, minimumHours, maximumHours, isActive, carryoverHoursIn } = billingConfig;
-
-  // Calculate each task
-  const taskResults: TaskBillingResult[] = tasks.map(task =>
-    calculateTaskBilling(task, rounding, rate)
-  );
-
-  // Aggregate task-level totals
-  const actualMinutes = taskResults.reduce((sum, t) => sum + t.actualMinutes, 0);
-  const roundedMinutes = taskResults.reduce((sum, t) => sum + t.roundedMinutes, 0);
-  const actualHours = roundHours(actualMinutes / 60);
-  const roundedHours = roundHours(roundedMinutes / 60);
-  const baseRevenue = roundCurrency(roundedHours * rate);
-
-  // Check if project has billing limits
-  const hasBillingLimits = minimumHours !== null ||
-                           maximumHours !== null ||
-                           carryoverHoursIn > 0;
-
-  // Apply billing limits
-  let billingResult: BilledHoursResult | null = null;
-  let carryoverIn = carryoverHoursIn;
-  let adjustedHours = roundHours(roundedHours + carryoverIn);
-  let billedHours = adjustedHours;
-  let unbillableHours = 0;
-  let carryoverOut = 0;
-  let minimumPadding = 0;
-  let minimumApplied = false;
-  let maximumApplied = false;
-  let billedRevenue = baseRevenue;
-
-  if (hasBillingLimits) {
-    const limits: ProjectBillingLimits = {
-      minimumHours: billingConfig.minimumHours,
-      maximumHours: billingConfig.maximumHours,
-      carryoverEnabled: billingConfig.carryoverEnabled,
-      carryoverMaxHours: billingConfig.carryoverMaxHours,
-      carryoverExpiryMonths: billingConfig.carryoverExpiryMonths,
-    };
-
-    billingResult = calculateBilledHours(
-      roundedMinutes,
-      limits,
-      carryoverIn,
-      rate,
-      isActive
-    );
-
-    adjustedHours = billingResult.adjustedHours;
-    billedHours = billingResult.billedHours;
-    unbillableHours = billingResult.unbillableHours;
-    carryoverOut = billingResult.carryoverOut;
-    minimumPadding = billingResult.minimumPadding;
-    minimumApplied = billingResult.minimumApplied;
-    maximumApplied = billingResult.maximumApplied;
-    billedRevenue = billingResult.revenue;
-  }
-
-  return {
-    projectId,
-    projectName,
-    actualMinutes,
-    roundedMinutes,
-    actualHours,
-    roundedHours,
-    carryoverIn,
-    adjustedHours,
-    billedHours,
-    unbillableHours,
-    carryoverOut,
-    minimumPadding,
-    minimumApplied,
-    maximumApplied,
-    hasBillingLimits,
-    baseRevenue,
-    billedRevenue,
-    rate,
-    rounding,
-    tasks: taskResults,
-    billingResult,
-  };
-}
-
-// ============================================================================
-// LEVEL 3: COMPANY BILLING
-// ============================================================================
-
-/**
- * Calculate billing for a company (collection of projects).
- *
- * Formula:
- * 1. For each project: calculate project billing
- * 2. Sum all project billedRevenue → company billedRevenue
- * 3. Sum all project billedHours → company billedHours
- */
-export function calculateCompanyBilling(company: CompanyInput): CompanyBillingResult {
-  const { companyId, companyName, projects } = company;
-
-  // Calculate each project
-  const projectResults: ProjectBillingResult[] = projects.map(project =>
-    calculateProjectBilling(project)
-  );
-
-  // Aggregate project-level totals
-  const actualMinutes = projectResults.reduce((sum, p) => sum + p.actualMinutes, 0);
-  const roundedMinutes = projectResults.reduce((sum, p) => sum + p.roundedMinutes, 0);
-  const actualHours = roundHours(projectResults.reduce((sum, p) => sum + p.actualHours, 0));
-  const roundedHours = roundHours(projectResults.reduce((sum, p) => sum + p.roundedHours, 0));
-  const adjustedHours = roundHours(projectResults.reduce((sum, p) => sum + p.adjustedHours, 0));
-  const billedHours = roundHours(projectResults.reduce((sum, p) => sum + p.billedHours, 0));
-  const unbillableHours = roundHours(projectResults.reduce((sum, p) => sum + p.unbillableHours, 0));
-  const baseRevenue = roundCurrency(projectResults.reduce((sum, p) => sum + p.baseRevenue, 0));
-  const billedRevenue = roundCurrency(projectResults.reduce((sum, p) => sum + p.billedRevenue, 0));
-
-  return {
-    companyId,
-    companyName,
-    actualMinutes,
-    roundedMinutes,
-    actualHours,
-    roundedHours,
-    adjustedHours,
-    billedHours,
-    unbillableHours,
-    baseRevenue,
-    billedRevenue,
-    projects: projectResults,
-  };
-}
-
-// ============================================================================
-// LEVEL 4: MONTHLY BILLING
-// ============================================================================
-
-/**
- * Calculate billing for a month (collection of companies).
- *
- * Formula:
- * 1. For each company: calculate company billing
- * 2. Sum all company billedRevenue → monthly billedRevenue
- * 3. Sum all company billedHours → monthly billedHours
- */
-export function calculateMonthlyBilling(companies: CompanyInput[]): MonthlyBillingResult {
-  // Calculate each company
-  const companyResults: CompanyBillingResult[] = companies.map(company =>
-    calculateCompanyBilling(company)
-  );
-
-  // Aggregate company-level totals
-  const actualMinutes = companyResults.reduce((sum, c) => sum + c.actualMinutes, 0);
-  const roundedMinutes = companyResults.reduce((sum, c) => sum + c.roundedMinutes, 0);
-  const actualHours = roundHours(companyResults.reduce((sum, c) => sum + c.actualHours, 0));
-  const roundedHours = roundHours(companyResults.reduce((sum, c) => sum + c.roundedHours, 0));
-  const adjustedHours = roundHours(companyResults.reduce((sum, c) => sum + c.adjustedHours, 0));
-  const billedHours = roundHours(companyResults.reduce((sum, c) => sum + c.billedHours, 0));
-  const unbillableHours = roundHours(companyResults.reduce((sum, c) => sum + c.unbillableHours, 0));
-  const baseRevenue = roundCurrency(companyResults.reduce((sum, c) => sum + c.baseRevenue, 0));
-  const billedRevenue = roundCurrency(companyResults.reduce((sum, c) => sum + c.billedRevenue, 0));
-
-  return {
-    actualMinutes,
-    roundedMinutes,
-    actualHours,
-    roundedHours,
-    adjustedHours,
-    billedHours,
-    unbillableHours,
-    baseRevenue,
-    billedRevenue,
-    companies: companyResults,
-  };
-}
-
-// ============================================================================
-// HELPER: BUILD INPUTS FROM RAW DATA
-// ============================================================================
-
 /**
  * Canonical company info returned by getCanonicalCompany
  */
@@ -431,67 +177,4 @@ export interface BuildBillingInputsParams {
    * CRITICAL: Uses project's company relationship for proper grouping.
    */
   getCanonicalCompanyByProject: (projectId: string) => CanonicalCompanyResult;
-}
-
-export function buildBillingInputs(params: BuildBillingInputsParams): CompanyInput[] {
-  const { entries, getBillingConfig, getCanonicalCompanyByProject } = params;
-
-  // Group entries: CANONICAL companyId -> projectId -> tasks
-  // CRITICAL: Use canonical client_id as key for proper grouping of company members
-  const companyMap = new Map<string, {
-    companyName: string;
-    projectMap: Map<string, { projectId: string; projectName: string; tasks: Map<string, number> }>;
-  }>();
-
-  for (const entry of entries) {
-    const projectId = entry.project_id || '';
-    // Get CANONICAL company info via the PROJECT's company relationship
-    const canonicalInfo = getCanonicalCompanyByProject(projectId);
-    const companyId = canonicalInfo.canonicalClientId;  // Use CANONICAL ID for grouping
-    const companyName = canonicalInfo.canonicalDisplayName;
-    const projectName = entry.project_name;
-    const taskName = entry.task_name || 'No Task';
-
-    if (!companyMap.has(companyId)) {
-      companyMap.set(companyId, { companyName, projectMap: new Map() });
-    }
-    const companyData = companyMap.get(companyId)!;
-
-    if (!companyData.projectMap.has(projectId)) {
-      companyData.projectMap.set(projectId, { projectId, projectName, tasks: new Map() });
-    }
-    const projectData = companyData.projectMap.get(projectId)!;
-
-    projectData.tasks.set(taskName, (projectData.tasks.get(taskName) || 0) + entry.total_minutes);
-  }
-
-  // Convert to CompanyInput[]
-  const companies: CompanyInput[] = [];
-
-  for (const [companyId, companyData] of companyMap) {
-    const projects: ProjectInput[] = [];
-
-    for (const [projectId, projectData] of companyData.projectMap) {
-      const tasks: TaskInput[] = Array.from(projectData.tasks.entries()).map(
-        ([taskName, totalMinutes]) => ({ taskName, totalMinutes })
-      );
-
-      const billingConfig = getBillingConfig(projectId);
-
-      projects.push({
-        projectId: projectId || null,
-        projectName: projectData.projectName,
-        tasks,
-        billingConfig,
-      });
-    }
-
-    companies.push({
-      companyId,
-      companyName: companyData.companyName,
-      projects,
-    });
-  }
-
-  return companies;
 }

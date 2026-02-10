@@ -15,8 +15,8 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { applyRounding, roundHours, roundCurrency } from '../utils/billing';
-import { useUnifiedBilling } from './useUnifiedBilling';
-import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement } from '../types';
+import type { MonthlyBillingResult } from '../utils/billingCalculations';
+import type { TimesheetEntry, RoundingIncrement } from '../types';
 
 // ============================================================================
 // Types
@@ -81,8 +81,8 @@ export interface ProjectHierarchyResult {
 interface UseProjectHierarchyParams {
   /** Raw timesheet entries */
   entries: TimesheetEntry[];
-  /** Projects with billing configuration from useMonthlyRates */
-  projectsWithRates: ProjectRateDisplayWithBilling[];
+  /** Pre-computed billing result from useBilling */
+  billingResult: MonthlyBillingResult;
   /** Lookup from external project_id to canonical external project_id */
   projectCanonicalIdLookup?: Map<string, string>;
   /** Lookup from user_id to canonical display name */
@@ -91,16 +91,10 @@ interface UseProjectHierarchyParams {
 
 export function useProjectHierarchy({
   entries,
-  projectsWithRates,
+  billingResult,
   projectCanonicalIdLookup,
   userIdToDisplayNameLookup,
 }: UseProjectHierarchyParams): ProjectHierarchyResult {
-  // Use unified billing to get project-level billed hours/revenue (with MIN/MAX/CARRYOVER)
-  const { billingResult } = useUnifiedBilling({
-    entries,
-    projectsWithRates,
-    projectCanonicalIdLookup,
-  });
 
   // Build lookup maps from billing result
   const projectBillingLookup = useMemo(() => {
