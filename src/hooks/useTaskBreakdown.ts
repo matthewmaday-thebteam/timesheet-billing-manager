@@ -21,6 +21,10 @@ export interface TaskBreakdownEntry {
 
 interface UseTaskBreakdownOptions {
   selectedMonth: MonthSelection;
+  /** When provided, filter entries to this date range instead of the full month */
+  dateRange?: { start: string; end: string };
+  /** When true, skip fetching entirely (returns empty map) */
+  skip?: boolean;
 }
 
 interface UseTaskBreakdownReturn {
@@ -32,32 +36,58 @@ interface UseTaskBreakdownReturn {
 
 export function useTaskBreakdown({
   selectedMonth,
+  dateRange,
+  skip = false,
 }: UseTaskBreakdownOptions): UseTaskBreakdownReturn {
   const [tasksByProject, setTasksByProject] = useState<Map<string, TaskBreakdownEntry[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
+    if (skip) {
+      setTasksByProject(new Map());
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const yyyy = selectedMonth.year;
-      const mm = String(selectedMonth.month).padStart(2, '0');
-      const monthStart = `${yyyy}-${mm}-01`;
-      // End of month: go to next month's 1st, entries are filtered with < in date range
-      const nextMonth = selectedMonth.month === 12
-        ? `${yyyy + 1}-01-01`
-        : `${yyyy}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
+      // Determine date bounds: use dateRange if provided, otherwise full month
+      let rangeStart: string;
+      let rangeEnd: string;
+      let useExclusiveEnd: boolean;
+
+      if (dateRange) {
+        rangeStart = dateRange.start;
+        rangeEnd = dateRange.end;
+        useExclusiveEnd = false; // inclusive end for week ranges
+      } else {
+        const yyyy = selectedMonth.year;
+        const mm = String(selectedMonth.month).padStart(2, '0');
+        rangeStart = `${yyyy}-${mm}-01`;
+        rangeEnd = selectedMonth.month === 12
+          ? `${yyyy + 1}-01-01`
+          : `${yyyy}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
+        useExclusiveEnd = true; // exclusive end for month ranges (< next month)
+      }
+
+      // Build the entries query with appropriate date filtering
+      let entriesQuery = supabase
+        .from('v_timesheet_entries')
+        .select('project_id, task_name, total_minutes')
+        .gte('work_date', rangeStart);
+
+      if (useExclusiveEnd) {
+        entriesQuery = entriesQuery.lt('work_date', rangeEnd);
+      } else {
+        entriesQuery = entriesQuery.lte('work_date', rangeEnd);
+      }
 
       // Fetch entries and project group mapping in parallel
       const [entriesResult, projectsResult, groupMembersResult] = await Promise.all([
-        // Raw entries for the month
-        supabase
-          .from('v_timesheet_entries')
-          .select('project_id, task_name, total_minutes')
-          .gte('work_date', monthStart)
-          .lt('work_date', nextMonth),
+        entriesQuery,
 
         // All projects (for external → internal ID mapping)
         supabase
@@ -133,7 +163,7 @@ export function useTaskBreakdown({
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, dateRange?.start, dateRange?.end, skip]);
 
   useEffect(() => {
     fetchTasks();

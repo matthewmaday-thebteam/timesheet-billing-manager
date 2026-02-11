@@ -1,6 +1,52 @@
-import { startOfWeek, format } from 'date-fns';
+import { startOfWeek, endOfWeek, format, addWeeks, isBefore, isAfter, startOfMonth, endOfMonth } from 'date-fns';
 import { getWorkingDaysInMonth } from './holidays';
 import type { TimesheetEntry, ProjectSummary, ResourceSummary, TaskSummary } from '../types';
+
+// ============================================================================
+// Week Option Utilities
+// ============================================================================
+
+export interface WeekOption {
+  label: string;       // "Week of Feb 2"
+  value: string;       // "2026-02-02" (Monday date as key)
+  startDate: string;   // "2026-02-02" (clamped to month start if needed)
+  endDate: string;     // "2026-02-08" (clamped to month end if needed)
+}
+
+/**
+ * Get week options for a given month. Each week starts on Monday (matching getWeekKey).
+ * Start/end dates are clamped to the month boundaries.
+ */
+export function getWeekOptionsForMonth(year: number, month: number): WeekOption[] {
+  const monthStart = startOfMonth(new Date(year, month - 1));
+  const monthEnd = endOfMonth(new Date(year, month - 1));
+
+  const options: WeekOption[] = [];
+  // Start from the Monday of the week containing the 1st of the month
+  let weekMonday = startOfWeek(monthStart, { weekStartsOn: 1 });
+
+  while (!isAfter(weekMonday, monthEnd)) {
+    const weekSunday = endOfWeek(weekMonday, { weekStartsOn: 1 });
+
+    // Clamp to month boundaries
+    const clampedStart = isBefore(weekMonday, monthStart) ? monthStart : weekMonday;
+    const clampedEnd = isAfter(weekSunday, monthEnd) ? monthEnd : weekSunday;
+
+    // Label uses the clamped start date: "Week of Feb 2"
+    const label = `Week of ${format(clampedStart, 'MMM d')}`;
+
+    options.push({
+      label,
+      value: format(weekMonday, 'yyyy-MM-dd'),
+      startDate: format(clampedStart, 'yyyy-MM-dd'),
+      endDate: format(clampedEnd, 'yyyy-MM-dd'),
+    });
+
+    weekMonday = addWeeks(weekMonday, 1);
+  }
+
+  return options;
+}
 
 export function minutesToHours(minutes: number): string {
   const hours = minutes / 60;

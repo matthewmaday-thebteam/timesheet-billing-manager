@@ -7,6 +7,7 @@ import { useBillings } from '../../hooks/useBillings';
 import { formatCurrency, applyRounding, roundCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
 import { useTaskBreakdown } from '../../hooks/useTaskBreakdown';
+import { getWeekOptionsForMonth } from '../../utils/calculations';
 import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../RangeSelector';
 import { RevenueTable } from '../atoms/RevenueTable';
@@ -14,6 +15,8 @@ import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
+import { Select } from '../Select';
+import type { SelectOption } from '../Select';
 import type { MonthSelection } from '../../types';
 
 export function RevenuePage() {
@@ -44,6 +47,36 @@ export function RevenuePage() {
 
   // Fetch task-level breakdown for the selected month
   const { tasksByProject, isLoading: tasksLoading } = useTaskBreakdown({ selectedMonth });
+
+  // --- Week filter state for Customer Revenue Report ---
+  const [customerReportWeek, setCustomerReportWeek] = useState('all');
+
+  // Build week options for the selected month
+  const weekOptions = useMemo<SelectOption[]>(() => {
+    const weeks = getWeekOptionsForMonth(selectedMonth.year, selectedMonth.month);
+    return [
+      { value: 'all', label: 'Entire Month' },
+      ...weeks.map(w => ({ value: w.value, label: w.label })),
+    ];
+  }, [selectedMonth]);
+
+  // Get the selected week's date range (for the weekly task query)
+  const selectedWeekRange = useMemo(() => {
+    if (customerReportWeek === 'all') return undefined;
+    const weeks = getWeekOptionsForMonth(selectedMonth.year, selectedMonth.month);
+    const week = weeks.find(w => w.value === customerReportWeek);
+    return week ? { start: week.startDate, end: week.endDate } : undefined;
+  }, [customerReportWeek, selectedMonth]);
+
+  // Fetch weekly task breakdown (only when a specific week is selected)
+  const {
+    tasksByProject: weeklyTasksByProject,
+    isLoading: weeklyTasksLoading,
+  } = useTaskBreakdown({
+    selectedMonth,
+    dateRange: selectedWeekRange,
+    skip: customerReportWeek === 'all',
+  });
 
   // Hydrate billing result with task-level data from timesheet_daily_rollups.
   // The summary table doesn't store tasks, so we merge them in here.
@@ -78,6 +111,107 @@ export function RevenuePage() {
       })),
     };
   }, [billingResult, tasksByProject]);
+
+  // Build weekly billing result when a specific week is selected.
+  // Simple calculation: roundedHours * rate per task. No MIN/MAX, no carryover, no milestones, no fixed billings.
+  const weeklyBillingResult = useMemo(() => {
+    if (customerReportWeek === 'all' || weeklyTasksByProject.size === 0) return null;
+
+    // Build a lookup from monthly data: projectId → { rate, rounding }
+    const projectConfigMap = new Map<string, { rate: number; rounding: number }>();
+    for (const company of hydratedBillingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) {
+          projectConfigMap.set(project.projectId, {
+            rate: project.rate,
+            rounding: project.rounding,
+          });
+        }
+      }
+    }
+
+    // Build company-level results from weekly task data
+    // We need to group weekly projects back into their companies
+    const companyMap = new Map<string, {
+      companyId: string;
+      companyName: string;
+      projects: Array<{
+        projectId: string;
+        projectName: string;
+        rate: number;
+        rounding: number;
+        billedHours: number;
+        billedRevenue: number;
+        tasks: Array<{
+          taskName: string;
+          actualMinutes: number;
+          roundedMinutes: number;
+          actualHours: number;
+          roundedHours: number;
+          baseRevenue: number;
+        }>;
+      }>;
+      billedHours: number;
+      billedRevenue: number;
+    }>();
+
+    for (const company of hydratedBillingResult.companies) {
+      for (const project of company.projects) {
+        if (!project.projectId) continue;
+        const weeklyTasks = weeklyTasksByProject.get(project.projectId);
+        if (!weeklyTasks || weeklyTasks.length === 0) continue;
+
+        const config = projectConfigMap.get(project.projectId);
+        if (!config) continue;
+
+        // Compute per-task rounding and revenue
+        const tasks = weeklyTasks.map(t => {
+          const roundedMinutes = applyRounding(t.actualMinutes, config.rounding as 0 | 5 | 15 | 30);
+          const actualHours = t.actualMinutes / 60;
+          const roundedHours = roundedMinutes / 60;
+          return {
+            taskName: t.taskName,
+            actualMinutes: t.actualMinutes,
+            roundedMinutes,
+            actualHours: Math.round(actualHours * 100) / 100,
+            roundedHours: Math.round(roundedHours * 100) / 100,
+            baseRevenue: roundCurrency(roundedHours * config.rate),
+          };
+        });
+
+        const projectBilledHours = tasks.reduce((sum, t) => sum + t.roundedHours, 0);
+        const projectBilledRevenue = tasks.reduce((sum, t) => sum + t.baseRevenue, 0);
+
+        if (!companyMap.has(company.companyId)) {
+          companyMap.set(company.companyId, {
+            companyId: company.companyId,
+            companyName: company.companyName,
+            projects: [],
+            billedHours: 0,
+            billedRevenue: 0,
+          });
+        }
+        const companyEntry = companyMap.get(company.companyId)!;
+        companyEntry.projects.push({
+          projectId: project.projectId,
+          projectName: project.projectName,
+          rate: config.rate,
+          rounding: config.rounding,
+          billedHours: projectBilledHours,
+          billedRevenue: projectBilledRevenue,
+          tasks,
+        });
+        companyEntry.billedHours += projectBilledHours;
+        companyEntry.billedRevenue += projectBilledRevenue;
+      }
+    }
+
+    return {
+      companies: [...companyMap.values()],
+      grandTotalHours: [...companyMap.values()].reduce((sum, c) => sum + c.billedHours, 0),
+      grandTotalRevenue: [...companyMap.values()].reduce((sum, c) => sum + c.billedRevenue, 0),
+    };
+  }, [customerReportWeek, weeklyTasksByProject, hydratedBillingResult]);
 
   // Build lookup: internal UUID -> externalProjectId
   const internalToExternalId = useMemo(() => {
@@ -278,6 +412,7 @@ export function RevenuePage() {
   const handleOpenCustomerReportModal = useCallback(() => {
     setCrCompanyIds(new Set(sortedCompaniesForExport.map(c => c.id)));
     setCrColumns({ tasks: true, rate: true, projectRevenue: true, companyRevenue: true });
+    setCustomerReportWeek('all');
     setShowCustomerReportModal(true);
   }, [sortedCompaniesForExport]);
 
@@ -306,13 +441,25 @@ export function RevenuePage() {
   //   Hours = task-level only, Project Hours = project summaries, Company Hours = company summaries
   const handleExportCustomerRevenue = useCallback(() => {
     const cols = crColumns;
+    const isWeekly = customerReportWeek !== 'all' && weeklyBillingResult !== null;
     const csvRows: string[][] = [];
 
+    // Build title with optional week range
+    let titleSuffix = format(dateRange.start, 'MMMM yyyy');
+    let filenameSuffix = format(dateRange.start, 'yyyy-MM');
+    if (isWeekly && selectedWeekRange) {
+      const weekStart = new Date(selectedWeekRange.start + 'T00:00:00');
+      const weekEnd = new Date(selectedWeekRange.end + 'T00:00:00');
+      const startLabel = format(weekStart, 'MMMd');
+      const endLabel = format(weekEnd, 'd');
+      titleSuffix += ` (Week of ${format(weekStart, 'MMM d')})`;
+      filenameSuffix += `_Week_${startLabel}-${endLabel}`;
+    }
+
     // Title row
-    csvRows.push([`Customer Revenue Report - ${format(dateRange.start, 'MMMM yyyy')}`]);
+    csvRows.push([`Customer Revenue Report - ${titleSuffix}`]);
 
     // Header row — build dynamically based on column toggles
-    // Hours are isolated per level: task Hours, Project Hours, Company Hours
     const header: string[] = ['Company', 'Project'];
     if (cols.tasks) header.push('Task', 'Hours');
     if (cols.rate) header.push('Rate ($/hr)');
@@ -323,107 +470,173 @@ export function RevenuePage() {
     // Helper: build an empty row matching column count
     const emptyRow = () => header.map(() => '');
 
-    // Filter and sort companies
-    const filteredCompanies = hydratedBillingResult.companies
-      .filter(c => crCompanyIds.has(c.companyId))
-      .sort((a, b) => a.companyName.localeCompare(b.companyName));
+    if (isWeekly) {
+      // --- WEEKLY MODE: use weeklyBillingResult (simple rounding * rate, no MIN/MAX/carryover/milestones) ---
+      const weeklyCompanies = weeklyBillingResult.companies
+        .filter(c => crCompanyIds.has(c.companyId) && c.billedRevenue > 0)
+        .sort((a, b) => a.companyName.localeCompare(b.companyName));
 
-    let grandTotalHours = 0;
-    let grandTotalRevenue = 0;
+      let grandTotalHours = 0;
+      let grandTotalRevenue = 0;
 
-    for (const company of filteredCompanies) {
-      // Calculate company revenue including milestone adjustments
-      const companyBillingData = filteredCompanyBillings.find(cb => cb.companyClientId === company.companyId);
-      const companyBillingCents = companyBillingData?.totalCents || 0;
-      let milestoneAdj = 0;
-      for (const project of company.projects) {
-        if (project.projectId) {
-          const milestone = milestoneByExternalProjectId.get(project.projectId);
-          if (milestone) {
-            milestoneAdj += (milestone.totalCents / 100) - project.billedRevenue;
+      for (const company of weeklyCompanies) {
+        grandTotalHours += company.billedHours;
+        grandTotalRevenue += company.billedRevenue;
+
+        // Company summary row
+        const companyRow = emptyRow();
+        companyRow[0] = company.companyName;
+        if (cols.companyRevenue) {
+          companyRow[header.indexOf('Company Hours')] = company.billedHours.toFixed(2);
+          companyRow[header.indexOf('Company Revenue')] = formatCurrency(company.billedRevenue);
+        }
+        csvRows.push(companyRow);
+
+        // Sort projects alphabetically
+        const sortedProjects = [...company.projects].sort((a, b) =>
+          a.projectName.localeCompare(b.projectName)
+        );
+
+        for (const project of sortedProjects) {
+          // Project summary row
+          const projectRow = emptyRow();
+          projectRow[0] = company.companyName;
+          projectRow[1] = project.projectName;
+          if (cols.rate) {
+            projectRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
           }
-        }
-      }
-      const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
-      grandTotalHours += company.billedHours;
-      grandTotalRevenue += companyTotalRevenue;
+          if (cols.projectRevenue) {
+            projectRow[header.indexOf('Project Hours')] = project.billedHours.toFixed(2);
+            projectRow[header.indexOf('Project Revenue')] = formatCurrency(project.billedRevenue);
+          }
+          csvRows.push(projectRow);
 
-      // Company summary row — hours and revenue in Company columns only
-      const companyRow = emptyRow();
-      companyRow[0] = company.companyName;
-      if (cols.companyRevenue) {
-        companyRow[header.indexOf('Company Hours')] = company.billedHours.toFixed(2);
-        companyRow[header.indexOf('Company Revenue')] = formatCurrency(companyTotalRevenue);
-      }
-      csvRows.push(companyRow);
-
-      // Sort projects alphabetically
-      const sortedProjects = [...company.projects].sort((a, b) =>
-        a.projectName.localeCompare(b.projectName)
-      );
-
-      for (const project of sortedProjects) {
-        const milestone = project.projectId
-          ? milestoneByExternalProjectId.get(project.projectId)
-          : undefined;
-        const projectRevenue = milestone
-          ? milestone.totalCents / 100
-          : project.billedRevenue;
-
-        // Project summary row — hours and revenue in Project columns only
-        const projectRow = emptyRow();
-        projectRow[0] = company.companyName;
-        projectRow[1] = project.projectName;
-        if (cols.rate) {
-          projectRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
-        }
-        if (cols.projectRevenue) {
-          projectRow[header.indexOf('Project Hours')] = project.billedHours.toFixed(2);
-          projectRow[header.indexOf('Project Revenue')] = formatCurrency(projectRevenue);
-        }
-        csvRows.push(projectRow);
-
-        // Task rows (only if tasks column enabled)
-        if (cols.tasks) {
-          const sortedTasks = [...project.tasks].sort((a, b) =>
-            b.roundedHours - a.roundedHours
-          );
-
-          for (const task of sortedTasks) {
-            const taskRow = emptyRow();
-            taskRow[0] = company.companyName;
-            taskRow[1] = project.projectName;
-            taskRow[header.indexOf('Task')] = task.taskName;
-            taskRow[header.indexOf('Hours')] = task.roundedHours.toFixed(2);
-            if (cols.rate) {
-              taskRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
+          // Task rows
+          if (cols.tasks) {
+            const sortedTasks = [...project.tasks].sort((a, b) =>
+              b.roundedHours - a.roundedHours
+            );
+            for (const task of sortedTasks) {
+              const taskRow = emptyRow();
+              taskRow[0] = company.companyName;
+              taskRow[1] = project.projectName;
+              taskRow[header.indexOf('Task')] = task.taskName;
+              taskRow[header.indexOf('Hours')] = task.roundedHours.toFixed(2);
+              if (cols.rate) {
+                taskRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
+              }
+              csvRows.push(taskRow);
             }
-            csvRows.push(taskRow);
           }
         }
+
+        // Empty row between companies
+        csvRows.push(emptyRow());
       }
 
-      // Empty row between companies
-      csvRows.push(emptyRow());
-    }
+      // Total row
+      const totalRow = emptyRow();
+      totalRow[0] = 'TOTAL';
+      if (cols.companyRevenue) {
+        totalRow[header.indexOf('Company Hours')] = grandTotalHours.toFixed(2);
+        totalRow[header.indexOf('Company Revenue')] = formatCurrency(grandTotalRevenue);
+      }
+      csvRows.push(totalRow);
+    } else {
+      // --- MONTHLY MODE: existing logic with milestone adjustments and fixed billings ---
+      const filteredCompanies = hydratedBillingResult.companies
+        .filter(c => crCompanyIds.has(c.companyId))
+        .sort((a, b) => a.companyName.localeCompare(b.companyName));
 
-    // Total row — totals in the Company columns
-    const totalRow = emptyRow();
-    totalRow[0] = 'TOTAL';
-    if (cols.companyRevenue) {
-      totalRow[header.indexOf('Company Hours')] = grandTotalHours.toFixed(2);
-      totalRow[header.indexOf('Company Revenue')] = formatCurrency(grandTotalRevenue);
+      let grandTotalHours = 0;
+      let grandTotalRevenue = 0;
+
+      for (const company of filteredCompanies) {
+        const companyBillingData = filteredCompanyBillings.find(cb => cb.companyClientId === company.companyId);
+        const companyBillingCents = companyBillingData?.totalCents || 0;
+        let milestoneAdj = 0;
+        for (const project of company.projects) {
+          if (project.projectId) {
+            const milestone = milestoneByExternalProjectId.get(project.projectId);
+            if (milestone) {
+              milestoneAdj += (milestone.totalCents / 100) - project.billedRevenue;
+            }
+          }
+        }
+        const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
+        grandTotalHours += company.billedHours;
+        grandTotalRevenue += companyTotalRevenue;
+
+        const companyRow = emptyRow();
+        companyRow[0] = company.companyName;
+        if (cols.companyRevenue) {
+          companyRow[header.indexOf('Company Hours')] = company.billedHours.toFixed(2);
+          companyRow[header.indexOf('Company Revenue')] = formatCurrency(companyTotalRevenue);
+        }
+        csvRows.push(companyRow);
+
+        const sortedProjects = [...company.projects].sort((a, b) =>
+          a.projectName.localeCompare(b.projectName)
+        );
+
+        for (const project of sortedProjects) {
+          const milestone = project.projectId
+            ? milestoneByExternalProjectId.get(project.projectId)
+            : undefined;
+          const projectRevenue = milestone
+            ? milestone.totalCents / 100
+            : project.billedRevenue;
+
+          const projectRow = emptyRow();
+          projectRow[0] = company.companyName;
+          projectRow[1] = project.projectName;
+          if (cols.rate) {
+            projectRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
+          }
+          if (cols.projectRevenue) {
+            projectRow[header.indexOf('Project Hours')] = project.billedHours.toFixed(2);
+            projectRow[header.indexOf('Project Revenue')] = formatCurrency(projectRevenue);
+          }
+          csvRows.push(projectRow);
+
+          if (cols.tasks) {
+            const sortedTasks = [...project.tasks].sort((a, b) =>
+              b.roundedHours - a.roundedHours
+            );
+            for (const task of sortedTasks) {
+              const taskRow = emptyRow();
+              taskRow[0] = company.companyName;
+              taskRow[1] = project.projectName;
+              taskRow[header.indexOf('Task')] = task.taskName;
+              taskRow[header.indexOf('Hours')] = task.roundedHours.toFixed(2);
+              if (cols.rate) {
+                taskRow[header.indexOf('Rate ($/hr)')] = project.rate.toFixed(2);
+              }
+              csvRows.push(taskRow);
+            }
+          }
+        }
+
+        csvRows.push(emptyRow());
+      }
+
+      const totalRow = emptyRow();
+      totalRow[0] = 'TOTAL';
+      if (cols.companyRevenue) {
+        totalRow[header.indexOf('Company Hours')] = grandTotalHours.toFixed(2);
+        totalRow[header.indexOf('Company Revenue')] = formatCurrency(grandTotalRevenue);
+      }
+      csvRows.push(totalRow);
     }
-    csvRows.push(totalRow);
 
     // Convert to CSV string and download
     const csvContent = csvRows
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
-    downloadCSV('\uFEFF' + csvContent, `customer-revenue-${format(dateRange.start, 'yyyy-MM')}.csv`);
+    downloadCSV('\uFEFF' + csvContent, `customer-revenue-${filenameSuffix}.csv`);
     setShowCustomerReportModal(false);
-  }, [hydratedBillingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start, crCompanyIds, crColumns]);
+  }, [hydratedBillingResult, filteredCompanyBillings, milestoneByExternalProjectId, dateRange.start, crCompanyIds, crColumns, customerReportWeek, weeklyBillingResult, selectedWeekRange]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -503,7 +716,7 @@ export function RevenuePage() {
             <Button
               variant="primary"
               onClick={handleExportCustomerRevenue}
-              disabled={crCompanyIds.size === 0}
+              disabled={crCompanyIds.size === 0 || (customerReportWeek !== 'all' && weeklyTasksLoading)}
             >
               Export
             </Button>
@@ -536,6 +749,20 @@ export function RevenuePage() {
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Week filter */}
+          <div>
+            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wide mb-2">Period</p>
+            <Select
+              value={customerReportWeek}
+              onChange={setCustomerReportWeek}
+              options={weekOptions}
+              className="w-full"
+            />
+            {customerReportWeek !== 'all' && weeklyTasksLoading && (
+              <p className="text-xs text-vercel-gray-300 mt-1">Loading weekly data...</p>
+            )}
           </div>
 
           {/* Company filter */}
