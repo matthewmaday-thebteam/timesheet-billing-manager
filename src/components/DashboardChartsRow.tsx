@@ -30,7 +30,6 @@ import {
 } from '../utils/chartTransforms';
 import { formatCurrency, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
 import type { ResourceSummary, TimesheetEntry, RoundingIncrement } from '../types';
-import type { MonthlyAggregate } from '../types/charts';
 import type { MonthlyBillingResult } from '../utils/billingCalculations';
 
 /**
@@ -53,8 +52,6 @@ export interface DashboardChartsRowProps {
   resources: ResourceSummary[];
   /** Raw timesheet entries for daily filtering */
   entries: TimesheetEntry[];
-  /** Monthly aggregates for line chart */
-  monthlyAggregates: MonthlyAggregate[];
   /** Project rates lookup by external project_id (fallback) */
   projectRates: Map<string, number>;
   /** Canonical project ID lookup (external project_id -> canonical project_id) */
@@ -63,12 +60,8 @@ export interface DashboardChartsRowProps {
   userIdToDisplayNameLookup?: Map<string, string>;
   /** Unified billing result from useUnifiedBilling */
   billingResult?: MonthlyBillingResult;
-  /** Pre-calculated total revenue for the selected month (with billing limits applied) */
-  currentMonthRevenue?: number;
-  /** The month key (YYYY-MM) that currentMonthRevenue corresponds to */
-  selectedMonthKey?: string;
-  /** Pre-computed combined revenue by month key (YYYY-MM -> dollars) — replicates Revenue page formula */
-  combinedRevenueByMonth?: Map<string, number>;
+  /** Pre-computed combined revenue by month key (YYYY-MM -> dollars) from billing engine */
+  combinedRevenueByMonth: Map<string, number>;
   /** Loading state */
   loading?: boolean;
   /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
@@ -205,13 +198,10 @@ function transformEntriesToTopList(
 export function DashboardChartsRow({
   resources,
   entries,
-  monthlyAggregates,
   projectRates,
   projectCanonicalIdLookup,
   userIdToDisplayNameLookup,
   billingResult,
-  currentMonthRevenue,
-  selectedMonthKey,
   combinedRevenueByMonth,
   loading = false,
   section = 'all',
@@ -219,83 +209,34 @@ export function DashboardChartsRow({
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
 
-  // Create corrected monthlyAggregates using pre-computed combined revenue
-  // (replicates the Revenue page formula for every month in the chart range)
-  const correctedMonthlyAggregates = useMemo(() => {
-    if (monthlyAggregates.length === 0) return monthlyAggregates;
-
-    return monthlyAggregates.map(agg => {
-      // Use pre-computed combined revenue (same calculation as Revenue page)
-      if (combinedRevenueByMonth && combinedRevenueByMonth.has(agg.month)) {
-        return { ...agg, totalRevenue: combinedRevenueByMonth.get(agg.month)! };
-      }
-      return agg;
-    });
-  }, [monthlyAggregates, combinedRevenueByMonth]);
-
   // Transform data for charts
   const pieData = useMemo(
     () => transformResourcesToPieData(resources),
     [resources]
   );
 
-  // Transform line data using corrected aggregates
-  const lineData = useMemo(() => {
-    const baseData = transformToLineChartData(correctedMonthlyAggregates);
+  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
+  const lineData = useMemo(
+    () => transformToLineChartData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
+  );
 
-    // Update future months projections based on selected month revenue
-    if (currentMonthRevenue !== undefined && correctedMonthlyAggregates.length > 0) {
-      // Use selected month for projection base, fall back to today's month
-      const selectedMonthIndex = selectedMonthKey
-        ? parseInt(selectedMonthKey.split('-')[1]) - 1
-        : new Date().getMonth();
-      const selectedYear = selectedMonthKey
-        ? parseInt(selectedMonthKey.split('-')[0])
-        : new Date().getFullYear();
-
-      // Find cumulative revenue up to and including selected month
-      let cumulativeRevenue = 0;
-      for (const agg of correctedMonthlyAggregates) {
-        const [aggYear, aggMonth] = agg.month.split('-').map(Number);
-        if (aggYear === selectedYear && aggMonth - 1 <= selectedMonthIndex) {
-          cumulativeRevenue += agg.totalRevenue;
-        }
-      }
-
-      // Update future months to extend from the correct base
-      for (let i = selectedMonthIndex + 1; i < 12; i++) {
-        if (baseData[i].bestCase !== null) {
-          const monthsAhead = i - selectedMonthIndex;
-          const avgMonthlyRevenue = currentMonthRevenue;
-          baseData[i] = {
-            ...baseData[i],
-            revenue: Math.round(cumulativeRevenue),
-            bestCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 1.2)),
-            worstCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 0.8)),
-          };
-        }
-      }
-    }
-
-    return baseData;
-  }, [correctedMonthlyAggregates, currentMonthRevenue, selectedMonthKey]);
-
-  // MoM Growth Rate data - uses corrected aggregates for accurate current month
+  // MoM Growth Rate data
   const momGrowthData = useMemo(
-    () => transformToMoMGrowthData(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => transformToMoMGrowthData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
-  // CAGR Projection data - uses corrected aggregates
+  // CAGR Projection data
   const cagrData = useMemo(
-    () => transformToCAGRProjectionData(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => transformToCAGRProjectionData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
-  // Growth statistics for display - uses corrected aggregates
+  // Growth statistics for display
   const growthStats = useMemo(
-    () => calculateGrowthStats(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => calculateGrowthStats(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
   // Top 5 by hours for the selected month
@@ -359,7 +300,7 @@ export function DashboardChartsRow({
   }
 
   // Empty state - no data
-  if (resources.length === 0 && monthlyAggregates.length === 0) {
+  if (resources.length === 0 && combinedRevenueByMonth.size === 0) {
     return null;
   }
 

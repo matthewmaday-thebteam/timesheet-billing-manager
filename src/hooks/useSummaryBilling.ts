@@ -169,8 +169,10 @@ export function useSummaryBilling({
     try {
       const monthStr = formatMonthAsISO(selectedMonth);
 
+      // Use the filtered view that excludes member project rows to prevent
+      // double-counting when projects are grouped (migration 050)
       const { data, error: queryError } = await supabase
-        .from('project_monthly_summary')
+        .from('v_canonical_project_monthly_summary')
         .select(`
           *,
           projects!inner (project_name, project_id),

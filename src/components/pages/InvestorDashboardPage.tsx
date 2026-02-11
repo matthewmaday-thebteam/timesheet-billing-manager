@@ -39,7 +39,6 @@ export function InvestorDashboardPage() {
 
   // Fetch timesheet data with extended months for trend charts
   const {
-    monthlyAggregates,
     loading,
   } = useTimesheetData(dateRange, { extendedMonths: HISTORICAL_MONTHS });
 
@@ -62,7 +61,7 @@ export function InvestorDashboardPage() {
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
 
   // Compute combined revenue for all 12 chart months
-  const { combinedRevenueByMonth } = useCombinedRevenue({
+  const { combinedRevenueByMonth, loading: combinedRevenueLoading } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
   });
@@ -242,75 +241,32 @@ export function InvestorDashboardPage() {
   }, [projectsWithRates]);
 
   // ========== CHART DATA ==========
-  // Month key for the selected date range (used to correct chart data for the right month)
-  const selectedMonthKey = `${dateRange.start.getFullYear()}-${String(dateRange.start.getMonth() + 1).padStart(2, '0')}`;
-
-  // Create corrected monthlyAggregates using pre-computed combined revenue
-  // (replicates the Revenue page formula for every month in the chart range)
-  const correctedMonthlyAggregates = useMemo(() => {
-    if (monthlyAggregates.length === 0) return monthlyAggregates;
-
-    return monthlyAggregates.map(agg => {
-      if (combinedRevenueByMonth.has(agg.month)) {
-        return { ...agg, totalRevenue: combinedRevenueByMonth.get(agg.month)! };
-      }
-      return agg;
-    });
-  }, [monthlyAggregates, combinedRevenueByMonth]);
-
-  // Line chart data
-  const lineData = useMemo(() => {
-    const baseData = transformToLineChartData(correctedMonthlyAggregates);
-
-    if (correctedMonthlyAggregates.length > 0) {
-      const selectedMonthIndex = parseInt(selectedMonthKey.split('-')[1]) - 1;
-      const selectedYear = parseInt(selectedMonthKey.split('-')[0]);
-
-      let cumulativeRevenue = 0;
-      for (const agg of correctedMonthlyAggregates) {
-        const [aggYear, aggMonth] = agg.month.split('-').map(Number);
-        if (aggYear === selectedYear && aggMonth - 1 <= selectedMonthIndex) {
-          cumulativeRevenue += agg.totalRevenue;
-        }
-      }
-
-      for (let i = selectedMonthIndex + 1; i < 12; i++) {
-        if (baseData[i].bestCase !== null) {
-          const monthsAhead = i - selectedMonthIndex;
-          const avgMonthlyRevenue = combinedTotalRevenue;
-          baseData[i] = {
-            ...baseData[i],
-            revenue: Math.round(cumulativeRevenue),
-            bestCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 1.2)),
-            worstCase: Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 0.8)),
-          };
-        }
-      }
-    }
-
-    return baseData;
-  }, [correctedMonthlyAggregates, combinedTotalRevenue, selectedMonthKey]);
+  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
+  const lineData = useMemo(
+    () => transformToLineChartData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
+  );
 
   // MoM Growth data
   const momGrowthData = useMemo(
-    () => transformToMoMGrowthData(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => transformToMoMGrowthData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
   // CAGR data
   const cagrData = useMemo(
-    () => transformToCAGRProjectionData(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => transformToCAGRProjectionData(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
   // Growth stats
   const growthStats = useMemo(
-    () => calculateGrowthStats(correctedMonthlyAggregates),
-    [correctedMonthlyAggregates]
+    () => calculateGrowthStats(combinedRevenueByMonth),
+    [combinedRevenueByMonth]
   );
 
   const currentYear = new Date().getFullYear();
-  const isLoading = loading || billingsLoading;
+  const isLoading = loading || billingsLoading || combinedRevenueLoading;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">

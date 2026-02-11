@@ -47,7 +47,7 @@ export function Dashboard() {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, monthlyAggregates, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
+  const { entries, projects, resources: resourceSummaries, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
     dateRange,
     { extendedMonths: HISTORICAL_MONTHS }
   );
@@ -93,7 +93,7 @@ export function Dashboard() {
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
 
   // Compute combined revenue for all 12 chart months using same calculation as Revenue page
-  const { combinedRevenueByMonth } = useCombinedRevenue({
+  const { combinedRevenueByMonth, loading: combinedRevenueLoading } = useCombinedRevenue({
     dateRange,
     extendedMonths: HISTORICAL_MONTHS,
   });
@@ -227,9 +227,6 @@ export function Dashboard() {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
-  // Month key for the selected date range (used to correct chart data for the right month)
-  const selectedMonthKey = `${dateRange.start.getFullYear()}-${String(dateRange.start.getMonth() + 1).padStart(2, '0')}`;
-
   // Utilization metrics (shared hook — same calculation as EmployeesPage)
   const utilizationMetrics = useUtilizationMetrics({
     dateRange,
@@ -295,15 +292,12 @@ export function Dashboard() {
           <DashboardChartsRow
             resources={resourceSummaries}
             entries={entries}
-            monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
             projectCanonicalIdLookup={projectCanonicalIdLookup}
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
-            currentMonthRevenue={combinedTotalRevenue}
-            selectedMonthKey={selectedMonthKey}
             combinedRevenueByMonth={combinedRevenueByMonth}
-            loading={loading || billingsLoading}
+            loading={loading || billingsLoading || combinedRevenueLoading}
             section="resources"
           />
 
@@ -326,15 +320,12 @@ export function Dashboard() {
           <DashboardChartsRow
             resources={resourceSummaries}
             entries={entries}
-            monthlyAggregates={monthlyAggregates}
             projectRates={dbRateLookup}
             projectCanonicalIdLookup={projectCanonicalIdLookup}
             userIdToDisplayNameLookup={userIdToDisplayNameLookup}
             billingResult={billingResult}
-            currentMonthRevenue={combinedTotalRevenue}
-            selectedMonthKey={selectedMonthKey}
             combinedRevenueByMonth={combinedRevenueByMonth}
-            loading={loading || billingsLoading}
+            loading={loading || billingsLoading || combinedRevenueLoading}
             section="trends"
           />
 

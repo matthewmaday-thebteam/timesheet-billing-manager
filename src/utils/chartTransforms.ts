@@ -70,33 +70,36 @@ export function transformResourcesToPieData(
 }
 
 /**
- * Transform monthly aggregates into line chart data.
+ * Transform revenue-by-month map into line chart data.
  * Shows cumulative values for the full year (Jan-Dec):
  * - Target: $150k/month compounding to annual target (budget * ratio) by December
  * - Budget: ~$83.3k/month compounding to annual budget by December
  * - Revenue: Cumulative earned revenue that extends as flat line into future months
  * - Best/Worst Case: Projections based on current growth rate with variance
  *
- * @param monthlyAggregates - Array of monthly aggregate data
+ * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars
  * @param annualBudget - Annual budget in dollars (default: $1M)
  * @param targetRatio - Target multiplier (default: 1.8x)
  * @returns Array of 12 line graph data points (full year)
  */
 export function transformToLineChartData(
-  monthlyAggregates: MonthlyAggregate[],
+  revenueByMonthKey: Map<string, number>,
   annualBudget: number = ANNUAL_BUDGET,
   targetRatio: number = TARGET_RATIO
 ): LineGraphDataPoint[] {
+  const currentYear = new Date().getFullYear();
   const annualTarget = annualBudget * targetRatio;
   const monthlyTarget = annualTarget / 12;  // $150k/month for $1.8M annual
   const monthlyBudget = annualBudget / 12;  // ~$83.3k/month for $1M annual
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Build a map of month index (0-11) to monthly revenue
+  // Build a map of month index (0-11) to monthly revenue, filtering to current year
   const revenueByMonth = new Map<number, number>();
-  for (const aggregate of monthlyAggregates) {
-    const monthIndex = parseInt(aggregate.month.split('-')[1]) - 1;
-    revenueByMonth.set(monthIndex, aggregate.totalRevenue);
+  for (const [key, value] of revenueByMonthKey) {
+    const [year, month] = key.split('-').map(Number);
+    if (year === currentYear) {
+      revenueByMonth.set(month - 1, value);
+    }
   }
 
   // Find the last month with revenue data and calculate average monthly revenue
@@ -332,22 +335,25 @@ export function generateMockPieData(): PieChartDataPoint[] {
 }
 
 /**
- * Transform monthly aggregates into MoM (Month-over-Month) growth rate data.
+ * Transform revenue-by-month map into MoM (Month-over-Month) growth rate data.
  * Shows percentage change from previous month.
  *
- * @param monthlyAggregates - Array of monthly aggregate data
+ * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars
  * @returns Array of 12 MoM growth data points
  */
 export function transformToMoMGrowthData(
-  monthlyAggregates: MonthlyAggregate[]
+  revenueByMonthKey: Map<string, number>
 ): MoMGrowthDataPoint[] {
+  const currentYear = new Date().getFullYear();
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Build a map of month index (0-11) to monthly revenue
+  // Build a map of month index (0-11) to monthly revenue, filtering to current year
   const revenueByMonth = new Map<number, number>();
-  for (const aggregate of monthlyAggregates) {
-    const monthIndex = parseInt(aggregate.month.split('-')[1]) - 1;
-    revenueByMonth.set(monthIndex, aggregate.totalRevenue);
+  for (const [key, value] of revenueByMonthKey) {
+    const [year, month] = key.split('-').map(Number);
+    if (year === currentYear) {
+      revenueByMonth.set(month - 1, value);
+    }
   }
 
   return months.map((monthName, index) => {
@@ -374,12 +380,12 @@ export function transformToMoMGrowthData(
  * Uses hardcoded annual revenue (2022-2025) and projects future years.
  * Formula: CAGR = (End/Start)^(1/n) - 1
  *
- * @param _monthlyAggregates - Unused, kept for API compatibility
+ * @param _revenueByMonthKey - Unused, kept for API compatibility
  * @param projectYears - Number of years to project forward (default: 2)
  * @returns Array of CAGR projection data points by year
  */
 export function transformToCAGRProjectionData(
-  _monthlyAggregates: MonthlyAggregate[],
+  _revenueByMonthKey: Map<string, number>,
   projectYears: number = 2
 ): CAGRProjectionDataPoint[] {
   const historicalYears = Object.keys(HISTORICAL_ANNUAL_REVENUE)
@@ -437,10 +443,10 @@ export interface YoYGrowthRate {
  * Calculate summary statistics for growth display.
  * Uses hardcoded historical annual revenue for CAGR calculation.
  *
- * @param monthlyAggregates - Array of monthly aggregate data (used for MoM stats)
+ * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars
  * @returns Object with CAGR, projected revenue, and current stats
  */
-export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
+export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
   avgMoMGrowth: number | null;
   projectedAnnualRevenue: number | null;
   currentCumulativeRevenue: number;
@@ -448,6 +454,8 @@ export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
   cagr: number | null;
   yoyGrowthRates: YoYGrowthRate[];
 } {
+  const currentYear = new Date().getFullYear();
+
   // Calculate CAGR and YoY growth rates from historical annual data
   const historicalYears = Object.keys(HISTORICAL_ANNUAL_REVENUE)
     .map(Number)
@@ -481,11 +489,13 @@ export function calculateGrowthStats(monthlyAggregates: MonthlyAggregate[]): {
     }
   }
 
-  // Build a map of month index (0-11) to monthly revenue for MoM stats
+  // Build a map of month index (0-11) to monthly revenue, filtering to current year
   const revenueByMonth = new Map<number, number>();
-  for (const aggregate of monthlyAggregates) {
-    const monthIndex = parseInt(aggregate.month.split('-')[1]) - 1;
-    revenueByMonth.set(monthIndex, aggregate.totalRevenue);
+  for (const [key, value] of revenueByMonthKey) {
+    const [year, month] = key.split('-').map(Number);
+    if (year === currentYear) {
+      revenueByMonth.set(month - 1, value);
+    }
   }
 
   // Find months with data
