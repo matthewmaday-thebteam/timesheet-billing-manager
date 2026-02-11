@@ -108,8 +108,8 @@ Step 3 (Task 034) deployed the feature-flagged cutover. Summary mode has been va
 ## Verification
 
 - [x] `npx tsc --noEmit` passes cleanly (exit code 0)
-- [ ] All pages render: Dashboard, Revenue, Employees, Projects, Investor Dashboard, Diagnostics
-- [ ] Revenue numbers match what was validated in Step 3
-- [ ] Projects page still shows 5-tier hierarchy correctly
-- [ ] Diagnostics file validation still works with summary data
-- [ ] Deploy via `npx vercel --prod`
+- [x] All pages render: Dashboard, Revenue, Employees, Projects, Investor Dashboard, Diagnostics
+- [x] Revenue numbers match what was validated in Step 3
+- [x] Projects page still shows 5-tier hierarchy correctly
+- [x] Diagnostics file validation still works with summary data
+- [x] Deploy via `npx vercel --prod`
