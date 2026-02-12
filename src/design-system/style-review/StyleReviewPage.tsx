@@ -18,6 +18,7 @@ import { Button } from '../../components/Button';
 import { Spinner } from '../../components/Spinner';
 import { Input } from '../../components/Input';
 import { Toggle } from '../../components/Toggle';
+import { Checkbox } from '../../components/Checkbox';
 import { Alert } from '../../components/Alert';
 import { Card } from '../../components/Card';
 import { Badge } from '../../components/Badge';
@@ -540,6 +541,57 @@ function AtomsSection() {
           <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
             <p className="text-xs text-vercel-gray-400">
               <span className="font-medium">Features:</span> Label with optional description, on/off states, disabled state.
+            </p>
+          </div>
+        </div>
+
+        {/* Checkbox */}
+        <div className="mb-8 p-6 border border-vercel-gray-100 rounded-lg">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-vercel-gray-600">Checkbox</h3>
+            <p className="text-xs text-vercel-gray-400">Component: src/components/Checkbox.tsx</p>
+          </div>
+          <div className="grid gap-4 max-w-md">
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Default States</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <Checkbox checked={false} onChange={() => {}} label="Unchecked" />
+                <Checkbox checked={true} onChange={() => {}} label="Checked" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Indeterminate</p>
+              <Checkbox checked={false} indeterminate onChange={() => {}} label="Select All" />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">With Description</p>
+              <Checkbox
+                checked={true}
+                onChange={() => {}}
+                label="Include Tasks"
+                description="Show task-level breakdown per project"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">With End Content</p>
+              <Checkbox
+                checked={true}
+                onChange={() => {}}
+                label="Acme Corporation"
+                endContent={<span className="text-sm text-vercel-gray-300 tabular-nums">$12,450.00</span>}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-vercel-gray-400 mb-2">Disabled</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <Checkbox checked={false} onChange={() => {}} label="Disabled Off" disabled />
+                <Checkbox checked={true} onChange={() => {}} label="Disabled On" disabled />
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
+            <p className="text-xs text-vercel-gray-400">
+              <span className="font-medium">Props:</span> checked, onChange, label, description, indeterminate, disabled, endContent, className
             </p>
           </div>
         </div>

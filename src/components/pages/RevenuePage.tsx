@@ -16,6 +16,7 @@ import { Alert } from '../Alert';
 import { Modal } from '../Modal';
 import { Button } from '../Button';
 import { Select } from '../Select';
+import { Checkbox } from '../Checkbox';
 import type { SelectOption } from '../Select';
 import type { MonthSelection } from '../../types';
 
@@ -738,15 +739,12 @@ export function RevenuePage() {
                 ['projectRevenue', 'Project Revenue'],
                 ['companyRevenue', 'Company Revenue'],
               ] as const).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={crColumns[key]}
-                    onChange={() => handleCrToggleColumn(key)}
-                    className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
-                  />
-                  <span className="text-sm text-vercel-gray-600">{label}</span>
-                </label>
+                <Checkbox
+                  key={key}
+                  checked={crColumns[key]}
+                  onChange={() => handleCrToggleColumn(key)}
+                  label={label}
+                />
               ))}
             </div>
           </div>
@@ -770,41 +768,30 @@ export function RevenuePage() {
             <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wide mb-2">Companies</p>
 
             {/* Select All */}
-            <label className="flex items-center gap-3 pb-3 border-b border-vercel-gray-100 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="pb-3 border-b border-vercel-gray-100">
+              <Checkbox
                 checked={crCompanyIds.size === sortedCompaniesForExport.length}
-                ref={(el) => {
-                  if (el) {
-                    el.indeterminate =
-                      crCompanyIds.size > 0 &&
-                      crCompanyIds.size < sortedCompaniesForExport.length;
-                  }
-                }}
+                indeterminate={crCompanyIds.size > 0 && crCompanyIds.size < sortedCompaniesForExport.length}
                 onChange={handleCrToggleAll}
-                className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+                label="Select All"
               />
-              <span className="text-sm font-medium text-vercel-gray-600">Select All</span>
-            </label>
+            </div>
 
             {/* Company list */}
             <div className="max-h-72 overflow-y-auto space-y-1 scrollbar-thin mt-2">
               {sortedCompaniesForExport.map(company => (
-                <label
-                  key={company.id}
-                  className="flex items-center gap-3 py-1.5 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
+                <div key={company.id} className="py-1.5">
+                  <Checkbox
                     checked={crCompanyIds.has(company.id)}
                     onChange={() => handleCrToggleCompany(company.id)}
-                    className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+                    label={company.name}
+                    endContent={
+                      <span className="text-sm text-vercel-gray-300 tabular-nums">
+                        {formatCurrency(company.revenue)}
+                      </span>
+                    }
                   />
-                  <span className="flex-1 text-sm text-vercel-gray-600">{company.name}</span>
-                  <span className="text-sm text-vercel-gray-300 tabular-nums">
-                    {formatCurrency(company.revenue)}
-                  </span>
-                </label>
+                </div>
               ))}
             </div>
           </div>
@@ -838,41 +825,30 @@ export function RevenuePage() {
           </p>
 
           {/* Select All */}
-          <label className="flex items-center gap-3 pb-3 border-b border-vercel-gray-100 cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="pb-3 border-b border-vercel-gray-100">
+            <Checkbox
               checked={selectedCompanyIds.size === sortedCompaniesForExport.length}
-              ref={(el) => {
-                if (el) {
-                  el.indeterminate =
-                    selectedCompanyIds.size > 0 &&
-                    selectedCompanyIds.size < sortedCompaniesForExport.length;
-                }
-              }}
+              indeterminate={selectedCompanyIds.size > 0 && selectedCompanyIds.size < sortedCompaniesForExport.length}
               onChange={handleToggleAll}
-              className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+              label="Select All"
             />
-            <span className="text-sm font-medium text-vercel-gray-600">Select All</span>
-          </label>
+          </div>
 
           {/* Company list */}
           <div className="max-h-72 overflow-y-auto space-y-1 scrollbar-thin">
             {sortedCompaniesForExport.map(company => (
-              <label
-                key={company.id}
-                className="flex items-center gap-3 py-1.5 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
+              <div key={company.id} className="py-1.5">
+                <Checkbox
                   checked={selectedCompanyIds.has(company.id)}
                   onChange={() => handleToggleCompany(company.id)}
-                  className="h-4 w-4 rounded border-vercel-gray-200 text-vercel-gray-600 focus:ring-vercel-gray-600"
+                  label={company.name}
+                  endContent={
+                    <span className="text-sm text-vercel-gray-300 tabular-nums">
+                      {formatCurrency(company.revenue)}
+                    </span>
+                  }
                 />
-                <span className="flex-1 text-sm text-vercel-gray-600">{company.name}</span>
-                <span className="text-sm text-vercel-gray-300 tabular-nums">
-                  {formatCurrency(company.revenue)}
-                </span>
-              </label>
+              </div>
             ))}
           </div>
         </div>
