@@ -17,6 +17,7 @@ import { Modal } from '../Modal';
 import { Button } from '../Button';
 import { Select } from '../Select';
 import { Checkbox } from '../Checkbox';
+import { MultiSelect } from '../MultiSelect';
 import type { SelectOption } from '../Select';
 import type { MonthSelection } from '../../types';
 
@@ -433,10 +434,6 @@ export function RevenuePage() {
     });
   }, [sortedCompaniesForExport]);
 
-  const handleCrToggleColumn = useCallback((col: keyof typeof crColumns) => {
-    setCrColumns(prev => ({ ...prev, [col]: !prev[col] }));
-  }, []);
-
   // Export Customer Revenue Report with column toggles and company filter
   // Hours are split into separate columns per level so Excel SUM won't double-count:
   //   Hours = task-level only, Project Hours = project summaries, Company Hours = company summaries
@@ -731,22 +728,29 @@ export function RevenuePage() {
 
           {/* Column toggles */}
           <div>
-            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wide mb-2">Columns</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {([
-                ['tasks', 'Tasks'],
-                ['rate', 'Rate ($/hr)'],
-                ['projectRevenue', 'Project Revenue'],
-                ['companyRevenue', 'Company Revenue'],
-              ] as const).map(([key, label]) => (
-                <Checkbox
-                  key={key}
-                  checked={crColumns[key]}
-                  onChange={() => handleCrToggleColumn(key)}
-                  label={label}
-                />
-              ))}
-            </div>
+            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wide mb-2">Include Columns</p>
+            <MultiSelect
+              values={
+                (['tasks', 'rate', 'projectRevenue', 'companyRevenue'] as const).filter(k => crColumns[k])
+              }
+              onChange={(vals) => {
+                const s = new Set(vals);
+                setCrColumns({
+                  tasks: s.has('tasks'),
+                  rate: s.has('rate'),
+                  projectRevenue: s.has('projectRevenue'),
+                  companyRevenue: s.has('companyRevenue'),
+                });
+              }}
+              options={[
+                { value: 'tasks', label: 'Tasks' },
+                { value: 'rate', label: 'Rate ($/hr)' },
+                { value: 'projectRevenue', label: 'Project Revenue' },
+                { value: 'companyRevenue', label: 'Company Revenue' },
+              ]}
+              placeholder="Select columns..."
+              className="w-full"
+            />
           </div>
 
           {/* Week filter */}
@@ -785,11 +789,6 @@ export function RevenuePage() {
                     checked={crCompanyIds.has(company.id)}
                     onChange={() => handleCrToggleCompany(company.id)}
                     label={company.name}
-                    endContent={
-                      <span className="text-sm text-vercel-gray-300 tabular-nums">
-                        {formatCurrency(company.revenue)}
-                      </span>
-                    }
                   />
                 </div>
               ))}
