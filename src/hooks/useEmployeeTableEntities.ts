@@ -248,6 +248,7 @@ export function useEmployeeTableEntities(): UseEmployeeTableEntitiesResult {
               expected_hours: data.expected_hours,
               hourly_rate: data.hourly_rate,
               monthly_cost: data.monthly_cost,
+              bamboo_employee_id: data.bamboo_employee_id,
               updated_at: new Date().toISOString(),
             }
           : r
@@ -267,6 +268,7 @@ export function useEmployeeTableEntities(): UseEmployeeTableEntitiesResult {
           expected_hours: data.expected_hours,
           hourly_rate: data.hourly_rate,
           monthly_cost: data.monthly_cost,
+          bamboo_employee_id: data.bamboo_employee_id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id);
