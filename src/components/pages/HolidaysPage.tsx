@@ -177,16 +177,6 @@ export function HolidaysPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <div className="lg:col-span-1">
-          <HolidayCalendar
-            holidays={holidays}
-            timeOff={timeOff}
-            year={selectedYear}
-            onDateClick={handleCalendarDateClick}
-          />
-        </div>
-
         {/* Table */}
         <div className="lg:col-span-2">
           <HolidayTable
@@ -195,6 +185,16 @@ export function HolidaysPage() {
             year={selectedYear}
             onEdit={handleEditClick}
             onDelete={handleDeleteClick}
+          />
+        </div>
+
+        {/* Calendar */}
+        <div className="lg:col-span-1">
+          <HolidayCalendar
+            holidays={holidays}
+            timeOff={timeOff}
+            year={selectedYear}
+            onDateClick={handleCalendarDateClick}
           />
         </div>
       </div>
