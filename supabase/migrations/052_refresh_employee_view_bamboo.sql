@@ -1,8 +1,11 @@
 -- Refresh v_employee_table_entities to pick up bamboo_employee_id column
 -- The view was created in migration 015 with r.* but PostgreSQL resolves
 -- column lists at view creation time, so columns added later are not included.
+-- DROP + CREATE required because column order changed (CREATE OR REPLACE fails).
 
-CREATE OR REPLACE VIEW v_employee_table_entities AS
+DROP VIEW IF EXISTS v_employee_table_entities;
+
+CREATE VIEW v_employee_table_entities AS
 SELECT
     r.*,
     -- Include employment type for convenience
