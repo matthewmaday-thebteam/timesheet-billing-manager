@@ -197,14 +197,16 @@ export function HolidaysPage() {
             onDateClick={handleCalendarDateClick}
           />
         </div>
-      </div>
 
-      {/* Employee Time Off */}
-      <EmployeeTimeOffList
-        timeOff={timeOff}
-        loading={loadingTimeOff}
-        year={selectedYear}
-      />
+        {/* Employee Time Off — same width as Holiday Table */}
+        <div className="lg:col-span-2">
+          <EmployeeTimeOffList
+            timeOff={timeOff}
+            loading={loadingTimeOff}
+            year={selectedYear}
+          />
+        </div>
+      </div>
 
       {/* Editor Modal */}
       <HolidayEditorModal
