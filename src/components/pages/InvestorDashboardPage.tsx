@@ -13,12 +13,14 @@ import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/billing';
 import {
   transformToLineChartData,
+  transformToQuarterlyChartData,
   transformToMoMGrowthData,
   transformToCAGRProjectionData,
   calculateGrowthStats,
 } from '../../utils/chartTransforms';
 import { MetricCard } from '../MetricCard';
 import { Card } from '../Card';
+import { Select } from '../Select';
 import { Spinner } from '../Spinner';
 import { LineGraphAtom } from '../atoms/charts/LineGraphAtom';
 import { BarChartAtom } from '../atoms/charts/BarChartAtom';
@@ -247,6 +249,24 @@ export function InvestorDashboardPage() {
     [combinedRevenueByMonth]
   );
 
+  // Quarter selector state — defaults to current quarter
+  const [selectedQuarter, setSelectedQuarter] = useState<string>(() =>
+    String(Math.ceil((new Date().getMonth() + 1) / 3))
+  );
+
+  const quarterOptions = [
+    { value: '1', label: 'Q1 (Jan–Mar)' },
+    { value: '2', label: 'Q2 (Apr–Jun)' },
+    { value: '3', label: 'Q3 (Jul–Sep)' },
+    { value: '4', label: 'Q4 (Oct–Dec)' },
+  ];
+
+  // Quarterly chart data — slice of the 12-month data for the selected quarter
+  const quarterlyData = useMemo(
+    () => transformToQuarterlyChartData(lineData, Number(selectedQuarter)),
+    [lineData, selectedQuarter]
+  );
+
   // MoM Growth data
   const momGrowthData = useMemo(
     () => transformToMoMGrowthData(combinedRevenueByMonth),
@@ -313,19 +333,43 @@ export function InvestorDashboardPage() {
             />
           </div>
 
-          {/* 12-Month Revenue Trend - Full Width */}
-          <Card variant="default" padding="lg">
-            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
-              12-Month Revenue Trend
-            </h3>
-            {lineData.length > 0 ? (
-              <LineGraphAtom data={lineData} />
-            ) : (
-              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
-                No revenue data available
+          {/* 12-Month Revenue Trend (2/3) + Quarterly Revenue (1/3) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
+            {/* 12-Month Revenue Trend */}
+            <Card variant="default" padding="lg">
+              <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+                12-Month Revenue Trend
+              </h3>
+              {lineData.length > 0 ? (
+                <LineGraphAtom data={lineData} />
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                  No revenue data available
+                </div>
+              )}
+            </Card>
+
+            {/* Quarterly Revenue */}
+            <Card variant="default" padding="lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-vercel-gray-600">
+                  Quarterly Revenue
+                </h3>
+                <Select
+                  value={selectedQuarter}
+                  onChange={setSelectedQuarter}
+                  options={quarterOptions}
+                />
               </div>
-            )}
-          </Card>
+              {quarterlyData.some(d => d.revenue !== null && d.revenue > 0) ? (
+                <LineGraphAtom data={quarterlyData} showLegend={false} />
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                  No revenue data for {quarterOptions[Number(selectedQuarter) - 1].label}
+                </div>
+              )}
+            </Card>
+          </div>
 
           {/* MoM Growth Rate and CAGR Projection - Two columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

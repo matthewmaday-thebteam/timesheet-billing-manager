@@ -166,6 +166,26 @@ export function transformToLineChartData(
 }
 
 /**
+ * Slice 12-month line chart data to a single quarter.
+ * Returns the 3 months for the selected quarter with bestCase/worstCase nulled out.
+ *
+ * @param fullYearData - Full 12-month LineGraphDataPoint array from transformToLineChartData
+ * @param quarter - Quarter number (1-4): Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec
+ * @returns Array of 3 LineGraphDataPoint entries for the selected quarter
+ */
+export function transformToQuarterlyChartData(
+  fullYearData: LineGraphDataPoint[],
+  quarter: number
+): LineGraphDataPoint[] {
+  const startIndex = (quarter - 1) * 3;
+  return fullYearData.slice(startIndex, startIndex + 3).map((point) => ({
+    ...point,
+    bestCase: null,
+    worstCase: null,
+  }));
+}
+
+/**
  * Aggregate timesheet entries by month for the line chart.
  * Groups entries by YYYY-MM and calculates total revenue.
  *
