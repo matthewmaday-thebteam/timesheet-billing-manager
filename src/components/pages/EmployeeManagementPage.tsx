@@ -4,6 +4,7 @@ import { useEmploymentTypes } from '../../hooks/useEmploymentTypes';
 import { ResourceTable } from '../ResourceTable';
 import { EmployeeEditorModal } from '../EmployeeEditorModal';
 import { MetricCard } from '../MetricCard';
+import { BambooEmployeePanel } from '../BambooEmployeePanel';
 import type { Resource, ResourceWithGrouping } from '../../types';
 
 export function EmployeeManagementPage() {
@@ -80,6 +81,9 @@ export function EmployeeManagementPage() {
           isAlert={incompleteCount > 0}
         />
       </div>
+
+      {/* BambooHR Employees */}
+      <BambooEmployeePanel />
 
       {/* Error State */}
       {error && (
