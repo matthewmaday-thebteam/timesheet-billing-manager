@@ -26,6 +26,8 @@ export interface BurnGridProps {
   startDate: Date;
   /** End date of the range */
   endDate: Date;
+  /** Set of "name|YYYY-MM-DD" keys for cells that are under expected hours */
+  underHoursCells?: Set<string>;
 }
 
 /**
@@ -58,7 +60,7 @@ function getDaysInRange(startDate: Date, endDate: Date): Array<{ dayNum: number;
   return days;
 }
 
-export function BurnGrid({ data, startDate, endDate }: BurnGridProps) {
+export function BurnGrid({ data, startDate, endDate, underHoursCells }: BurnGridProps) {
   const days = getDaysInRange(startDate, endDate);
 
   if (data.length === 0) {
@@ -96,10 +98,13 @@ export function BurnGrid({ data, startDate, endDate }: BurnGridProps) {
                 </td>
                 {days.map(({ dateStr }) => {
                   const hours = employee.hoursByDate.get(dateStr) || 0;
+                  const isUnder = underHoursCells?.has(`${employee.name}|${dateStr}`);
                   return (
                     <td
                       key={dateStr}
-                      className="px-3 py-3 text-sm text-vercel-gray-600 tabular-nums text-right"
+                      className={`px-3 py-3 text-sm tabular-nums text-right ${
+                        isUnder ? 'text-bteam-brand font-semibold' : 'text-vercel-gray-600'
+                      }`}
                     >
                       {formatHours(hours)}
                     </td>

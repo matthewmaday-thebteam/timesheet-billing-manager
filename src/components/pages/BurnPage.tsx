@@ -77,6 +77,90 @@ export function BurnPage() {
     return result;
   }, [entries, userIdToDisplayNameLookup]);
 
+  // Compute under-hours cells for highlighting
+  const underHoursCells = useMemo(() => {
+    if (burnGridData.length === 0 || employees.length === 0) return new Set<string>();
+
+    // Map display name → employment type name
+    const employeeNameToType = new Map<string, string>();
+    for (const entity of employees) {
+      const typeName = entity.employment_type?.name;
+      if (!typeName) continue;
+      for (const uid of entity.all_system_ids) {
+        const displayName = userIdToDisplayNameLookup.get(uid);
+        if (displayName && !employeeNameToType.has(displayName)) {
+          employeeNameToType.set(displayName, typeName);
+        }
+      }
+    }
+
+    // Map resource_id → display name (for time-off lookup)
+    const resourceIdToName = new Map<string, string>();
+    for (const entity of employees) {
+      for (const uid of entity.all_system_ids) {
+        const displayName = userIdToDisplayNameLookup.get(uid);
+        if (displayName) {
+          resourceIdToName.set(entity.id, displayName);
+          break;
+        }
+      }
+    }
+
+    // Holiday date set
+    const holidayDates = new Set(holidays.map(h => h.holiday_date));
+
+    // Employee time-off dates: display name → Set of YYYY-MM-DD
+    const employeeTimeOffDates = new Map<string, Set<string>>();
+    for (const to of timeOff) {
+      if (!to.resource_id) continue;
+      const name = resourceIdToName.get(to.resource_id);
+      if (!name) continue;
+      if (!employeeTimeOffDates.has(name)) {
+        employeeTimeOffDates.set(name, new Set());
+      }
+      const dates = employeeTimeOffDates.get(name)!;
+      const start = new Date(to.start_date + 'T00:00:00');
+      const end = new Date(to.end_date + 'T00:00:00');
+      const cur = new Date(start);
+      while (cur <= end) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        dates.add(`${y}-${m}-${d}`);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    // Build the set of under-hours cells
+    const cells = new Set<string>();
+    for (const emp of burnGridData) {
+      const empType = employeeNameToType.get(emp.name);
+      if (empType !== 'Full-time' && empType !== 'Part-time') continue;
+      const threshold = empType === 'Full-time' ? 7 : 4;
+      const offDates = employeeTimeOffDates.get(emp.name);
+
+      const current = new Date(dateRange.start);
+      const endDt = new Date(dateRange.end);
+      while (current <= endDt) {
+        const dow = current.getDay();
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, '0');
+        const d = String(current.getDate()).padStart(2, '0');
+        const ds = `${y}-${m}-${d}`;
+
+        if (dow !== 0 && dow !== 6 && !holidayDates.has(ds) && !offDates?.has(ds)) {
+          const hours = emp.hoursByDate.get(ds) || 0;
+          if (hours < threshold) {
+            cells.add(`${emp.name}|${ds}`);
+          }
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    return cells;
+  }, [burnGridData, employees, userIdToDisplayNameLookup, holidays, timeOff, dateRange]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -138,6 +222,7 @@ export function BurnPage() {
               data={burnGridData}
               startDate={dateRange.start}
               endDate={dateRange.end}
+              underHoursCells={underHoursCells}
             />
           </div>
         </>
