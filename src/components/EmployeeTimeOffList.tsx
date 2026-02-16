@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Card } from './Card';
+import { format } from 'date-fns';
 import { Spinner } from './Spinner';
+import { Badge } from './Badge';
 import type { EmployeeTimeOff } from '../types';
 
 interface EmployeeTimeOffListProps {
@@ -9,100 +10,54 @@ interface EmployeeTimeOffListProps {
   year: number;
 }
 
-interface GroupedTimeOff {
-  date: string;
-  employees: {
-    name: string;
-    type: string;
-    totalDays: number;
-    isLinked: boolean;
-  }[];
-}
-
-/**
- * Format a date string to display format
- */
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
- * Get all dates between start and end (inclusive)
- */
-function getDateRange(startDate: string, endDate: string): string[] {
-  const dates: string[] = [];
-  const current = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
-
-  while (current <= end) {
-    const year = current.getFullYear();
-    const month = String(current.getMonth() + 1).padStart(2, '0');
-    const day = String(current.getDate()).padStart(2, '0');
-    dates.push(`${year}-${month}-${day}`);
-    current.setDate(current.getDate() + 1);
-  }
-
-  return dates;
-}
-
 export function EmployeeTimeOffList({ timeOff, loading, year }: EmployeeTimeOffListProps) {
-  // Group time-off by date, expanding multi-day ranges
-  const groupedByDate = useMemo(() => {
-    const dateMap = new Map<string, { name: string; type: string; totalDays: number; isLinked: boolean }[]>();
-
-    for (const to of timeOff) {
-      // Only include records for the selected year
-      const startYear = new Date(to.start_date + 'T00:00:00').getFullYear();
-      const endYear = new Date(to.end_date + 'T00:00:00').getFullYear();
-      if (startYear !== year && endYear !== year) continue;
-
-      const dates = getDateRange(to.start_date, to.end_date);
-
-      for (const date of dates) {
-        // Only include dates in the selected year
-        if (!date.startsWith(String(year))) continue;
-
-        const existing = dateMap.get(date) || [];
-        existing.push({
-          name: to.employee_name,
-          type: to.time_off_type,
-          totalDays: to.total_days,
-          isLinked: to.resource_id !== null,
-        });
-        dateMap.set(date, existing);
-      }
-    }
-
-    // Convert to sorted array
-    const result: GroupedTimeOff[] = [];
-    for (const [date, employees] of dateMap) {
-      result.push({ date, employees });
-    }
-
-    // Sort by date
-    result.sort((a, b) => a.date.localeCompare(b.date));
-
-    return result;
+  // Filter and sort time-off records for the selected year
+  const filteredTimeOff = useMemo(() => {
+    return timeOff
+      .filter(to => {
+        const startYear = new Date(to.start_date + 'T00:00:00').getFullYear();
+        const endYear = new Date(to.end_date + 'T00:00:00').getFullYear();
+        return startYear === year || endYear === year;
+      })
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
   }, [timeOff, year]);
 
   if (loading) {
     return (
-      <Card>
-        <div className="flex items-center justify-center py-8">
-          <Spinner size="md" />
-          <span className="ml-3 text-sm text-vercel-gray-400">Loading time-off data...</span>
+      <div className="bg-white rounded-lg border border-vercel-gray-100">
+        <div className="p-8 text-center">
+          <div className="inline-flex items-center gap-2 text-vercel-gray-400">
+            <Spinner size="md" />
+            <span className="text-sm">Loading time-off data...</span>
+          </div>
         </div>
-      </Card>
+      </div>
+    );
+  }
+
+  if (filteredTimeOff.length === 0) {
+    return (
+      <div className="bg-white rounded-lg border border-vercel-gray-100">
+        <div className="px-4 py-3 border-b border-vercel-gray-100">
+          <h3 className="text-sm font-semibold text-vercel-gray-600">
+            Employee Time Off ({year})
+          </h3>
+          <p className="text-xs text-vercel-gray-400 mt-0.5">
+            Synced from BambooHR
+          </p>
+        </div>
+        <div className="p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-vercel-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p className="mt-4 text-sm text-vercel-gray-400">No time-off records for {year}</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
+    <div className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
       <div className="px-4 py-3 border-b border-vercel-gray-100">
         <h3 className="text-sm font-semibold text-vercel-gray-600">
           Employee Time Off ({year})
@@ -111,39 +66,74 @@ export function EmployeeTimeOffList({ timeOff, loading, year }: EmployeeTimeOffL
           Synced from BambooHR
         </p>
       </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-vercel-gray-50 border-b border-vercel-gray-100">
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Employee
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Linked
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Days
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-vercel-gray-100">
+            {filteredTimeOff.map((to) => {
+              const startDate = new Date(to.start_date + 'T00:00:00');
+              const endDate = new Date(to.end_date + 'T00:00:00');
+              const isLinked = to.resource_id !== null;
+              const isSameDay = to.start_date === to.end_date;
 
-      {groupedByDate.length === 0 ? (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-vercel-gray-400">No time-off records for {year}</p>
-        </div>
-      ) : (
-        <div className="divide-y divide-vercel-gray-100">
-          {groupedByDate.map(({ date, employees }) => (
-            <div key={date} className="px-4 py-3">
-              <div className="flex items-start gap-4">
-                <div className="w-24 flex-shrink-0">
-                  <span className="text-sm font-medium text-vercel-gray-600">
-                    {formatDate(date)}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  {employees.map((emp, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className={`text-sm ${emp.isLinked ? 'text-vercel-gray-600' : 'text-vercel-gray-400'}`}>
-                        {emp.name}
+              return (
+                <tr
+                  key={to.id}
+                  className="hover:bg-vercel-gray-50 transition-colors duration-200 ease-out"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-vercel-gray-600">
+                        {format(startDate, 'MMM d')}
+                        {!isSameDay && ` – ${format(endDate, 'MMM d')}`}
                       </span>
-                      <span className="text-xs text-vercel-gray-400">({emp.type})</span>
-                      {!emp.isLinked && (
-                        <span className="text-xs text-warning">(not linked)</span>
-                      )}
+                      <span className="text-xs text-vercel-gray-400">
+                        {isSameDay ? format(startDate, 'EEEE') : format(startDate, 'EEE') + ' – ' + format(endDate, 'EEE')}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-vercel-gray-600">{to.employee_name}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={to.time_off_type === 'Sick Leave' ? 'warning' : 'info'}>
+                      {to.time_off_type}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {isLinked ? (
+                      <Badge variant="success">Linked</Badge>
+                    ) : (
+                      <Badge variant="warning">Not Linked</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-sm text-vercel-gray-600">{to.total_days}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
