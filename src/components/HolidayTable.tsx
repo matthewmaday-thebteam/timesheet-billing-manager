@@ -7,11 +7,12 @@ import type { BulgarianHoliday } from '../types';
 interface HolidayTableProps {
   holidays: BulgarianHoliday[];
   loading: boolean;
+  year: number;
   onEdit: (holiday: BulgarianHoliday) => void;
   onDelete: (holiday: BulgarianHoliday) => void;
 }
 
-export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTableProps) {
+export function HolidayTable({ holidays, loading, year, onEdit, onDelete }: HolidayTableProps) {
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-vercel-gray-100">
@@ -63,6 +64,14 @@ export function HolidayTable({ holidays, loading, onEdit, onDelete }: HolidayTab
 
   return (
     <div className="bg-white rounded-lg border border-vercel-gray-100 overflow-hidden">
+      <div className="px-4 py-3 border-b border-vercel-gray-100">
+        <h3 className="text-sm font-semibold text-vercel-gray-600">
+          Country and Company Holidays ({year})
+        </h3>
+        <p className="text-xs text-vercel-gray-400 mt-0.5">
+          Synced and Manual Entries
+        </p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>

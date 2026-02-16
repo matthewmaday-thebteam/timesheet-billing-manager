@@ -192,6 +192,7 @@ export function HolidaysPage() {
           <HolidayTable
             holidays={holidays}
             loading={loading}
+            year={selectedYear}
             onEdit={handleEditClick}
             onDelete={handleDeleteClick}
           />
