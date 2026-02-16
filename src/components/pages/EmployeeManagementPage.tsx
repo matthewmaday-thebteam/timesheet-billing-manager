@@ -22,6 +22,7 @@ export function EmployeeManagementPage() {
   const { employmentTypes } = useEmploymentTypes();
   const [selectedResource, setSelectedResource] = useState<Resource | ResourceWithGrouping | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saveCount, setSaveCount] = useState(0);
 
   const handleRowClick = (resource: Resource | ResourceWithGrouping) => {
     setSelectedResource(resource);
@@ -34,7 +35,9 @@ export function EmployeeManagementPage() {
   };
 
   const handleSaveResource = async (id: string, data: import('../../types').ResourceFormData) => {
-    return updateResource(id, data, employmentTypes);
+    const success = await updateResource(id, data, employmentTypes);
+    if (success) setSaveCount(c => c + 1);
+    return success;
   };
 
   // Callback when group changes are saved - refetch the entity list
@@ -83,7 +86,7 @@ export function EmployeeManagementPage() {
       </div>
 
       {/* BambooHR Employees */}
-      <BambooEmployeePanel />
+      <BambooEmployeePanel key={saveCount} />
 
       {/* Error State */}
       {error && (
