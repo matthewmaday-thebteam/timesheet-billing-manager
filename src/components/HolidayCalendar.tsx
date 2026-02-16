@@ -130,7 +130,7 @@ export function HolidayCalendar({ holidays, timeOff = [], year, onDateClick }: H
                 ${isCurrentMonth && !holiday && !hasTimeOff && !isWeekend ? 'text-vercel-gray-600' : ''}
                 ${isCurrentMonth && isWeekend && !holiday && !hasTimeOff ? 'text-vercel-gray-400' : ''}
                 ${holiday ? 'bg-bteam-brand text-white' : ''}
-                ${hasTimeOff && !holiday ? 'bg-success-light text-vercel-gray-600' : ''}
+                ${hasTimeOff && !holiday ? 'bg-vercel-gray-100 text-vercel-gray-600' : ''}
                 ${!holiday && !hasTimeOff && !isToday ? 'hover:bg-vercel-gray-50' : ''}
                 focus:outline-none
               `}
