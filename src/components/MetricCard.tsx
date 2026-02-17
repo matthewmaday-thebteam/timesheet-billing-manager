@@ -7,6 +7,7 @@ interface MetricCardProps {
   onClick?: () => void;
   actionLabel?: string;
   hideDot?: boolean;
+  loading?: boolean;
 }
 
 export function MetricCard({
@@ -18,6 +19,7 @@ export function MetricCard({
   onClick,
   actionLabel,
   hideDot = false,
+  loading = false,
 }: MetricCardProps) {
   // Determine card styling based on alert/warning state
   const cardClasses = isAlert
@@ -59,16 +61,16 @@ export function MetricCard({
       <p className={`text-xs font-mono mb-1 ${titleClasses}`}>{title}</p>
 
       <div className="flex items-center gap-2 mt-1">
-        {showStatusDot && (
+        {!loading && showStatusDot && (
           <span className={`w-2 h-2 rounded-full ${dotColor}`} />
         )}
-        <span className={`text-2xl font-semibold ${valueClasses}`}>
-          {value}
+        <span className={`text-2xl font-semibold ${loading ? 'text-vercel-gray-200' : valueClasses}`}>
+          {loading ? '\u2014' : value}
         </span>
       </div>
 
       {/* Optional Action Button */}
-      {onClick && (
+      {!loading && onClick && (
         <button
           onClick={onClick}
           className={`absolute bottom-3 right-3 flex items-center gap-1 px-3 py-1 rounded-md text-xs transition-colors duration-200 ease-out focus:outline-none ${buttonClasses}`}

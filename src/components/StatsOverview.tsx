@@ -16,6 +16,7 @@ interface StatsOverviewProps {
   underHoursCount: number;
   totalRevenue: number;
   utilizationPercent: number;
+  utilizationLoading?: boolean;
   onUnderHoursClick?: () => void;
 }
 
@@ -26,6 +27,7 @@ export function StatsOverview({
   underHoursCount,
   totalRevenue,
   utilizationPercent,
+  utilizationLoading = false,
   onUnderHoursClick,
 }: StatsOverviewProps) {
   const totalMinutes = projects.reduce((sum, p) => sum + p.totalMinutes, 0);
@@ -64,6 +66,7 @@ export function StatsOverview({
         <MetricCard
           title="Utilization"
           value={`${utilizationPercent.toFixed(1)}%`}
+          loading={utilizationLoading}
         />
       </div>
 

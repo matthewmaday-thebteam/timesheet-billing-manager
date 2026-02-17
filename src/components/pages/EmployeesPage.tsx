@@ -37,20 +37,20 @@ export function EmployeesPage() {
   }), [dateRange.start]);
 
   // Fetch monthly rates
-  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
+  const { projectsWithRates, isLoading: ratesLoading } = useMonthlyRates({ selectedMonth });
 
   // Get canonical company mapping
   const { getCanonicalCompany } = useCanonicalCompanyMapping();
 
   // Fetch time-off data for the selected period
-  const { timeOff } = useTimeOff({
+  const { timeOff, loading: timeOffLoading } = useTimeOff({
     startDate: dateRange.start,
     endDate: dateRange.end,
     approvedOnly: true,
   });
 
   // Fetch employee entities (excludes grouped members to avoid double-counting)
-  const { entities: employees } = useEmployeeTableEntities();
+  const { entities: employees, loading: employeesLoading } = useEmployeeTableEntities();
 
   // Fetch holidays for the selected month
   const [holidays, setHolidays] = useState<BulgarianHoliday[]>([]);
@@ -115,6 +115,9 @@ export function EmployeesPage() {
     }
     return lookup;
   }, [entries, projectCanonicalIdLookup]);
+
+  // Combined loading state for utilization metrics
+  const metricsLoading = loading || ratesLoading || timeOffLoading || employeesLoading;
 
   // Calculate utilization metrics (shared hook)
   const utilizationMetrics = useUtilizationMetrics({
@@ -273,18 +276,22 @@ export function EmployeesPage() {
         <MetricCard
           title="Underutilization"
           value={`${utilizationMetrics.underutilizationHours.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs`}
+          loading={metricsLoading}
         />
         <MetricCard
           title="Lost Revenue (approx.)"
           value={formatCurrency(utilizationMetrics.lostRevenue)}
+          loading={metricsLoading}
         />
         <MetricCard
           title="Utilization"
           value={`${utilizationMetrics.utilizationPercent.toFixed(1)}%`}
+          loading={metricsLoading}
         />
         <MetricCard
           title="Time Off"
           value={`${utilizationMetrics.timeOffDays} days`}
+          loading={metricsLoading}
         />
       </div>
 

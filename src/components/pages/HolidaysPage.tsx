@@ -163,14 +163,16 @@ export function HolidaysPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Total Holidays" value={holidays.length.toLocaleString('en-US')} />
+        <MetricCard title="Total Holidays" value={holidays.length.toLocaleString('en-US')} loading={loading} />
         <MetricCard
           title="Auto-Generated"
           value={holidays.filter((h) => h.is_system_generated).length.toLocaleString('en-US')}
+          loading={loading}
         />
         <MetricCard
           title="Manual"
           value={holidays.filter((h) => !h.is_system_generated).length.toLocaleString('en-US')}
+          loading={loading}
         />
         <MetricCard title="Year" value={selectedYear} />
       </div>

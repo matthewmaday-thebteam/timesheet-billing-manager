@@ -57,10 +57,10 @@ export function Dashboard() {
   const { projects: canonicalProjects } = useProjectTableEntities();
 
   // Fetch employee entities (excludes grouped members to avoid double-counting)
-  const { entities: employees } = useEmployeeTableEntities();
+  const { entities: employees, loading: employeesLoading } = useEmployeeTableEntities();
 
   // Fetch time-off data for the selected period
-  const { timeOff } = useTimeOff({
+  const { timeOff, loading: timeOffLoading } = useTimeOff({
     startDate: dateRange.start,
     endDate: dateRange.end,
     approvedOnly: true,
@@ -87,7 +87,7 @@ export function Dashboard() {
   }), [dateRange.start]);
 
   // Fetch monthly rates
-  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
+  const { projectsWithRates, isLoading: ratesLoading } = useMonthlyRates({ selectedMonth });
 
   // Fetch fixed billings for the date range (same as Revenue page)
   const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
@@ -227,6 +227,9 @@ export function Dashboard() {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Loading state for utilization inputs (employees, timeOff, holidays, rates)
+  const utilizationLoading = employeesLoading || timeOffLoading || ratesLoading;
+
   // Utilization metrics (shared hook — same calculation as EmployeesPage)
   const utilizationMetrics = useUtilizationMetrics({
     dateRange,
@@ -282,6 +285,7 @@ export function Dashboard() {
             underHoursCount={underHoursItems.length}
             totalRevenue={combinedTotalRevenue}
             utilizationPercent={utilizationMetrics.utilizationPercent}
+            utilizationLoading={utilizationLoading}
             onUnderHoursClick={() => setIsUnderHoursModalOpen(true)}
           />
         )}

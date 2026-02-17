@@ -146,10 +146,10 @@ export function UsersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Total Users" value={users.length} />
-        <MetricCard title="Admins" value={adminCount} />
-        <MetricCard title="Verified" value={users.filter((u) => u.is_verified).length} />
-        <MetricCard title="Pending" value={users.filter((u) => !u.is_verified).length} />
+        <MetricCard title="Total Users" value={users.length} loading={loading} />
+        <MetricCard title="Admins" value={adminCount} loading={loading} />
+        <MetricCard title="Verified" value={users.filter((u) => u.is_verified).length} loading={loading} />
+        <MetricCard title="Pending" value={users.filter((u) => !u.is_verified).length} loading={loading} />
       </div>
 
       {/* Users Table */}

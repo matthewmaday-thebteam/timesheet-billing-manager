@@ -61,27 +61,32 @@ export function EmployeeManagementPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard title="Total" value={sortedEntities.length} />
+        <MetricCard title="Total" value={sortedEntities.length} loading={loading} />
         <MetricCard
           title="Full-time"
           value={sortedEntities.filter(r => r.employment_type?.name === 'Full-time').length}
+          loading={loading}
         />
         <MetricCard
           title="Part-time"
           value={sortedEntities.filter(r => r.employment_type?.name === 'Part-time').length}
+          loading={loading}
         />
         <MetricCard
           title="Contractor"
           value={sortedEntities.filter(r => r.employment_type?.name === 'Contractor').length}
+          loading={loading}
         />
         <MetricCard
           title="Vendor"
           value={sortedEntities.filter(r => r.employment_type?.name === 'Vendor').length}
+          loading={loading}
         />
         <MetricCard
           title="Incomplete"
           value={incompleteCount}
-          isAlert={incompleteCount > 0}
+          isAlert={!loading && incompleteCount > 0}
+          loading={loading}
         />
       </div>
 

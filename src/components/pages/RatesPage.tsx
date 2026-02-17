@@ -176,6 +176,7 @@ export function RatesPage() {
         <MetricCard
           title="Average Rate"
           value={`$${rateMetrics.averageRate.toFixed(2)}`}
+          loading={isLoading}
         />
         <MetricCard
           title={`${currentYear} Target`}
@@ -188,10 +189,12 @@ export function RatesPage() {
         <MetricCard
           title={`At ${currentYear} Target`}
           value={rateMetrics.atTargetRateCount.toLocaleString('en-US')}
+          loading={isLoading}
         />
         <MetricCard
           title="Default"
           value={rateMetrics.atDefaultRateCount.toLocaleString('en-US')}
+          loading={isLoading}
         />
       </div>
 
