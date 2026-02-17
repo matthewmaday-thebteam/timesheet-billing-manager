@@ -218,7 +218,7 @@ export function AccordionFlat({
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
-                              <span className="text-sm font-semibold text-black">{group.label}</span>
+                              <span className="text-sm font-semibold text-vercel-gray-600">{group.label}</span>
                             </div>
                             {group.labelRight && (
                               <div className="text-sm font-medium text-vercel-gray-500">{group.labelRight}</div>

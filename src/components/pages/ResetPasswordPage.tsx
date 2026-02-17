@@ -55,9 +55,9 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
     <div className="min-h-screen bg-vercel-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo/Title */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-semibold text-vercel-gray-600">Set New Password</h1>
-          <p className="text-sm text-vercel-gray-400 mt-2">
+          <p className="text-sm text-vercel-gray-400 mt-1">
             Enter your new password below
           </p>
         </div>
@@ -94,7 +94,7 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
 
               {/* New Password Field */}
               <div>
-                <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
                   New Password
                 </label>
                 <div className="relative">
@@ -129,7 +129,7 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
 
               {/* Confirm Password Field */}
               <div>
-                <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
                   Confirm Password
                 </label>
                 <input

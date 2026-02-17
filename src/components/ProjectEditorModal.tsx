@@ -159,7 +159,7 @@ export function ProjectEditorModal({
               value={targetHours}
               onChange={(e) => setTargetHours(e.target.value)}
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-vercel-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-vercel-blue focus:border-transparent disabled:bg-vercel-gray-50 disabled:text-vercel-gray-400"
+              className="w-full px-3 py-2 border border-vercel-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-vercel-gray-600 disabled:bg-vercel-gray-50 disabled:text-vercel-gray-400"
               placeholder="0"
             />
             <p className="mt-1 text-xs text-vercel-gray-400">

@@ -647,7 +647,7 @@ export function RevenuePage() {
           </p>
         </div>
         {!loading && !billingsLoading && (
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-success" />
               <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(combinedTotalRevenue)}</span>
@@ -721,7 +721,7 @@ export function RevenuePage() {
           </>
         }
       >
-        <div className="space-y-5">
+        <div className="space-y-4">
           <p className="text-sm text-vercel-gray-400">
             {format(dateRange.start, 'MMMM yyyy')}
           </p>

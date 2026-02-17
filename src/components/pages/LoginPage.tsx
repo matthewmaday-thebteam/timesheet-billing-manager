@@ -42,7 +42,7 @@ export function LoginPage({ onForgotPassword, authError }: LoginPageProps) {
         {/* Login Card */}
         <Card variant="elevated" padding="lg">
           {/* Logo/Title */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <img
               src="/logo.svg"
               alt="The B Team Logo"
@@ -51,7 +51,7 @@ export function LoginPage({ onForgotPassword, authError }: LoginPageProps) {
               className="mx-auto mb-4"
             />
             <h1 className="text-2xl font-semibold text-vercel-gray-600">Manifest</h1>
-            <p className="text-sm text-vercel-gray-400 mt-2 italic">See the Unseeable. Know the Unknowable.</p>
+            <p className="text-sm text-vercel-gray-400 mt-1 italic">See the Unseeable. Know the Unknowable.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

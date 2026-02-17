@@ -17,10 +17,7 @@ export function AIChatButton() {
           isOpen
             ? 'bg-vercel-gray-400 hover:bg-vercel-gray-300'
             : 'bg-vercel-gray-600 hover:bg-vercel-gray-500'
-        }`}
-        style={{
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        }}
+        } shadow-elevated`}
         aria-label={isOpen ? 'Close chat' : 'Open AI chat'}
       >
         {isOpen ? (

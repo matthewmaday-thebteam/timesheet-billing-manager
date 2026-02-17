@@ -196,22 +196,22 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">
                       <ChevronIcon expanded={isCompanyExpanded} className="text-vercel-gray-400" />
-                      <span className="text-sm font-semibold text-black">{company.companyName}</span>
+                      <span className="text-sm font-semibold text-vercel-gray-600">{company.companyName}</span>
                     </div>
                   </td>
                   <td className="px-6 py-3 text-right">
                     <span className="text-sm text-vercel-gray-300">{minutesToHours(company.actualMinutes)}</span>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-sm text-black">{minutesToHours(company.roundedMinutes)}</span>
+                    <span className="text-sm text-vercel-gray-600">{minutesToHours(company.roundedMinutes)}</span>
                   </td>
                   {hasBillingColumns && (
                     <>
                       <td className="px-6 py-3 text-right">
-                        <span className="text-sm text-black">{formatHours(company.adjustedHours)}</span>
+                        <span className="text-sm text-vercel-gray-600">{formatHours(company.adjustedHours)}</span>
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <span className="text-sm font-medium text-black">{formatHours(company.billedHours)}</span>
+                        <span className="text-sm font-medium text-vercel-gray-600">{formatHours(company.billedHours)}</span>
                       </td>
                       <td className="px-6 py-3 text-right">
                         {company.unbillableHours > 0 ? (
@@ -229,7 +229,7 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                     <span className="text-sm text-vercel-gray-300">—</span>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-sm font-medium text-black">
+                    <span className="text-sm font-medium text-vercel-gray-600">
                       {formatCurrency(companyTotalRevenue)}
                     </span>
                   </td>

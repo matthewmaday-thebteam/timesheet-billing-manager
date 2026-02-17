@@ -58,7 +58,7 @@ function FormulaCard({
         {/* Source */}
         {source && (
           <div className="pl-11">
-            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Source</p>
+            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">Source</p>
             <div className="flex flex-wrap gap-4 text-sm">
               {source.table && (
                 <div>
@@ -85,7 +85,7 @@ function FormulaCard({
         {/* Data Flow */}
         {dataFlow && dataFlow.length > 0 && (
           <div className="pl-11">
-            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Data Flow</p>
+            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">Data Flow</p>
             <div className="flex items-center flex-wrap gap-2 text-sm">
               {dataFlow.map((step, i) => (
                 <span key={i} className="flex items-center gap-2">
@@ -103,9 +103,9 @@ function FormulaCard({
 
         {/* Formula */}
         <div className="pl-11">
-          <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Formula</p>
+          <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">Formula</p>
           <div className="bg-vercel-gray-900 rounded-lg p-4">
-            <code className="text-sm text-green-400 font-mono">{formula}</code>
+            <code className="text-sm text-success font-mono">{formula}</code>
           </div>
         </div>
 
@@ -118,7 +118,7 @@ function FormulaCard({
         {/* Notes */}
         {notes && notes.length > 0 && (
           <div className="pl-11">
-            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Notes</p>
+            <p className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">Notes</p>
             <ul className="space-y-1">
               {notes.map((note, i) => (
                 <li key={i} className="text-sm text-vercel-gray-500 flex items-start gap-2">

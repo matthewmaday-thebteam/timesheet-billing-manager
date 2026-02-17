@@ -8,6 +8,11 @@
 import { useState } from 'react';
 import { MeshGradientBackground } from '../patterns/MeshGradientBackground';
 import { TypographyPreview } from '../Typography';
+import { organisms } from '../registry/organisms';
+import { animations } from '../registry/animations';
+import { patterns } from '../registry/patterns';
+import { horizontalSpacing, verticalSpacing, combinedSpacing } from '../registry/spacing';
+import type { PatternCategory } from '../types';
 import { Modal } from '../../components/Modal';
 import { Select } from '../../components/Select';
 import { Avatar } from '../../components/Avatar';
@@ -39,7 +44,7 @@ import { DateCycle } from '../../components/molecules/DateCycle';
 import { generateMockPieData, generateMockLineData } from '../../utils/chartTransforms';
 import type { DateRange } from '../../types';
 
-type Section = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
+type Section = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'organisms' | 'animations' | 'designPatterns' | 'spacing' | 'patterns';
 
 interface StyleReviewPageProps {
   onClose: () => void;
@@ -55,6 +60,10 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
     { id: 'typography', label: 'Typography' },
     { id: 'atoms', label: 'Atoms' },
     { id: 'molecules', label: 'Molecules' },
+    { id: 'organisms', label: 'Organisms' },
+    { id: 'animations', label: 'Animations' },
+    { id: 'designPatterns', label: 'Design Patterns' },
+    { id: 'spacing', label: 'Spacing' },
     { id: 'patterns', label: 'Global Patterns' },
   ];
 
@@ -112,6 +121,10 @@ export function StyleReviewPage({ onClose, initialSection = 'tokens' }: StyleRev
         {activeSection === 'typography' && <TypographyPreview showAll />}
         {activeSection === 'atoms' && <AtomsSection />}
         {activeSection === 'molecules' && <MoleculesSection />}
+        {activeSection === 'organisms' && <OrganismsSection />}
+        {activeSection === 'animations' && <AnimationsSection />}
+        {activeSection === 'designPatterns' && <DesignPatternsSection />}
+        {activeSection === 'spacing' && <SpacingSection />}
         {activeSection === 'patterns' && (
           <PatternsSection showBackground={showBackground} setShowBackground={setShowBackground} />
         )}
@@ -1247,6 +1260,311 @@ function MoleculesSection() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Organisms Section
+function OrganismsSection() {
+  // Group organisms by domain
+  const groups: { label: string; items: typeof organisms }[] = [];
+  const domainMap: Record<string, typeof organisms> = {};
+
+  for (const org of organisms) {
+    const page = org.usedIn?.[0] ?? 'Other';
+    if (!domainMap[page]) domainMap[page] = [];
+    domainMap[page].push(org);
+  }
+
+  for (const [page, items] of Object.entries(domainMap)) {
+    groups.push({ label: page, items });
+  }
+
+  return (
+    <div className="space-y-12">
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-2">Organisms</h2>
+        <p className="text-sm text-vercel-gray-400 mb-6">
+          Collections of molecules and atoms composed for a specific on-screen purpose.
+          {' '}<span className="font-mono text-xs">{organisms.length} registered</span>
+        </p>
+
+        {groups.map((group) => (
+          <div key={group.label} className="mb-8">
+            <h3 className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-3">
+              {group.label}
+            </h3>
+            <div className="grid gap-4">
+              {group.items.map((org) => (
+                <div key={org.name} className="p-6 border border-vercel-gray-100 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="text-sm font-medium text-vercel-gray-600">{org.name}</h4>
+                    <span className="text-2xs font-mono text-vercel-gray-200 bg-vercel-gray-50 px-2 py-0.5 rounded">
+                      organism
+                    </span>
+                  </div>
+                  <p className="text-xs text-vercel-gray-400 mb-3">{org.description}</p>
+                  <p className="text-2xs text-vercel-gray-200 font-mono mb-3">{org.filePath}</p>
+
+                  {org.composedOf && org.composedOf.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-2xs font-medium text-vercel-gray-400 mb-1">Composed of:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {org.composedOf.map((dep) => (
+                          <span
+                            key={dep}
+                            className="text-2xs font-mono px-2 py-0.5 bg-vercel-gray-50 text-vercel-gray-400 rounded"
+                          >
+                            {dep}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Animations Section
+function AnimationsSection() {
+  const keyframeAnims = animations.filter((a) => a.keyframes);
+  const transitionAnims = animations.filter((a) => !a.keyframes);
+
+  return (
+    <div className="space-y-12">
+      {/* Keyframe Animations */}
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-2">Keyframe Animations</h2>
+        <p className="text-sm text-vercel-gray-400 mb-6">
+          Named keyframe animations used for loading states, indicators, and backgrounds.
+        </p>
+        <div className="grid gap-4">
+          {keyframeAnims.map((anim) => (
+            <div key={anim.name} className="p-6 border border-vercel-gray-100 rounded-lg">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-sm font-medium text-vercel-gray-600">{anim.name}</h3>
+                <div className="flex gap-2">
+                  <span className="text-2xs font-mono text-vercel-gray-200 bg-vercel-gray-50 px-2 py-0.5 rounded">
+                    {anim.duration}
+                  </span>
+                  <span className="text-2xs font-mono text-vercel-gray-200 bg-vercel-gray-50 px-2 py-0.5 rounded">
+                    {anim.easing}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-vercel-gray-400 mb-3">{anim.description}</p>
+              <div className="flex flex-wrap gap-4 text-2xs font-mono text-vercel-gray-400">
+                {anim.tailwindClass && (
+                  <span>
+                    <span className="text-vercel-gray-200">class:</span>{' '}
+                    <span className="text-brand-indigo">{anim.tailwindClass}</span>
+                  </span>
+                )}
+                {anim.cssClass && (
+                  <span>
+                    <span className="text-vercel-gray-200">css:</span>{' '}
+                    <span className="text-brand-indigo">{anim.cssClass}</span>
+                  </span>
+                )}
+                {anim.keyframes && (
+                  <span>
+                    <span className="text-vercel-gray-200">keyframes:</span>{' '}
+                    <span className="text-brand-purple">{anim.keyframes}</span>
+                  </span>
+                )}
+              </div>
+              <div className="mt-3">
+                <p className="text-2xs text-vercel-gray-200 mb-1">Used in:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {anim.usedIn.map((comp) => (
+                    <span
+                      key={comp}
+                      className="text-2xs font-mono px-2 py-0.5 bg-vercel-gray-50 text-vercel-gray-400 rounded"
+                    >
+                      {comp}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Transition Patterns */}
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-2">Transition Patterns</h2>
+        <p className="text-sm text-vercel-gray-400 mb-6">
+          CSS transition utilities for smooth state changes (hover, focus, toggle).
+        </p>
+        <div className="grid gap-4">
+          {transitionAnims.map((anim) => (
+            <div key={anim.name} className="p-6 border border-vercel-gray-100 rounded-lg">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-sm font-medium text-vercel-gray-600">{anim.name}</h3>
+                <div className="flex gap-2">
+                  <span className="text-2xs font-mono text-vercel-gray-200 bg-vercel-gray-50 px-2 py-0.5 rounded">
+                    {anim.duration}
+                  </span>
+                  <span className="text-2xs font-mono text-vercel-gray-200 bg-vercel-gray-50 px-2 py-0.5 rounded">
+                    {anim.easing}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-vercel-gray-400 mb-3">{anim.description}</p>
+              {anim.tailwindClass && (
+                <p className="text-2xs font-mono mb-3">
+                  <span className="text-vercel-gray-200">class:</span>{' '}
+                  <span className="text-brand-indigo">{anim.tailwindClass}</span>
+                </p>
+              )}
+              <div>
+                <p className="text-2xs text-vercel-gray-200 mb-1">
+                  Used in ({anim.usedIn.length} components):
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {anim.usedIn.map((comp) => (
+                    <span
+                      key={comp}
+                      className="text-2xs font-mono px-2 py-0.5 bg-vercel-gray-50 text-vercel-gray-400 rounded"
+                    >
+                      {comp}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Design Patterns Section
+function DesignPatternsSection() {
+  const categories: { id: PatternCategory; label: string; description: string }[] = [
+    { id: 'typography', label: 'Typography', description: 'Font weight, size, and color conventions for text hierarchy.' },
+    { id: 'spacing', label: 'Spacing', description: 'Consistent gaps between headings, sections, cards, and form elements.' },
+    { id: 'color', label: 'Color', description: 'Status colors, interactive states, borders, and text hierarchy.' },
+    { id: 'layout', label: 'Layout', description: 'Page headers, responsive grids, tables, and modals.' },
+  ];
+
+  return (
+    <div className="space-y-12">
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-2">Design Patterns</h2>
+        <p className="text-sm text-vercel-gray-400 mb-6">
+          Rules and conventions that dictate how elements are composed visually. These are not components — they are the standards components must follow.
+          {' '}<span className="font-mono text-xs">{patterns.length} registered</span>
+        </p>
+
+        {categories.map((cat) => {
+          const categoryPatterns = patterns.filter((p) => p.category === cat.id);
+          return (
+            <div key={cat.id} className="mb-10">
+              <h3 className="text-sm font-semibold text-vercel-gray-600 mb-1">{cat.label}</h3>
+              <p className="text-xs text-vercel-gray-400 mb-4">{cat.description}</p>
+
+              <div className="grid gap-4">
+                {categoryPatterns.map((pattern) => (
+                  <div key={pattern.name} className="p-6 border border-vercel-gray-100 rounded-lg">
+                    <h4 className="text-sm font-medium text-vercel-gray-600 mb-1">{pattern.name}</h4>
+                    <p className="text-xs text-vercel-gray-400 mb-4">{pattern.description}</p>
+
+                    <div className="mb-4">
+                      <p className="text-2xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Rules</p>
+                      <ul className="space-y-1">
+                        {pattern.rules.map((rule, i) => (
+                          <li key={i} className="text-xs text-vercel-gray-400 flex gap-2">
+                            <span className="text-vercel-gray-200 shrink-0">&bull;</span>
+                            {rule}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <p className="text-2xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">Tokens</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {pattern.tokens.map((token) => (
+                          <span
+                            key={token}
+                            className="text-2xs font-mono px-2 py-0.5 bg-vercel-gray-50 text-brand-indigo rounded"
+                          >
+                            {token}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Spacing Section
+function SpacingSection() {
+  const spacingGroups = [
+    { label: 'Horizontal Spacing', description: 'Padding, gaps, and margins on the horizontal axis.', items: horizontalSpacing },
+    { label: 'Vertical Spacing', description: 'Section gaps, element gaps, and internal padding on the vertical axis.', items: verticalSpacing },
+    { label: 'Combined Spacing', description: 'Padding applied equally on both axes.', items: combinedSpacing },
+  ];
+
+  return (
+    <div className="space-y-12">
+      <div>
+        <h2 className="text-lg font-semibold text-vercel-gray-600 mb-2">Spacing System</h2>
+        <p className="text-sm text-vercel-gray-400 mb-6">
+          Single source of truth for all allowed spacing values. Any spacing not listed here should not be introduced without updating the registry.
+        </p>
+
+        {spacingGroups.map((group) => (
+          <div key={group.label} className="mb-10">
+            <h3 className="text-sm font-semibold text-vercel-gray-600 mb-1">{group.label}</h3>
+            <p className="text-xs text-vercel-gray-400 mb-4">{group.description}</p>
+
+            <div className="border border-vercel-gray-100 rounded-lg overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-[1fr_80px_120px_1fr] gap-4 px-4 py-3 bg-vercel-gray-50 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                <span>Name</span>
+                <span>Value</span>
+                <span>Class</span>
+                <span>Usage</span>
+              </div>
+              {/* Table rows */}
+              {group.items.map((s) => (
+                <div
+                  key={s.name}
+                  className="grid grid-cols-[1fr_80px_120px_1fr] gap-4 px-4 py-3 border-t border-vercel-gray-100 items-start"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="bg-brand-indigo rounded shrink-0"
+                      style={{ width: parseInt(s.value), height: parseInt(s.value), maxWidth: 48, maxHeight: 48 }}
+                    />
+                    <span className="text-sm font-medium text-vercel-gray-600">{s.name}</span>
+                  </div>
+                  <span className="text-sm font-mono text-vercel-gray-400">{s.value}</span>
+                  <span className="text-xs font-mono text-brand-indigo">{s.tailwindClass}</span>
+                  <span className="text-xs text-vercel-gray-400">{s.usage}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -151,7 +151,7 @@ export function ProjectsPage() {
           <span className="ml-3 text-sm text-vercel-gray-400">Loading project data...</span>
         </div>
       ) : hierarchyResult.companies.length === 0 ? (
-        <div className="bg-white rounded-lg border border-vercel-gray-100 p-8 text-center">
+        <div className="bg-white rounded-lg border border-vercel-gray-100 p-6 text-center">
           <p className="text-sm text-vercel-gray-400">No timesheet data for this month.</p>
         </div>
       ) : (

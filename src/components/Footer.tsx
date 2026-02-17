@@ -52,10 +52,10 @@ export function Footer({ onNavigate }: FooterProps) {
       <footer className="bg-white border-t border-vercel-gray-100 mt-auto">
         <div className="max-w-7xl mx-auto px-6 py-8">
           {/* Site Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             {Object.entries(siteHierarchy).map(([section, links]) => (
               <div key={section}>
-                <h4 className="text-sm font-semibold text-vercel-gray-600 mb-3">
+                <h4 className="text-sm font-semibold text-vercel-gray-600 mb-4">
                   {section}
                 </h4>
                 <ul className="space-y-2">
@@ -75,7 +75,7 @@ export function Footer({ onNavigate }: FooterProps) {
 
             {/* Legal Section */}
             <div>
-              <h4 className="text-sm font-semibold text-vercel-gray-600 mb-3">
+              <h4 className="text-sm font-semibold text-vercel-gray-600 mb-4">
                 Legal
               </h4>
               <ul className="space-y-2">

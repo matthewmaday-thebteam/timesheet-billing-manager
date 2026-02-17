@@ -451,7 +451,7 @@ export function BillingsPage() {
           <span className="ml-3 text-sm text-vercel-gray-400">Loading billings...</span>
         </div>
       ) : companyBillings.length === 0 ? (
-        <div className="bg-white border border-vercel-gray-100 rounded-lg p-8 text-center">
+        <div className="bg-white border border-vercel-gray-100 rounded-lg p-6 text-center">
           <p className="text-vercel-gray-400">No billings found. Click "Add Billing" to create one.</p>
         </div>
       ) : (
@@ -484,13 +484,13 @@ export function BillingsPage() {
                   {/* Company Row */}
                   <tr key={company.companyId} className="bg-vercel-gray-50">
                     <td className="px-6 py-3">
-                      <span className="text-sm font-semibold text-black">{company.companyName}</span>
+                      <span className="text-sm font-semibold text-vercel-gray-600">{company.companyName}</span>
                     </td>
                     <td />
                     <td />
                     <td />
                     <td className="px-6 py-3 text-right">
-                      <span className="text-sm font-medium text-black">
+                      <span className="text-sm font-medium text-vercel-gray-600">
                         {formatCentsToDisplay(company.totalCents)}
                       </span>
                     </td>
@@ -610,7 +610,7 @@ export function BillingsPage() {
           </>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleSaveBilling(); }} className="space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveBilling(); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
               Company
@@ -710,7 +710,7 @@ export function BillingsPage() {
           </>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleSaveTransaction(); }} className="space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveTransaction(); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
               Date
@@ -778,7 +778,7 @@ export function BillingsPage() {
           </>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleUpdateBilling(); }} className="space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleUpdateBilling(); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
               Company
@@ -881,7 +881,7 @@ export function BillingsPage() {
           </>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleUpdateTransaction(); }} className="space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleUpdateTransaction(); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
               Date

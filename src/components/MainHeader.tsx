@@ -134,10 +134,7 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
 
             {isMenuOpen && (
               <div
-                className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-vercel-gray-100 overflow-hidden z-50"
-                style={{
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
+                className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-vercel-gray-100 overflow-hidden z-50 shadow-vercel-dropdown"
               >
                 {/* User Info */}
                 <div className="px-4 py-3 border-b border-vercel-gray-100">

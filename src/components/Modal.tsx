@@ -62,10 +62,7 @@ export function Modal({
       {/* Modal container */}
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div
-          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-white rounded-xl flex flex-col overflow-hidden`}
-          style={{
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          }}
+          className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] bg-white rounded-xl flex flex-col overflow-hidden shadow-modal`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

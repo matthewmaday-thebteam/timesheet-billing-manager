@@ -412,7 +412,7 @@ export function EmployeePerformance({
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2">
                         <ChevronIcon expanded={isEmployeeExpanded} className="text-vercel-gray-400" />
-                        <span className="text-sm font-semibold text-black">{employee.name}</span>
+                        <span className="text-sm font-semibold text-vercel-gray-600">{employee.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-3 text-right">
@@ -423,10 +423,10 @@ export function EmployeePerformance({
                       )}
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <span className="text-sm text-black">{minutesToHours(employee.roundedMinutes)}</span>
+                      <span className="text-sm text-vercel-gray-600">{minutesToHours(employee.roundedMinutes)}</span>
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <span className="text-sm font-medium text-black">{formatCurrency(employee.revenue)}</span>
+                      <span className="text-sm font-medium text-vercel-gray-600">{formatCurrency(employee.revenue)}</span>
                     </td>
                   </tr>
 

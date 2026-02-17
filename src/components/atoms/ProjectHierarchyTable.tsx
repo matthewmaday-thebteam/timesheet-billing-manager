@@ -120,14 +120,14 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">
                       <ChevronIcon expanded={isCompanyExpanded} className="text-vercel-gray-400" />
-                      <span className="text-sm font-semibold text-black">{company.companyName}</span>
+                      <span className="text-sm font-semibold text-vercel-gray-600">{company.companyName}</span>
                     </div>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-sm font-medium text-black">{formatHours(company.hours)}</span>
+                    <span className="text-sm font-medium text-vercel-gray-600">{formatHours(company.hours)}</span>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-sm font-medium text-black">{formatCurrency(company.revenue)}</span>
+                    <span className="text-sm font-medium text-vercel-gray-600">{formatCurrency(company.revenue)}</span>
                   </td>
                 </tr>
 

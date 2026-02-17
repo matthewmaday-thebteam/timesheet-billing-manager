@@ -94,7 +94,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="bg-white rounded-lg overflow-hidden"
+      className="bg-white rounded-lg overflow-hidden shadow-vercel-dropdown backdrop-blur-sm"
       style={{
         position: 'fixed',
         top: dropdownPosition.top,
@@ -102,8 +102,6 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
         width: dropdownPosition.width,
         minWidth: 120,
         zIndex: 9999,
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-        backdropFilter: 'blur(8px)',
       }}
     >
       <div className="py-1 max-h-60 overflow-y-auto scrollbar-thin">

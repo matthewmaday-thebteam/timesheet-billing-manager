@@ -2,7 +2,7 @@ import { Card } from '../Card';
 
 export function EOMReportsPage() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       <section>
         <div className="flex justify-between items-end mb-4">
           <h2 className="text-lg font-semibold tracking-tight text-vercel-gray-600">

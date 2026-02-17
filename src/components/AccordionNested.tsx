@@ -119,7 +119,7 @@ export function AccordionNested({
                     </svg>
                     <span className="text-sm font-medium text-vercel-gray-600">{item.label}</span>
                   </div>
-                  <span className="text-sm font-medium text-black mr-[10px]">{item.value}</span>
+                  <span className="text-sm font-medium text-vercel-gray-600 mr-2.5">{item.value}</span>
                 </button>
 
                 {/* Level 3: Children */}

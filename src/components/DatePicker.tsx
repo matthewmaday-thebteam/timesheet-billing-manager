@@ -191,7 +191,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', error
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-[11px] font-medium text-vercel-gray-300 py-1"
+            className="text-center text-2xs font-medium text-vercel-gray-300 py-1"
           >
             {day}
           </div>
