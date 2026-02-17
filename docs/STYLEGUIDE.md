@@ -1,7 +1,7 @@
 # Timesheet Billing Manager - Style Guide
 
-**Version:** 1.6.0
-**Last Updated:** 2026-01-13 (Task 019 - Toggle & Alert)
+**Version:** 2.0.0
+**Last Updated:** 2026-02-17 (Task 046 - Design System Architecture)
 **Status:** ENFORCED
 
 This document is the mandatory source of truth for all UI development. Claude Code MUST reference this guide before implementing any UI changes.
@@ -10,14 +10,63 @@ This document is the mandatory source of truth for all UI development. Claude Co
 
 ## Table of Contents
 
-1. [Design Tokens](#design-tokens)
-2. [Color System](#color-system)
-3. [Typography](#typography)
-4. [Spacing](#spacing)
-5. [Component Library](#component-library)
-6. [Approved Global Patterns](#approved-global-patterns)
-7. [Enforcement Rules](#enforcement-rules)
-8. [Migration Guide](#migration-guide)
+1. [Component Tier System](#component-tier-system)
+2. [Design Tokens](#design-tokens)
+3. [Color System](#color-system)
+4. [Typography](#typography)
+5. [Spacing](#spacing)
+6. [Component Library](#component-library)
+7. [Approved Global Patterns](#approved-global-patterns)
+8. [Enforcement Rules](#enforcement-rules)
+9. [Migration Guide](#migration-guide)
+
+---
+
+## Component Tier System
+
+The design system uses a multi-tier architecture inspired by atomic design. Each tier builds on the one below it.
+
+### Tiers
+
+| Tier | Definition | Example |
+|------|-----------|---------|
+| **Atom** | Smallest indivisible UI element. Rarely displayed independently. | Button, Input, Badge, Spinner, ChevronIcon |
+| **Molecule** | Collection of atoms organized with a specific intent. | DateCycle (chevrons + label), RangeSelector (buttons + date + dropdown), EmployeeEditorModal (modal + inputs + selects) |
+| **Organism** | Collection of molecules/atoms composed for a specific on-screen purpose. What users actually see as coherent page sections. | HolidayTable (heading + column headers + data rows), StatsOverview (row of MetricCards), MainHeader (nav items + avatar + dropdown) |
+
+### Supporting Categories
+
+| Category | Definition | Registry |
+|----------|-----------|----------|
+| **Animations** | Reusable animation definitions (keyframes, transitions, timing) for consistent motion. | `src/design-system/registry/animations.ts` |
+| **Design Patterns** | Rules for typography, spacing, color, and layout that components must follow. | `src/design-system/registry/patterns.ts` |
+| **Spacing** | Allowed horizontal and vertical spacing values. Single source of truth to prevent arbitrary spacing. | `src/design-system/registry/spacing.ts` |
+
+### Registry Files
+
+The authoritative catalog of every component and pattern lives in `src/design-system/registry/`:
+
+```
+src/design-system/
+  types.ts              # TypeScript interfaces for all registry entries
+  registry/
+    atoms.ts            # All atom components (34 entries)
+    molecules.ts        # All molecule components (21 entries)
+    organisms.ts        # All organism components (16 entries)
+    animations.ts       # All animation/transition definitions (16 entries)
+    patterns.ts         # All design pattern rules (15 entries)
+    spacing.ts          # All allowed spacing values (25 entries)
+    index.ts            # Barrel export
+```
+
+### Classification Rules
+
+1. **Atoms** — If a component renders a single interactive or display element with no composed sub-components, it is an atom.
+2. **Molecules** — If a component composes multiple atoms for a focused purpose (e.g., a form modal, a navigation control), it is a molecule.
+3. **Organisms** — If a component represents a visible page section that users interact with as a coherent unit (e.g., a data table, a stats row, a navigation bar), it is an organism.
+4. **New components** must be registered in the appropriate registry file before use.
+5. **Animations** must be registered before being applied to components.
+6. **Spacing values** not in the registry require justification before introduction.
 
 ---
 
@@ -712,6 +761,16 @@ This displays:
 ---
 
 ## Changelog
+
+### v2.0.0 (2026-02-17) - Task 046
+- Introduced multi-tier component architecture: Atoms, Molecules, Organisms
+- Added design system registry at `src/design-system/registry/`
+- Cataloged 34 atoms, 21 molecules, 16 organisms
+- Added Animation registry (16 animation/transition definitions)
+- Added Design Pattern registry (15 typography, spacing, color, and layout patterns)
+- Added Spacing registry (25 allowed spacing values across horizontal, vertical, and combined)
+- Added TypeScript interfaces for all registry types
+- No frontend code changes — backend classification system only
 
 ### v1.6.0 (2026-01-13) - Task 019
 - Added Toggle component to official atoms (boolean switch with label/description)
