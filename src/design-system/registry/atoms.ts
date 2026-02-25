@@ -3,10 +3,16 @@ import type { DesignSystemEntry } from '../types';
 /**
  * Atom Registry
  *
- * Atoms are the smallest, indivisible UI elements. They are rarely displayed
- * independently on a page — they exist to be composed into molecules and organisms.
+ * Atoms are the smallest, indivisible UI elements. They are single-purpose
+ * primitives that do not compose other design system components. They exist
+ * to be composed into molecules and organisms.
+ *
+ * 22 registered atoms.
  */
 export const atoms: DesignSystemEntry[] = [
+  // ---------------------------------------------------------------------------
+  // Form primitives
+  // ---------------------------------------------------------------------------
   {
     name: 'Button',
     description: 'Interactive button with primary, secondary, ghost, and danger variants in sm/md/lg sizes.',
@@ -64,6 +70,10 @@ export const atoms: DesignSystemEntry[] = [
     usedIn: ['UserEditorModal'],
     introducedIn: 'Task 019',
   },
+
+  // ---------------------------------------------------------------------------
+  // Containers & feedback
+  // ---------------------------------------------------------------------------
   {
     name: 'Card',
     description: 'Container with default, elevated, bordered, and subtle variants; none/sm/md/lg padding.',
@@ -117,18 +127,23 @@ export const atoms: DesignSystemEntry[] = [
     introducedIn: 'Task 019',
   },
   {
+    name: 'Accordion',
+    description: 'Expandable section with chevron toggle and header/content areas.',
+    tier: 'atom',
+    filePath: 'src/components/Accordion.tsx',
+    usedIn: ['DiagnosticsPage'],
+    introducedIn: 'Task 018',
+  },
+
+  // ---------------------------------------------------------------------------
+  // Icons & indicators
+  // ---------------------------------------------------------------------------
+  {
     name: 'Avatar',
     description: 'Circular user avatar with image, initials fallback, and size variants.',
     tier: 'atom',
     filePath: 'src/components/Avatar.tsx',
     usedIn: ['MainHeader', 'ProfileEditorModal'],
-  },
-  {
-    name: 'AvatarUpload',
-    description: 'Avatar with hover overlay for uploading and cropping a new image.',
-    tier: 'atom',
-    filePath: 'src/components/AvatarUpload.tsx',
-    usedIn: ['ProfileEditorModal'],
   },
   {
     name: 'ChevronIcon',
@@ -155,70 +170,6 @@ export const atoms: DesignSystemEntry[] = [
     usedIn: ['MainHeader'],
   },
   {
-    name: 'MetricCard',
-    description: 'Stat display card with title, value, optional status dot, loading state, and action button.',
-    tier: 'atom',
-    filePath: 'src/components/MetricCard.tsx',
-    usedIn: [
-      'StatsOverview', 'EmployeesPage', 'EmployeeManagementPage',
-      'RatesPage', 'HolidaysPage', 'UsersPage', 'InvestorDashboardPage',
-      'UnderHoursModal',
-    ],
-  },
-  {
-    name: 'DatePicker',
-    description: 'Date input with inline calendar dropdown, month/year navigation, and keyboard support.',
-    tier: 'atom',
-    filePath: 'src/components/DatePicker.tsx',
-    usedIn: ['HolidayEditorModal', 'BillingsPage'],
-    introducedIn: 'Task 018',
-  },
-  {
-    name: 'MonthPicker',
-    description: 'Month-level date picker for selecting year/month combinations.',
-    tier: 'atom',
-    filePath: 'src/components/MonthPicker.tsx',
-    usedIn: ['BillingsPage'],
-  },
-  {
-    name: 'DropdownMenu',
-    description: 'Context menu with icon-button or text trigger, positioned dynamically.',
-    tier: 'atom',
-    filePath: 'src/components/DropdownMenu.tsx',
-    usedIn: ['RangeSelector', 'BillingRatesTable'],
-  },
-  {
-    name: 'Accordion',
-    description: 'Expandable section with chevron toggle and header/content areas.',
-    tier: 'atom',
-    filePath: 'src/components/Accordion.tsx',
-    usedIn: ['DiagnosticsPage'],
-    introducedIn: 'Task 018',
-  },
-  {
-    name: 'AccordionNested',
-    description: 'Three-level accordion hierarchy (project > resource > task) with left border lines.',
-    tier: 'atom',
-    filePath: 'src/components/AccordionNested.tsx',
-    usedIn: ['EmployeePerformance', 'RevenuePage'],
-    introducedIn: 'Task 018',
-  },
-  {
-    name: 'AccordionFlat',
-    description: 'Two-level accordion with tabular content, column headers, groupable rows, and footer.',
-    tier: 'atom',
-    filePath: 'src/components/AccordionFlat.tsx',
-    usedIn: ['BillingRatesTable'],
-    introducedIn: 'Task 018',
-  },
-  {
-    name: 'AccordionListTable',
-    description: 'Accordion with list-table hybrid content for expandable rows with columns.',
-    tier: 'atom',
-    filePath: 'src/components/AccordionListTable.tsx',
-    usedIn: ['UnderHoursModal'],
-  },
-  {
     name: 'Markdown',
     description: 'Renders Markdown-formatted text as styled HTML.',
     tier: 'atom',
@@ -232,27 +183,23 @@ export const atoms: DesignSystemEntry[] = [
     filePath: 'src/components/TypingIndicator.tsx',
     usedIn: ['AIChatWindow'],
   },
-  // Chart atoms
+  {
+    name: 'AIChatButton',
+    description: 'Floating action button that toggles the AI chat window.',
+    tier: 'atom',
+    filePath: 'src/components/chat/AIChatButton.tsx',
+    usedIn: ['App'],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Chart primitives
+  // ---------------------------------------------------------------------------
   {
     name: 'BarChartAtom',
     description: 'Horizontal bar chart for resource hours distribution using Recharts.',
     tier: 'atom',
     filePath: 'src/components/atoms/charts/BarChartAtom.tsx',
     usedIn: ['DashboardChartsRow'],
-  },
-  {
-    name: 'PieChartAtom',
-    description: 'Donut/pie chart for data distribution using Recharts.',
-    tier: 'atom',
-    filePath: 'src/components/atoms/charts/PieChartAtom.tsx',
-    usedIn: ['DashboardChartsRow'],
-  },
-  {
-    name: 'LineGraphAtom',
-    description: 'Line chart for cumulative Target/Budget/Revenue trends using Recharts.',
-    tier: 'atom',
-    filePath: 'src/components/atoms/charts/LineGraphAtom.tsx',
-    usedIn: ['DashboardChartsRow', 'InvestorDashboardPage'],
   },
   {
     name: 'CAGRChartAtom',
@@ -267,27 +214,5 @@ export const atoms: DesignSystemEntry[] = [
     tier: 'atom',
     filePath: 'src/components/atoms/charts/DailyHoursChart.tsx',
     usedIn: ['Dashboard'],
-  },
-  // Table atoms
-  {
-    name: 'BurnGrid',
-    description: 'Daily hours grid showing employee hours per day with under-hours highlighting.',
-    tier: 'atom',
-    filePath: 'src/components/atoms/BurnGrid.tsx',
-    usedIn: ['BurnPage'],
-  },
-  {
-    name: 'ProjectHierarchyTable',
-    description: 'Expandable table showing company > project > resource > task hierarchy.',
-    tier: 'atom',
-    filePath: 'src/components/atoms/ProjectHierarchyTable.tsx',
-    usedIn: ['ProjectsPage'],
-  },
-  {
-    name: 'RevenueTable',
-    description: 'Expandable revenue table with company > project > resource > task breakdown.',
-    tier: 'atom',
-    filePath: 'src/components/atoms/RevenueTable.tsx',
-    usedIn: ['RevenuePage'],
   },
 ];

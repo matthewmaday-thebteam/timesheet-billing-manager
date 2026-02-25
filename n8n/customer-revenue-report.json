@@ -1,0 +1,141 @@
+{
+  "name": "Monday Neocurrency Revenue Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Monday 7am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute current month in YYYY-MM-01 format and human-readable label\nconst now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst monthStart = `${year}-${month}-01`;\n\nconst monthNames = [\n  'January', 'February', 'March', 'April', 'May', 'June',\n  'July', 'August', 'September', 'October', 'November', 'December'\n];\nconst monthLabel = `${monthNames[now.getMonth()]} ${year}`;\n\nreturn [{\n  json: {\n    month: monthStart,\n    monthLabel: monthLabel\n  }\n}];"
+      },
+      "id": "compute-month",
+      "name": "Compute Current Month",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yptbnsegcfpizwhipeep.supabase.co/functions/v1/customer-revenue-report",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwdGJuc2VnY2ZwaXp3aGlwZWVwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODAwNjM1MCwiZXhwIjoyMDgzNTgyMzUwfQ.gP_kbCGf_MZtKm1dx3SxfaSXXVwMwoo5JG47GuVDwWI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ companyName: 'Neocurrency', month: $json.month }) }}",
+        "options": {}
+      },
+      "id": "call-edge-function",
+      "name": "Fetch Report Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst company = data.company;\nconst monthLabel = $('Compute Current Month').first().json.monthLabel;\n\n// Format currency helper\nfunction fmtCurrency(amount) {\n  return new Intl.NumberFormat('en-US', {\n    style: 'currency', currency: 'USD',\n    minimumFractionDigits: 2, maximumFractionDigits: 2\n  }).format(amount);\n}\n\nconst BOM = '\\uFEFF';\nconst header = ['Company', 'Project', 'Task', 'Hours', 'Rate ($/hr)',\n                'Project Hours', 'Project Revenue', 'Company Hours', 'Company Revenue'];\n\nconst csvRows = [];\n\n// Title row\ncsvRows.push([`Customer Revenue Report - ${monthLabel}`]);\n\n// Header row\ncsvRows.push(header);\n\n// Helper: empty row matching column count\nconst emptyRow = () => header.map(() => '');\n\n// Company summary row\nconst companyRow = emptyRow();\ncompanyRow[0] = company.companyName;\ncompanyRow[7] = company.companyHours.toFixed(2);           // Company Hours\ncompanyRow[8] = fmtCurrency(company.companyRevenue);       // Company Revenue\ncsvRows.push(companyRow);\n\n// Projects (already sorted alphabetically by edge function)\nfor (const project of company.projects) {\n  // Project summary row\n  const projectRow = emptyRow();\n  projectRow[0] = company.companyName;\n  projectRow[1] = project.projectName;\n  projectRow[4] = project.rate.toFixed(2);                  // Rate ($/hr)\n  projectRow[5] = project.projectHours.toFixed(2);          // Project Hours\n  projectRow[6] = fmtCurrency(project.projectRevenue);      // Project Revenue\n  csvRows.push(projectRow);\n\n  // Task rows (already sorted by hours desc by edge function)\n  for (const task of project.tasks) {\n    const taskRow = emptyRow();\n    taskRow[0] = company.companyName;\n    taskRow[1] = project.projectName;\n    taskRow[2] = task.taskName;                              // Task\n    taskRow[3] = task.hours.toFixed(2);                      // Hours\n    taskRow[4] = project.rate.toFixed(2);                    // Rate ($/hr)\n    csvRows.push(taskRow);\n  }\n}\n\n// Empty separator\ncsvRows.push(emptyRow());\n\n// Total row\nconst totalRow = emptyRow();\ntotalRow[0] = 'TOTAL';\ntotalRow[7] = data.totalHours.toFixed(2);                    // Company Hours\ntotalRow[8] = fmtCurrency(data.totalRevenue);                // Company Revenue\ncsvRows.push(totalRow);\n\n// Convert to quoted CSV\nconst csvContent = BOM + csvRows\n  .map(row => row.map(cell => `\"${String(cell).replace(/\"/g, '\"\"')}\"`).join(','))\n  .join('\\n');\n\nconst filename = `customer-revenue-neocurrency-${data.month || ''}.csv`;\n\n// Output CSV as binary attachment for email node\nconst buffer = Buffer.from(csvContent, 'utf-8');\nreturn [{\n  json: {\n    monthLabel,\n    filename,\n    csvContent\n  },\n  binary: {\n    attachment: await this.helpers.prepareBinaryData(buffer, filename, 'text/csv; charset=utf-8')\n  }\n}];"
+      },
+      "id": "build-csv",
+      "name": "Build CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "reports@yourbteam.com",
+        "toEmail": "sdimitrov@yourbteam.com",
+        "subject": "=Neocurrency Revenue Report - {{ $json.monthLabel }}",
+        "emailType": "text",
+        "message": "=Hi Stanimir,\n\nAttached is the Neocurrency customer revenue report for {{ $json.monthLabel }}.\n\nThis is an automated report generated every Monday morning.\n\nBest,\nThe B Team",
+        "options": {
+          "attachments": "attachment"
+        }
+      },
+      "id": "send-email",
+      "name": "Email to Stanimir",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [880, 0],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday 7am": {
+      "main": [
+        [
+          {
+            "node": "Compute Current Month",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Current Month": {
+      "main": [
+        [
+          {
+            "node": "Fetch Report Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Report Data": {
+      "main": [
+        [
+          {
+            "node": "Build CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CSV": {
+      "main": [
+        [
+          {
+            "node": "Email to Stanimir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Sofia"
+  }
+}

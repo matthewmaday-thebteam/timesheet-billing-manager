@@ -6,8 +6,13 @@ import type { DesignSystemEntry } from '../types';
  * Molecules are collections of atoms organized with a specific intent.
  * Each molecule has a single, focused responsibility that emerges from
  * the combination of its parts.
+ *
+ * 20 registered molecules.
  */
 export const molecules: DesignSystemEntry[] = [
+  // ---------------------------------------------------------------------------
+  // Navigation & date controls
+  // ---------------------------------------------------------------------------
   {
     name: 'DateCycle',
     description: 'Month navigation control with left/right chevrons and a centered date label.',
@@ -27,6 +32,100 @@ export const molecules: DesignSystemEntry[] = [
       'BurnPage', 'EOMReportsPage',
     ],
   },
+  {
+    name: 'DateRangeFilter',
+    description: 'Month navigation filter with previous/next buttons and formatted date display.',
+    tier: 'molecule',
+    filePath: 'src/components/DateRangeFilter.tsx',
+    composedOf: ['Button', 'DatePicker'],
+    usedIn: ['BillingsPage'],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Composite inputs (atoms that compose other atoms)
+  // ---------------------------------------------------------------------------
+  {
+    name: 'MetricCard',
+    description: 'Stat display card with title, value, optional status dot, loading state, and action button.',
+    tier: 'molecule',
+    filePath: 'src/components/MetricCard.tsx',
+    composedOf: ['Card'],
+    usedIn: [
+      'StatsOverview', 'EmployeesPage', 'EmployeeManagementPage',
+      'RatesPage', 'HolidaysPage', 'UsersPage', 'InvestorDashboardPage',
+      'UnderHoursModal',
+    ],
+  },
+  {
+    name: 'DatePicker',
+    description: 'Date input with inline calendar dropdown, month/year navigation, and keyboard support.',
+    tier: 'molecule',
+    filePath: 'src/components/DatePicker.tsx',
+    composedOf: ['ChevronIcon'],
+    usedIn: ['HolidayEditorModal', 'BillingsPage'],
+    introducedIn: 'Task 018',
+  },
+  {
+    name: 'MonthPicker',
+    description: 'Month-level date picker for selecting year/month combinations.',
+    tier: 'molecule',
+    filePath: 'src/components/MonthPicker.tsx',
+    composedOf: ['ChevronIcon'],
+    usedIn: ['BillingsPage'],
+  },
+  {
+    name: 'DropdownMenu',
+    description: 'Context menu with icon-button or text trigger, positioned dynamically.',
+    tier: 'molecule',
+    filePath: 'src/components/DropdownMenu.tsx',
+    composedOf: ['Button'],
+    usedIn: ['RangeSelector', 'BillingRatesTable'],
+  },
+  {
+    name: 'AvatarUpload',
+    description: 'Avatar with hover overlay for uploading and cropping a new image.',
+    tier: 'molecule',
+    filePath: 'src/components/AvatarUpload.tsx',
+    composedOf: ['Avatar'],
+    usedIn: ['ProfileEditorModal'],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Accordion molecules (compose atoms into structured expand/collapse patterns)
+  // ---------------------------------------------------------------------------
+  {
+    name: 'AccordionFlat',
+    description: 'Two-level accordion with tabular content, column headers, groupable rows, and footer.',
+    tier: 'molecule',
+    filePath: 'src/components/AccordionFlat.tsx',
+    composedOf: ['ChevronIcon'],
+    usedIn: ['BillingRatesTable'],
+    introducedIn: 'Task 018',
+  },
+
+  // ---------------------------------------------------------------------------
+  // Chart molecules (compose chart atoms with data formatting)
+  // ---------------------------------------------------------------------------
+  {
+    name: 'PieChartAtom',
+    description: 'Donut/pie chart for data distribution using Recharts.',
+    tier: 'molecule',
+    filePath: 'src/components/atoms/charts/PieChartAtom.tsx',
+    composedOf: [],
+    usedIn: ['DashboardChartsRow'],
+  },
+  {
+    name: 'LineGraphAtom',
+    description: 'Line chart for cumulative Target/Budget/Revenue trends using Recharts.',
+    tier: 'molecule',
+    filePath: 'src/components/atoms/charts/LineGraphAtom.tsx',
+    composedOf: [],
+    usedIn: ['DashboardChartsRow', 'InvestorDashboardPage'],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Data display molecules
+  // ---------------------------------------------------------------------------
   {
     name: 'ResourceRow',
     description: 'Expandable table row for a single employee with chevron toggle and nested project details.',
@@ -50,80 +149,10 @@ export const molecules: DesignSystemEntry[] = [
     filePath: 'src/components/TaskList.tsx',
     usedIn: ['ResourceRow'],
   },
-  // Editor modals — molecules composed of multiple atom inputs
-  {
-    name: 'EmployeeEditorModal',
-    description: 'Modal form for editing employee data with avatar upload, employment type, and group management.',
-    tier: 'molecule',
-    filePath: 'src/components/EmployeeEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'Select', 'Button', 'AvatarUpload', 'Toggle'],
-    usedIn: ['EmployeeManagementPage'],
-  },
-  {
-    name: 'UserEditorModal',
-    description: 'Modal form for creating/editing admin users with role selection and invite toggle.',
-    tier: 'molecule',
-    filePath: 'src/components/UserEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'Select', 'Button', 'Toggle'],
-    usedIn: ['UsersPage'],
-  },
-  {
-    name: 'HolidayEditorModal',
-    description: 'Modal form for adding/editing holidays with date picker and name input.',
-    tier: 'molecule',
-    filePath: 'src/components/HolidayEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'DatePicker', 'Button'],
-    usedIn: ['HolidaysPage'],
-  },
-  {
-    name: 'CompanyEditorModal',
-    description: 'Modal form for editing company details and managing company groups.',
-    tier: 'molecule',
-    filePath: 'src/components/CompanyEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'Button'],
-    usedIn: ['CompaniesPage'],
-  },
-  {
-    name: 'ProjectEditorModal',
-    description: 'Modal form for editing project details and linked properties.',
-    tier: 'molecule',
-    filePath: 'src/components/ProjectEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'Select', 'Button'],
-    usedIn: ['ProjectManagementPage'],
-  },
-  {
-    name: 'RateEditModal',
-    description: 'Modal for editing project rates by month with DateCycle navigation and currency input.',
-    tier: 'molecule',
-    filePath: 'src/components/RateEditModal.tsx',
-    composedOf: ['Modal', 'Input', 'Button', 'DateCycle', 'Spinner'],
-    usedIn: ['BillingRatesTable'],
-  },
-  {
-    name: 'ProfileEditorModal',
-    description: 'Modal for editing user profile with avatar upload and name/email fields.',
-    tier: 'molecule',
-    filePath: 'src/components/ProfileEditorModal.tsx',
-    composedOf: ['Modal', 'Input', 'Button', 'AvatarUpload'],
-    usedIn: ['MainHeader'],
-  },
-  {
-    name: 'LegalModal',
-    description: 'Modal for displaying and accepting legal documents (Terms, Privacy).',
-    tier: 'molecule',
-    filePath: 'src/components/LegalModal.tsx',
-    composedOf: ['Modal', 'Button', 'Markdown', 'Spinner'],
-    usedIn: ['App'],
-  },
-  {
-    name: 'UnderHoursModal',
-    description: 'Modal showing resources under target hours with sticky summary MetricCards and accordion list.',
-    tier: 'molecule',
-    filePath: 'src/components/UnderHoursModal.tsx',
-    composedOf: ['Modal', 'MetricCard', 'Card', 'AccordionListTable'],
-    usedIn: ['Dashboard'],
-  },
+
+  // ---------------------------------------------------------------------------
   // Group management sections
+  // ---------------------------------------------------------------------------
   {
     name: 'CompanyGroupSection',
     description: 'Section for managing company group membership with add/remove controls.',
@@ -156,7 +185,10 @@ export const molecules: DesignSystemEntry[] = [
     composedOf: ['Button', 'Spinner'],
     usedIn: ['UserEditorModal'],
   },
+
+  // ---------------------------------------------------------------------------
   // Chat molecules
+  // ---------------------------------------------------------------------------
   {
     name: 'ChatMessage',
     description: 'Single chat message bubble with user/AI styling and Markdown rendering.',
