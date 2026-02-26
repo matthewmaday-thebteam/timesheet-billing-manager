@@ -3,12 +3,16 @@ import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
 import { ProjectGroupSection } from './ProjectGroupSection';
+import { ProjectManagerSection } from './ProjectManagerSection';
 import { useProjectGroup } from '../hooks/useProjectGroup';
 import { useProjectGroupMutations } from '../hooks/useProjectGroupMutations';
 import { useProjectUpdate } from '../hooks/useProjectUpdate';
+import { useProjectManagersForProject, useProjectManagerMutations } from '../hooks/useProjectManagers';
+import { useResources } from '../hooks/useResources';
 import type {
   Project,
   StagedProjectGroupChanges,
+  StagedProjectManagerChanges,
 } from '../types';
 
 interface ProjectEditorModalProps {
@@ -25,6 +29,11 @@ const EMPTY_STAGED_CHANGES: StagedProjectGroupChanges = {
   removals: new Set<string>(),
 };
 
+const EMPTY_MANAGER_STAGED_CHANGES: StagedProjectManagerChanges = {
+  additions: [],
+  removals: new Set<string>(),
+};
+
 export function ProjectEditorModal({
   isOpen,
   onClose,
@@ -33,6 +42,7 @@ export function ProjectEditorModal({
 }: ProjectEditorModalProps) {
   const [lastProjectId, setLastProjectId] = useState<string | null>(project?.id ?? null);
   const [stagedGroupChanges, setStagedGroupChanges] = useState<StagedProjectGroupChanges>(EMPTY_STAGED_CHANGES);
+  const [stagedManagerChanges, setStagedManagerChanges] = useState<StagedProjectManagerChanges>(EMPTY_MANAGER_STAGED_CHANGES);
   const [targetHours, setTargetHours] = useState<string>('0');
 
   // Fetch project group data
@@ -42,8 +52,20 @@ export function ProjectEditorModal({
     loading: loadingGroup,
   } = useProjectGroup(project?.id ?? null);
 
+  // Fetch project managers data
+  const {
+    managers: persistedManagers,
+    loading: loadingManagers,
+  } = useProjectManagersForProject(project?.id ?? null);
+
+  // Fetch all resources for the manager dropdown
+  const { resources: allResources, loading: loadingResources } = useResources();
+
   // Group mutation hook
   const { saveChanges: saveGroupChanges, isSaving: isSavingGroup, saveError: groupSaveError } = useProjectGroupMutations();
+
+  // Manager mutation hook
+  const { saveChanges: saveManagerChanges, isSaving: isSavingManagers, saveError: managerSaveError } = useProjectManagerMutations();
 
   // Project update hook
   const { updateProject, isUpdating: isUpdatingProject, error: projectUpdateError } = useProjectUpdate();
@@ -53,6 +75,7 @@ export function ProjectEditorModal({
   if (currentProjectId !== lastProjectId) {
     setLastProjectId(currentProjectId);
     setStagedGroupChanges(EMPTY_STAGED_CHANGES);
+    setStagedManagerChanges(EMPTY_MANAGER_STAGED_CHANGES);
     setTargetHours(project?.target_hours?.toString() ?? '0');
   }
 
@@ -67,14 +90,21 @@ export function ProjectEditorModal({
     setStagedGroupChanges(changes);
   }, []);
 
+  const handleStagedManagerChangesUpdate = useCallback((changes: StagedProjectManagerChanges) => {
+    setStagedManagerChanges(changes);
+  }, []);
+
   // Check if there are group changes to save
   const hasGroupChanges = stagedGroupChanges.additions.length > 0 || stagedGroupChanges.removals.size > 0;
   const hasExistingGroup = projectRole === 'primary';
 
+  // Check if there are manager changes to save
+  const hasManagerChanges = stagedManagerChanges.additions.length > 0 || stagedManagerChanges.removals.size > 0;
+
   // Check if target hours has changed
   const parsedTargetHours = parseFloat(targetHours) || 0;
   const hasTargetHoursChanged = project && parsedTargetHours !== (project.target_hours ?? 0);
-  const hasAnyChanges = hasGroupChanges || hasTargetHoursChanged;
+  const hasAnyChanges = hasGroupChanges || hasTargetHoursChanged || hasManagerChanges;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,14 +136,28 @@ export function ProjectEditorModal({
       }
     }
 
+    // If there are manager changes, save them
+    if (hasManagerChanges && allSuccessful) {
+      const managerResult = await saveManagerChanges({
+        projectId: project.id,
+        additions: stagedManagerChanges.additions,
+        removals: Array.from(stagedManagerChanges.removals),
+      });
+
+      if (!managerResult.success) {
+        allSuccessful = false;
+      }
+    }
+
     if (allSuccessful) {
       setStagedGroupChanges(EMPTY_STAGED_CHANGES);
+      setStagedManagerChanges(EMPTY_MANAGER_STAGED_CHANGES);
       onGroupChange?.();
       onClose();
     }
   };
 
-  const isLoading = isSavingGroup || isUpdatingProject;
+  const isLoading = isSavingGroup || isUpdatingProject || isSavingManagers;
 
   if (!project) return null;
 
@@ -187,10 +231,30 @@ export function ProjectEditorModal({
           />
         )}
 
+        {/* Divider */}
+        <div className="border-t border-vercel-gray-100" />
+
+        {/* Project Managers Section */}
+        {loadingManagers ? (
+          <div className="flex items-center justify-center py-4">
+            <Spinner size="sm" />
+            <span className="ml-2 text-sm text-vercel-gray-400">Loading managers...</span>
+          </div>
+        ) : (
+          <ProjectManagerSection
+            persistedManagers={persistedManagers}
+            allResources={allResources}
+            resourcesLoading={loadingResources}
+            stagedChanges={stagedManagerChanges}
+            onStagedChangesUpdate={handleStagedManagerChangesUpdate}
+            disabled={isLoading}
+          />
+        )}
+
         {/* Error display */}
-        {(groupSaveError || projectUpdateError) && (
+        {(groupSaveError || projectUpdateError || managerSaveError) && (
           <div className="p-3 bg-error-light border border-error rounded-md">
-            <p className="text-sm text-error">{groupSaveError || projectUpdateError}</p>
+            <p className="text-sm text-error">{groupSaveError || projectUpdateError || managerSaveError}</p>
           </div>
         )}
 

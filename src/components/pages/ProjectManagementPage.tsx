@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Spinner } from '../Spinner';
+import { Tooltip } from '../Tooltip';
 import { DropdownMenu } from '../DropdownMenu';
 import { RangeSelector } from '../RangeSelector';
 import { ProjectEditorModal } from '../ProjectEditorModal';
 import type { Project, ProjectWithGrouping } from '../../types';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
+import { useAllProjectManagers } from '../../hooks/useProjectManagers';
 
 export function ProjectManagementPage() {
   const {
@@ -15,6 +17,9 @@ export function ProjectManagementPage() {
     refetch,
   } = useProjectTableEntities();
 
+  // Fetch project managers (keyed by internal UUID — matches project.id directly)
+  const { managerLookup, refetch: refetchManagers } = useAllProjectManagers();
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
@@ -23,13 +28,14 @@ export function ProjectManagementPage() {
     const csvRows: string[] = [];
 
     // Header row
-    csvRows.push('"System IDs","Project","Company"');
+    csvRows.push('"System IDs","Project","Manager","Company"');
 
     // Data rows
     for (const project of projects) {
       const idCount = getIdCount(project);
       const companyName = project.company_display_name || 'Unassigned';
-      csvRows.push(`"${idCount}","${project.project_name.replace(/"/g, '""')}","${companyName.replace(/"/g, '""')}"`);
+      const managers = managerLookup.get(project.id)?.join('; ') ?? '';
+      csvRows.push(`"${idCount}","${project.project_name.replace(/"/g, '""')}","${managers.replace(/"/g, '""')}","${companyName.replace(/"/g, '""')}"`);
     }
 
     // Convert to CSV string
@@ -45,7 +51,7 @@ export function ProjectManagementPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [projects]);
+  }, [projects, managerLookup]);
 
   const handleEditClick = (project: ProjectWithGrouping) => {
     // Convert to base Project type for modal
@@ -69,6 +75,7 @@ export function ProjectManagementPage() {
 
   const handleGroupChange = () => {
     refetch();
+    refetchManagers();
   };
 
   // Get total ID count for a project (itself + members)
@@ -138,6 +145,9 @@ export function ProjectManagementPage() {
                   Project
                 </th>
                 <th className="px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider text-left">
+                  Manager
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider text-left">
                   Company
                 </th>
               </tr>
@@ -176,6 +186,21 @@ export function ProjectManagementPage() {
                     {/* Project column */}
                     <td className="px-4 py-3 text-sm text-vercel-gray-600">
                       {project.project_name}
+                    </td>
+                    {/* Manager column */}
+                    <td className="px-4 py-3 text-sm text-vercel-gray-300">
+                      {(() => {
+                        const managers = managerLookup.get(project.id) ?? [];
+                        if (managers.length === 0) return null;
+                        if (managers.length === 1) return managers[0];
+                        return (
+                          <Tooltip content={managers.join(', ')} position="bottom">
+                            <span>
+                              {managers[0]} <span className="text-vercel-gray-400">+{managers.length - 1}</span>
+                            </span>
+                          </Tooltip>
+                        );
+                      })()}
                     </td>
                     {/* Company column with 3-dot menu */}
                     <td className="px-4 py-3 text-sm text-vercel-gray-400">

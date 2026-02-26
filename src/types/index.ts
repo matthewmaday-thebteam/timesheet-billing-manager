@@ -968,3 +968,48 @@ export interface BillingTransactionFormData {
   amount: string;  // String input, converted to cents
   description: string;
 }
+
+// ============================================================================
+// Project Manager Types
+// ============================================================================
+
+/**
+ * Row from the project_managers junction table.
+ */
+export interface ProjectManager {
+  id: string;
+  project_id: string;
+  resource_id: string;
+  created_at: string;
+}
+
+/**
+ * Display data for a project manager (joined with resource info).
+ */
+export interface ProjectManagerDisplay {
+  resource_id: string;
+  display_name: string;
+  external_label: string;
+}
+
+/**
+ * Staged addition of a project manager (local state before save).
+ */
+export interface StagedProjectManagerAdd {
+  resource_id: string;
+  display_name: string;
+  external_label: string;
+}
+
+/**
+ * Staged changes for project managers in the Edit Project modal.
+ */
+export interface StagedProjectManagerChanges {
+  additions: StagedProjectManagerAdd[];
+  removals: Set<string>;  // resource_id set
+}
+
+/**
+ * Lookup map from internal project UUID to array of manager display names.
+ */
+export type ProjectManagerLookup = Map<string, string[]>;

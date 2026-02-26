@@ -7,7 +7,7 @@ import type { DesignSystemEntry } from '../types';
  * primitives that do not compose other design system components. They exist
  * to be composed into molecules and organisms.
  *
- * 22 registered atoms.
+ * 23 registered atoms.
  */
 export const atoms: DesignSystemEntry[] = [
   // ---------------------------------------------------------------------------
@@ -214,5 +214,17 @@ export const atoms: DesignSystemEntry[] = [
     tier: 'atom',
     filePath: 'src/components/atoms/charts/DailyHoursChart.tsx',
     usedIn: ['Dashboard'],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Overlays & popovers
+  // ---------------------------------------------------------------------------
+  {
+    name: 'Tooltip',
+    description: 'CSS-only hover tooltip with top/bottom positioning, dark background, white text.',
+    tier: 'atom',
+    filePath: 'src/components/Tooltip.tsx',
+    usedIn: ['ProjectHierarchyTable'],
+    introducedIn: 'Task 054',
   },
 ];

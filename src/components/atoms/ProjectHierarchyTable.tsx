@@ -19,14 +19,18 @@
 import { useState, useEffect, Fragment } from 'react';
 import { formatCurrency, formatHours } from '../../utils/billing';
 import { ChevronIcon } from '../ChevronIcon';
+import { Tooltip } from '../Tooltip';
 import type { ProjectHierarchyResult } from '../../hooks/useProjectHierarchy';
+import type { ProjectManagerLookup } from '../../types';
 
 interface ProjectHierarchyTableProps {
   /** Hierarchy data from useProjectHierarchy */
   hierarchyResult: ProjectHierarchyResult;
+  /** Optional lookup from external project_id to manager display names */
+  managerLookup?: ProjectManagerLookup;
 }
 
-export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTableProps) {
+export function ProjectHierarchyTable({ hierarchyResult, managerLookup }: ProjectHierarchyTableProps) {
   // State for 4 levels of expansion (tasks are always visible when day is expanded)
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(() => new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() => new Set());
@@ -98,6 +102,9 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
             <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Name
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+              Manager
+            </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Hours
             </th>
@@ -123,6 +130,7 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                       <span className="text-sm font-semibold text-vercel-gray-600">{company.companyName}</span>
                     </div>
                   </td>
+                  <td className="px-6 py-3" />
                   <td className="px-6 py-3 text-right">
                     <span className="text-sm font-medium text-vercel-gray-600">{formatHours(company.hours)}</span>
                   </td>
@@ -147,6 +155,22 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                             <ChevronIcon expanded={isProjectExpanded} className="text-vercel-gray-300" />
                             <span className="text-sm text-vercel-gray-200">{project.projectName}</span>
                           </div>
+                        </td>
+                        <td className="px-6 py-3">
+                          {(() => {
+                            const managers = managerLookup?.get(project.projectId) ?? [];
+                            if (managers.length === 0) return null;
+                            if (managers.length === 1) {
+                              return <span className="text-sm text-vercel-gray-300">{managers[0]}</span>;
+                            }
+                            return (
+                              <Tooltip content={managers.join(', ')} position="bottom">
+                                <span className="text-sm text-vercel-gray-300">
+                                  {managers[0]} <span className="text-vercel-gray-400">+{managers.length - 1}</span>
+                                </span>
+                              </Tooltip>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-3 text-right">
                           <span className="text-sm text-vercel-gray-200">{formatHours(project.hours)}</span>
@@ -173,6 +197,7 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                                   <span className="text-sm text-vercel-gray-300">{employee.employeeName}</span>
                                 </div>
                               </td>
+                              <td className="px-6 py-2" />
                               <td className="px-6 py-2 text-right">
                                 <span className="text-sm text-vercel-gray-300">{formatHours(employee.hours)}</span>
                               </td>
@@ -198,6 +223,7 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                                         <span className="text-xs text-vercel-gray-300">{day.displayDate}</span>
                                       </div>
                                     </td>
+                                    <td className="px-6 py-2" />
                                     <td className="px-6 py-2 text-right">
                                       <span className="text-xs text-vercel-gray-300">{formatHours(day.hours)}</span>
                                     </td>
@@ -215,6 +241,7 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
                                       <td className="pl-[5.5rem] pr-6 py-1.5">
                                         <span className="text-xs text-vercel-gray-400">{task.taskName}</span>
                                       </td>
+                                      <td className="px-6 py-1.5" />
                                       <td className="px-6 py-1.5 text-right">
                                         <span className="text-xs text-vercel-gray-400">{formatHours(task.hours)}</span>
                                       </td>
@@ -241,6 +268,7 @@ export function ProjectHierarchyTable({ hierarchyResult }: ProjectHierarchyTable
             <td className="px-6 py-4 text-sm font-semibold text-vercel-gray-600">
               Total
             </td>
+            <td className="px-6 py-4" />
             <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
               {formatHours(totalHours)}
             </td>
