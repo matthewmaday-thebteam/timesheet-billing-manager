@@ -9,6 +9,15 @@ import type {
   RoundingIncrement,
 } from '../types';
 
+/** Extract message from Error instances or Supabase PostgrestError objects */
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    return (err as { message: string }).message;
+  }
+  return fallback;
+}
+
 /**
  * Helper to convert MonthSelection to Date (first of month)
  */
@@ -121,7 +130,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
       setData(result || []);
     } catch (err) {
       console.error('Error fetching monthly rates:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch rates');
+      setError(extractErrorMessage(err, 'Failed to fetch rates'));
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +224,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         return true;
       } catch (err) {
         console.error('Error updating rate:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update rate');
+        setError(extractErrorMessage(err, 'Failed to update rate'));
         return false;
       }
     },
@@ -245,7 +254,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         return true;
       } catch (err) {
         console.error('Error updating rounding:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update rounding');
+        setError(extractErrorMessage(err, 'Failed to update rounding'));
         return false;
       }
     },
@@ -283,7 +292,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         return true;
       } catch (err) {
         console.error('Error updating billing limits:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update billing limits');
+        setError(extractErrorMessage(err, 'Failed to update billing limits'));
         return false;
       }
     },
@@ -313,7 +322,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         return true;
       } catch (err) {
         console.error('Error updating active status:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update active status');
+        setError(extractErrorMessage(err, 'Failed to update active status'));
         return false;
       }
     },
@@ -389,7 +398,7 @@ export function useEffectiveRatesRange(
         setRates(mapped);
       } catch (err) {
         console.error('Error fetching rates range:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch rates');
+        setError(extractErrorMessage(err, 'Failed to fetch rates'));
       } finally {
         setIsLoading(false);
       }

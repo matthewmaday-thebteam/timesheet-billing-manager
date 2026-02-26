@@ -230,7 +230,7 @@ export function RateEditModal({
       <Button
         variant="primary"
         onClick={() => handleSubmit()}
-        disabled={isSaving || isLoadingRate || rateValue === ''}
+        disabled={isSaving || isLoadingRate || rateValue === '' || showMinMaxError}
       >
         {isSaving ? (
           <span className="flex items-center gap-2">
