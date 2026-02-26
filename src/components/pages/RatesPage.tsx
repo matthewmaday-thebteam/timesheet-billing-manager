@@ -1,42 +1,30 @@
-import { useState, useCallback, useMemo } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { useCallback, useMemo } from 'react';
+import { format } from 'date-fns';
 import { RangeSelector } from '../RangeSelector';
 import { BillingRatesTable } from '../BillingRatesTable';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
-import type { MonthSelection, DateRange } from '../../types';
+import type { MonthSelection } from '../../types';
 import {
   useMonthlyRates,
   formatMonthDisplay,
   isFutureMonth,
 } from '../../hooks/useMonthlyRates';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
+import { useDateFilter } from '../../contexts/DateFilterContext';
 
 const TARGET_RATE_2026 = 60;
 const DEFAULT_RATE = 45;
 
-/**
- * Convert DateRange to MonthSelection (uses start date's month)
- */
-function dateRangeToMonth(range: DateRange): MonthSelection {
-  return {
-    year: range.start.getFullYear(),
-    month: range.start.getMonth() + 1,
-  };
-}
-
 export function RatesPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const now = new Date();
-    return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
-    };
-  });
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
-  // Convert to MonthSelection for the hook
-  const selectedMonth = useMemo(() => dateRangeToMonth(dateRange), [dateRange]);
+  // Convert dateRange to MonthSelection for the rates hook
+  const selectedMonth = useMemo<MonthSelection>(() => ({
+    year: dateRange.start.getFullYear(),
+    month: dateRange.start.getMonth() + 1,
+  }), [dateRange.start]);
 
   // Fetch monthly rates using the hook
   const {
@@ -169,6 +157,9 @@ export function RatesPage() {
           { label: 'Current Rate Card', onClick: handleExportCSV },
         ]}
         exportDisabled={isLoading || projectsWithRates.length === 0}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
       />
 
       {/* Metrics Row */}
