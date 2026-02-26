@@ -18,6 +18,11 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+/** Drain the recalculation queue so billing summaries update immediately */
+async function drainRecalculationQueue(): Promise<void> {
+  await supabase.rpc('drain_recalculation_queue_authenticated');
+}
+
 /**
  * Helper to convert MonthSelection to Date (first of month)
  */
@@ -218,6 +223,9 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
 
         if (rpcError) throw rpcError;
 
+        // Drain recalculation queue so billing summaries update immediately
+        await drainRecalculationQueue();
+
         // Refetch to get updated data
         await fetchRates();
 
@@ -247,6 +255,9 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         );
 
         if (rpcError) throw rpcError;
+
+        // Drain recalculation queue so billing summaries update immediately
+        await drainRecalculationQueue();
 
         // Refetch to get updated data
         await fetchRates();
@@ -286,6 +297,9 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
 
         if (rpcError) throw rpcError;
 
+        // Drain recalculation queue so billing summaries update immediately
+        await drainRecalculationQueue();
+
         // Refetch to get updated data
         await fetchRates();
 
@@ -315,6 +329,9 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         );
 
         if (rpcError) throw rpcError;
+
+        // Drain recalculation queue so billing summaries update immediately
+        await drainRecalculationQueue();
 
         // Refetch to get updated data
         await fetchRates();
