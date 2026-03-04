@@ -65,7 +65,7 @@ if (rows.length > 0) {
 
       await this.helpers.httpRequest({
         method: 'POST',
-        url: `${SUPABASE_URL}/rest/v1/employee_time_off`,
+        url: `${SUPABASE_URL}/rest/v1/employee_time_off?on_conflict=bamboo_request_id`,
         headers: {
           'apikey': SUPABASE_SERVICE_ROLE_KEY,
           'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
