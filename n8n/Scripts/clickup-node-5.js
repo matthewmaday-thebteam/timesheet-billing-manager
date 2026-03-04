@@ -43,7 +43,7 @@ for (var i = 0; i < items.length; i++) {
 
     // Client/Company = Space in ClickUp hierarchy
     client_id: e.space_id ? String(e.space_id) : null,
-    client_name: e.space_name || null,
+    client_name: e.space_name || (e.space_id ? 'Unknown Client' : null),
 
     total_minutes: actualMinutes,
     synced_at: syncRunAt,

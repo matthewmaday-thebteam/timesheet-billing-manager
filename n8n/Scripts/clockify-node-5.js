@@ -45,7 +45,7 @@ for (const item of items) {
 
     // Client/Company fields
     client_id: e.client_id ?? null,
-    client_name: e.client_name || null,
+    client_name: e.client_name || (e.client_id ? 'Unknown Client' : null),
 
     total_minutes: actualMinutes,
     synced_at: syncRunAt,

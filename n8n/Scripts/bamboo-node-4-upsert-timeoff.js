@@ -30,9 +30,9 @@ for (const emp of employees) {
   }
 }
 
-// Build rows for upsert
+// Build rows for upsert — only approved requests
 const rows = timeOffRequests
-  .filter(req => req.id && req.employeeId)
+  .filter(req => req.id && req.employeeId && (req.status?.status || '').toLowerCase() === 'approved')
   .map(req => {
     const empId = String(req.employeeId);
     const empInfo = employeeLookup[empId] || { name: req.name || 'Unknown', email: null };
@@ -80,12 +80,52 @@ if (rows.length > 0) {
     }
 
     upsertResult = { success: true, count: totalUpserted, error: null };
+
+    // Remove records no longer in the approved set (cancelled/denied since last sync)
+    const approvedIds = rows.map(r => `"${r.bamboo_request_id}"`).join(',');
+    const startDate = rows.reduce((min, r) => r.start_date < min ? r.start_date : min, rows[0].start_date);
+    const endDate = rows.reduce((max, r) => r.end_date > max ? r.end_date : max, rows[0].end_date);
+
+    const deleteResponse = await this.helpers.httpRequest({
+      method: 'DELETE',
+      url: `${SUPABASE_URL}/rest/v1/employee_time_off?bamboo_request_id=not.in.(${approvedIds})&start_date=gte.${startDate}&end_date=lte.${endDate}`,
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Prefer': 'return=representation',
+      },
+      json: true,
+    });
+
+    const deletedCount = Array.isArray(deleteResponse) ? deleteResponse.length : 0;
+    upsertResult.deleted = deletedCount;
   } catch (err) {
     upsertResult = {
       success: false,
       count: totalUpserted,
       error: err.message || 'Failed to upsert employee_time_off',
     };
+  }
+} else {
+  // No approved requests — delete all records in the sync date range
+  try {
+    const rangeStart = syncMeta.range_start;
+    const rangeEnd = syncMeta.range_end;
+    if (rangeStart && rangeEnd) {
+      const deleteResponse = await this.helpers.httpRequest({
+        method: 'DELETE',
+        url: `${SUPABASE_URL}/rest/v1/employee_time_off?start_date=gte.${rangeStart}&end_date=lte.${rangeEnd}`,
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        json: true,
+      });
+      upsertResult.deleted = Array.isArray(deleteResponse) ? deleteResponse.length : 0;
+    }
+  } catch (err) {
+    upsertResult.error = err.message || 'Failed to clean up stale time-off records';
   }
 }
 
@@ -99,6 +139,7 @@ return [{
     employees_upserted: syncMeta.employees_upserted || 0,
     time_off_fetched: timeOffRequests.length,
     time_off_upserted: upsertResult.count,
+    time_off_deleted: upsertResult.deleted || 0,
     time_off_upsert_success: upsertResult.success,
     time_off_upsert_error: upsertResult.error,
     errors: syncMeta.errors || [],

@@ -4,7 +4,7 @@
 // PURPOSE:
 //   Two API calls to BambooHR:
 //     1. Employee directory (all employees)
-//     2. Time-off requests for the date range (all statuses)
+//     2. Time-off requests for the date range (approved only)
 //
 // AUTH:
 //   Basic Auth — API key as username, "x" as password
@@ -66,7 +66,7 @@ try {
 try {
   const timeOffResponse = await this.helpers.httpRequest({
     method: 'GET',
-    url: `${BASE_URL}/time_off/requests?start=${rangeStartDate}&end=${rangeEndDate}`,
+    url: `${BASE_URL}/time_off/requests?start=${rangeStartDate}&end=${rangeEndDate}&status=approved`,
     headers: {
       'Authorization': authHeader,
       'Accept': 'application/json',
