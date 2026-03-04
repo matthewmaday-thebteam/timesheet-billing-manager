@@ -7,7 +7,7 @@ import { AIChatWindow } from './chat';
 
 type DocsSection = 'tokens' | 'typography' | 'atoms' | 'molecules' | 'patterns';
 
-export type NavRoute = 'home' | 'holidays' | 'employees' | 'burn' | 'projects' | 'companies' | 'rates' | 'revenue' | 'billings' | 'eom-reports' | 'users' | 'employee-management' | 'project-management' | 'investor-dashboard' | 'diagnostics' | 'formulas' | 'legal';
+export type NavRoute = 'home' | 'holidays' | 'employees' | 'burn' | 'projects' | 'companies' | 'rates' | 'revenue' | 'billings' | 'eom-reports' | 'users' | 'employee-management' | 'project-management' | 'investor-dashboard' | 'diagnostics' | 'formulas' | 'legal' | 'release-notes';
 
 interface NavItemConfig {
   id: NavRoute;
@@ -260,6 +260,18 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     Legal
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onRouteChange('release-notes');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-vercel-gray-600 hover:bg-vercel-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-vercel-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
+                    </svg>
+                    Release Notes
                   </button>
                   <button
                     onClick={handleSignOut}

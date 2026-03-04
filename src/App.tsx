@@ -20,6 +20,7 @@ import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
 import { FormulasPage } from './components/pages/FormulasPage';
 import { InvestorDashboardPage } from './components/pages/InvestorDashboardPage';
 import { LegalPage } from './components/pages/LegalPage';
+import { ReleaseNotesPage } from './components/pages/ReleaseNotesPage';
 import { BurnPage } from './components/pages/BurnPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
@@ -101,6 +102,8 @@ function AuthenticatedApp() {
         return <InvestorDashboardPage />;
       case 'legal':
         return <LegalPage />;
+      case 'release-notes':
+        return <ReleaseNotesPage />;
       default:
         return <Dashboard />;
     }
