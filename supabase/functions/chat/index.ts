@@ -312,6 +312,15 @@ serve(async (req) => {
     }
     console.log('User authenticated:', user.id);
 
+    // Verify caller is admin (chat uses service_role client that bypasses RLS)
+    const { data: isAdmin, error: adminCheckError } = await supabaseAuth.rpc('is_admin');
+    if (adminCheckError || !isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!checkRateLimit(user.id)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute.' }),
