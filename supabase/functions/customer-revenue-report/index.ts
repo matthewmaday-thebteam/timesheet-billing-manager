@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jwtVerify } from 'https://deno.land/x/jose@v5.2.2/index.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,13 +106,13 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET')!;
     const token = authHeader.replace('Bearer ', '');
 
-    // Verify the token is a service_role JWT.
-    // The API gateway validates the JWT signature; we just check the role claim.
+    // Verify the JWT signature cryptographically and check the role claim.
     try {
-      const payloadB64 = token.split('.')[1];
-      const payload = JSON.parse(atob(payloadB64));
+      const secret = new TextEncoder().encode(jwtSecret);
+      const { payload } = await jwtVerify(token, secret);
       if (payload.role !== 'service_role') {
         return jsonResponse({ error: 'Unauthorized: service_role required' }, 401);
       }
