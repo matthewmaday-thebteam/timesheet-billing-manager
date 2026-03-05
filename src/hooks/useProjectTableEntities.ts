@@ -42,6 +42,7 @@ export function useProjectTableEntities(): UseProjectTableEntitiesResult {
         project_name: row.project_name,
         rate: row.rate,
         target_hours: row.target_hours ?? 0,
+        send_weekly_report: row.send_weekly_report ?? false,
         created_at: row.created_at,
         updated_at: row.updated_at,
         grouping_role: (row.grouping_role || 'unassociated') as ProjectGroupRole,

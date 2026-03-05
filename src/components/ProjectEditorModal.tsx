@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
+import { Toggle } from './Toggle';
 import { ProjectGroupSection } from './ProjectGroupSection';
 import { ProjectManagerSection } from './ProjectManagerSection';
 import { useProjectGroup } from '../hooks/useProjectGroup';
@@ -44,6 +45,7 @@ export function ProjectEditorModal({
   const [stagedGroupChanges, setStagedGroupChanges] = useState<StagedProjectGroupChanges>(EMPTY_STAGED_CHANGES);
   const [stagedManagerChanges, setStagedManagerChanges] = useState<StagedProjectManagerChanges>(EMPTY_MANAGER_STAGED_CHANGES);
   const [targetHours, setTargetHours] = useState<string>('0');
+  const [sendWeeklyReport, setSendWeeklyReport] = useState(false);
 
   // Fetch project group data
   const {
@@ -77,12 +79,14 @@ export function ProjectEditorModal({
     setStagedGroupChanges(EMPTY_STAGED_CHANGES);
     setStagedManagerChanges(EMPTY_MANAGER_STAGED_CHANGES);
     setTargetHours(project?.target_hours?.toString() ?? '0');
+    setSendWeeklyReport(project?.send_weekly_report ?? false);
   }
 
-  // Initialize target hours when project is first loaded
+  // Initialize form state when project is first loaded
   useEffect(() => {
     if (project) {
       setTargetHours(project.target_hours?.toString() ?? '0');
+      setSendWeeklyReport(project.send_weekly_report ?? false);
     }
   }, [project]);
 
@@ -104,7 +108,9 @@ export function ProjectEditorModal({
   // Check if target hours has changed
   const parsedTargetHours = parseFloat(targetHours) || 0;
   const hasTargetHoursChanged = project && parsedTargetHours !== (project.target_hours ?? 0);
-  const hasAnyChanges = hasGroupChanges || hasTargetHoursChanged || hasManagerChanges;
+  const hasWeeklyReportChanged = project && sendWeeklyReport !== (project.send_weekly_report ?? false);
+  const hasProjectFieldChanges = hasTargetHoursChanged || hasWeeklyReportChanged;
+  const hasAnyChanges = hasGroupChanges || hasProjectFieldChanges || hasManagerChanges;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,11 +118,13 @@ export function ProjectEditorModal({
 
     let allSuccessful = true;
 
-    // Save target hours if changed
-    if (hasTargetHoursChanged) {
-      const projectResult = await updateProject(project.id, {
-        target_hours: parsedTargetHours,
-      });
+    // Save project field changes (target hours, weekly report toggle)
+    if (hasProjectFieldChanges) {
+      const updates: { target_hours?: number; send_weekly_report?: boolean } = {};
+      if (hasTargetHoursChanged) updates.target_hours = parsedTargetHours;
+      if (hasWeeklyReportChanged) updates.send_weekly_report = sendWeeklyReport;
+
+      const projectResult = await updateProject(project.id, updates);
       if (!projectResult.success) {
         allSuccessful = false;
       }
@@ -169,6 +177,18 @@ export function ProjectEditorModal({
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Weekly Report Toggle */}
+        <Toggle
+          label="Send Weekly Reports"
+          description="Email weekly project summaries to assigned managers"
+          checked={sendWeeklyReport}
+          onChange={setSendWeeklyReport}
+          disabled={isLoading}
+        />
+
+        {/* Divider */}
+        <div className="border-t border-vercel-gray-100" />
+
         {/* Project Info Section */}
         <div className="space-y-4">
           {/* Read-only Project Name */}

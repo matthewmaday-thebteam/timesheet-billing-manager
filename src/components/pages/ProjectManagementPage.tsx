@@ -61,6 +61,7 @@ export function ProjectManagementPage() {
       project_name: project.project_name,
       rate: project.rate,
       target_hours: project.target_hours,
+      send_weekly_report: project.send_weekly_report,
       created_at: project.created_at,
       updated_at: project.updated_at,
     };

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 interface ProjectUpdateData {
   target_hours?: number;
+  send_weekly_report?: boolean;
 }
 
 interface UseProjectUpdateResult {
