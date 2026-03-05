@@ -2,6 +2,10 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { CompanyGroupMutationResult, StagedCompanyMemberAdd } from '../types';
 
+async function drainRecalculationQueue(): Promise<void> {
+  await supabase.rpc('drain_recalculation_queue_authenticated');
+}
+
 interface SaveChangesParams {
   /** The primary company ID */
   primaryCompanyId: string;
@@ -97,6 +101,9 @@ export function useCompanyGroupMutations(): UseCompanyGroupMutationsResult {
           }
         }
       }
+
+      // Drain recalculation queue so billing summaries update immediately
+      await drainRecalculationQueue();
 
       return {
         success: true,
