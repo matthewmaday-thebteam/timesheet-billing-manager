@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Spinner } from '../Spinner';
 import { Tooltip } from '../Tooltip';
 import { DropdownMenu } from '../DropdownMenu';
+import { Select } from '../Select';
 import { RangeSelector } from '../RangeSelector';
 import { ProjectEditorModal } from '../ProjectEditorModal';
 import type { Project, ProjectWithGrouping } from '../../types';
@@ -23,19 +24,56 @@ export function ProjectManagementPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
+  // Filter state
+  const [filterManager, setFilterManager] = useState('');
+  const [filterCompany, setFilterCompany] = useState('');
+  const [filterReport, setFilterReport] = useState('');
+
+  // Build filter options from data
+  const managerOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const [, managers] of managerLookup) {
+      for (const name of managers) {
+        names.add(name);
+      }
+    }
+    return [
+      { value: '', label: 'All Managers' },
+      ...Array.from(names).sort().map(name => ({ value: name, label: name })),
+    ];
+  }, [managerLookup]);
+
+  const companyOptions = useMemo(() => {
+    const companies = new Set<string>();
+    for (const project of projects) {
+      companies.add(project.company_display_name || 'Unassigned');
+    }
+    return [
+      { value: '', label: 'All Companies' },
+      ...Array.from(companies).sort().map(name => ({ value: name, label: name })),
+    ];
+  }, [projects]);
+
+  const reportOptions = [
+    { value: '', label: 'All' },
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ];
+
   // Export to CSV
   const handleExportCSV = useCallback(() => {
     const csvRows: string[] = [];
 
     // Header row
-    csvRows.push('"System IDs","Project","Manager","Company"');
+    csvRows.push('"System IDs","Project","Manager","Company","Report"');
 
     // Data rows
     for (const project of projects) {
       const idCount = getIdCount(project);
       const companyName = project.company_display_name || 'Unassigned';
       const managers = managerLookup.get(project.id)?.join('; ') ?? '';
-      csvRows.push(`"${idCount}","${project.project_name.replace(/"/g, '""')}","${managers.replace(/"/g, '""')}","${companyName.replace(/"/g, '""')}"`);
+      const report = project.send_weekly_report ? 'Yes' : 'No';
+      csvRows.push(`"${idCount}","${project.project_name.replace(/"/g, '""')}","${managers.replace(/"/g, '""')}","${companyName.replace(/"/g, '""')}","${report}"`);
     }
 
     // Convert to CSV string
@@ -87,15 +125,39 @@ export function ProjectManagementPage() {
     return 1;
   };
 
-  // Sort projects by company then by project name
-  const sortedProjects = [...projects].sort((a, b) => {
-    const companyA = a.company_display_name || 'ZZZZZ'; // Sort unassigned last
-    const companyB = b.company_display_name || 'ZZZZZ';
-    if (companyA !== companyB) {
-      return companyA.localeCompare(companyB);
-    }
-    return a.project_name.localeCompare(b.project_name);
-  });
+  // Sort projects by company then by project name, then apply filters
+  const filteredProjects = useMemo(() => {
+    const sorted = [...projects].sort((a, b) => {
+      const companyA = a.company_display_name || 'ZZZZZ'; // Sort unassigned last
+      const companyB = b.company_display_name || 'ZZZZZ';
+      if (companyA !== companyB) {
+        return companyA.localeCompare(companyB);
+      }
+      return a.project_name.localeCompare(b.project_name);
+    });
+
+    return sorted.filter((project) => {
+      // Filter by manager
+      if (filterManager) {
+        const managers = managerLookup.get(project.id) ?? [];
+        if (!managers.includes(filterManager)) return false;
+      }
+
+      // Filter by company
+      if (filterCompany) {
+        const companyName = project.company_display_name || 'Unassigned';
+        if (companyName !== filterCompany) return false;
+      }
+
+      // Filter by report status
+      if (filterReport === 'yes' && !project.send_weekly_report) return false;
+      if (filterReport === 'no' && project.send_weekly_report) return false;
+
+      return true;
+    });
+  }, [projects, managerLookup, filterManager, filterCompany, filterReport]);
+
+  const hasActiveFilters = filterManager || filterCompany || filterReport;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -115,6 +177,46 @@ export function ProjectManagementPage() {
         onExport={handleExportCSV}
         exportDisabled={isLoading || projects.length === 0}
       />
+
+      {/* Filters */}
+      {!isLoading && projects.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">Filters</span>
+          <Select
+            value={filterManager}
+            onChange={setFilterManager}
+            options={managerOptions}
+            placeholder="All Managers"
+            className="w-48"
+          />
+          <Select
+            value={filterCompany}
+            onChange={setFilterCompany}
+            options={companyOptions}
+            placeholder="All Companies"
+            className="w-48"
+          />
+          <Select
+            value={filterReport}
+            onChange={setFilterReport}
+            options={reportOptions}
+            placeholder="All"
+            className="w-32"
+          />
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => { setFilterManager(''); setFilterCompany(''); setFilterReport(''); }}
+              className="text-xs text-vercel-gray-400 hover:text-vercel-gray-600 transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+          <span className="text-xs text-vercel-gray-300 ml-auto">
+            {filteredProjects.length} of {projects.length} projects
+          </span>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (
@@ -151,10 +253,13 @@ export function ProjectManagementPage() {
                 <th className="px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider text-left">
                   Company
                 </th>
+                <th className="px-4 py-3 text-xs font-medium text-vercel-gray-400 uppercase tracking-wider text-left w-24">
+                  Report
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-vercel-gray-100">
-              {sortedProjects.map((project) => {
+              {filteredProjects.map((project) => {
                 const idCount = getIdCount(project);
                 const menuItems = [
                   {
@@ -203,13 +308,17 @@ export function ProjectManagementPage() {
                         );
                       })()}
                     </td>
-                    {/* Company column with 3-dot menu */}
+                    {/* Company column */}
                     <td className="px-4 py-3 text-sm text-vercel-gray-400">
+                      {project.company_display_name || (
+                        <span className="italic">Unassigned</span>
+                      )}
+                    </td>
+                    {/* Report column with 3-dot menu */}
+                    <td className="px-4 py-3 text-sm">
                       <div className="flex items-center justify-between">
-                        <span>
-                          {project.company_display_name || (
-                            <span className="italic">Unassigned</span>
-                          )}
+                        <span className={project.send_weekly_report ? 'text-vercel-gray-600' : 'text-vercel-gray-300'}>
+                          {project.send_weekly_report ? 'Yes' : 'No'}
                         </span>
                         <div className="flex-shrink-0">
                           <DropdownMenu items={menuItems} />
@@ -219,6 +328,13 @@ export function ProjectManagementPage() {
                   </tr>
                 );
               })}
+              {filteredProjects.length === 0 && !isLoading && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-vercel-gray-300">
+                    {hasActiveFilters ? 'No projects match the selected filters' : 'No projects found'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
