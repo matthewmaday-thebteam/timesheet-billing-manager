@@ -80,12 +80,15 @@ export function useSummaryCombinedRevenueByMonth({
   }, [startMonth, endMonth]);
 
   // Aggregate rows by month (the view returns per-company, we need per-month totals)
+  // Exclude the current incomplete month so MoM/CAGR charts don't show partial data
   const combinedRevenueByMonth = useMemo(() => {
     const map = new Map<string, number>();
+    const currentMonthKey = format(new Date(), 'yyyy-MM');
 
     for (const row of rows) {
       // summary_month is a DATE like '2026-01-01', extract 'YYYY-MM'
       const monthKey = row.summary_month.substring(0, 7);
+      if (monthKey === currentMonthKey) continue;
       const dollars = (row.combined_revenue_cents ?? 0) / 100;
       const current = map.get(monthKey) ?? 0;
       map.set(monthKey, current + dollars);

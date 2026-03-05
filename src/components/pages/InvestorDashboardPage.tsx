@@ -376,9 +376,12 @@ export function InvestorDashboardPage() {
             {/* MoM Growth Rate Chart */}
             <Card variant="default" padding="lg">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-vercel-gray-600">
-                  MoM Growth Rate
-                </h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-vercel-gray-600">
+                    MoM Growth Rate
+                  </h3>
+                  <p className="text-xs text-vercel-gray-400">Excludes current month</p>
+                </div>
                 {growthStats.avgMoMGrowth !== null && (
                   <span className={`text-sm font-mono ${growthStats.avgMoMGrowth >= 0 ? 'text-success' : 'text-error'}`}>
                     Avg: {growthStats.avgMoMGrowth >= 0 ? '+' : ''}{growthStats.avgMoMGrowth.toFixed(1)}%
