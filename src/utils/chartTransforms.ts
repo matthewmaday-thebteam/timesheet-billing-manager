@@ -364,14 +364,17 @@ export function generateMockPieData(): PieChartDataPoint[] {
 export function transformToMoMGrowthData(
   revenueByMonthKey: Map<string, number>
 ): MoMGrowthDataPoint[] {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth(); // 0-11
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   // Build a map of month index (0-11) to monthly revenue, filtering to current year
+  // Exclude current month — partial-month data produces misleading growth rates
   const revenueByMonth = new Map<number, number>();
   for (const [key, value] of revenueByMonthKey) {
     const [year, month] = key.split('-').map(Number);
-    if (year === currentYear) {
+    if (year === currentYear && (month - 1) !== currentMonthIndex) {
       revenueByMonth.set(month - 1, value);
     }
   }
@@ -474,7 +477,9 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
   cagr: number | null;
   yoyGrowthRates: YoYGrowthRate[];
 } {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth(); // 0-11
 
   // Calculate CAGR and YoY growth rates from historical annual data
   const historicalYears = Object.keys(HISTORICAL_ANNUAL_REVENUE)
@@ -510,10 +515,11 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
   }
 
   // Build a map of month index (0-11) to monthly revenue, filtering to current year
+  // Exclude current month — partial data produces misleading MoM growth rates
   const revenueByMonth = new Map<number, number>();
   for (const [key, value] of revenueByMonthKey) {
     const [year, month] = key.split('-').map(Number);
-    if (year === currentYear) {
+    if (year === currentYear && (month - 1) !== currentMonthIndex) {
       revenueByMonth.set(month - 1, value);
     }
   }
