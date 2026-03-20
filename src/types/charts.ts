@@ -58,6 +58,22 @@ export interface LineGraphDataPoint {
 }
 
 /**
+ * Configuration for a horizontal reference line on the chart
+ */
+export interface ChartReferenceLine {
+  /** Y-axis value where the line is drawn */
+  y: number;
+  /** Display label (e.g., "2025 Revenue") */
+  label: string;
+  /** CSS color value or design token variable */
+  stroke: string;
+  /** Stroke dash pattern (e.g., "8 4") */
+  strokeDasharray?: string;
+  /** Stroke width in pixels */
+  strokeWidth?: number;
+}
+
+/**
  * Props for LineGraphAtom component
  */
 export interface LineGraphAtomProps extends HTMLAttributes<HTMLDivElement> {
@@ -71,6 +87,8 @@ export interface LineGraphAtomProps extends HTMLAttributes<HTMLDivElement> {
   showTooltip?: boolean;
   /** Whether to show grid lines */
   showGrid?: boolean;
+  /** Optional horizontal reference line(s) for benchmarks */
+  referenceLines?: ChartReferenceLine[];
 }
 
 /**

@@ -117,6 +117,17 @@ export const chartFontSizes = {
 } as const;
 
 /**
+ * Reference line configuration for historical benchmarks.
+ * Uses a subtle gray from the Vercel design system.
+ */
+export const referenceLineDefaults = {
+  stroke: chartColors.axisText,            // vercel-gray-400 (#666666)
+  strokeDasharray: '8 4',
+  strokeWidth: 1,
+  labelFontSize: chartFontSizes.tick,      // 10px — matches axis ticks
+} as const;
+
+/**
  * Common axis tick configuration
  */
 export const axisTickStyle = {

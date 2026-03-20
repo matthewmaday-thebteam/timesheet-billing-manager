@@ -21,6 +21,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import type { LineGraphAtomProps } from '../../../types/charts';
@@ -33,6 +34,7 @@ import {
   legendWrapperStyle,
   chartColors,
   chartFontFamily,
+  referenceLineDefaults,
   formatChartCurrency,
 } from './chartTheme';
 
@@ -64,6 +66,7 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
       showLegend = true,
       showTooltip = true,
       showGrid = true,
+      referenceLines = [],
       className = '',
       ...props
     },
@@ -166,6 +169,23 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
               activeDot={activeDotConfig}
               connectNulls={false}
             />
+            {/* Reference Lines (e.g., prior-year benchmarks) */}
+            {referenceLines.map((refLine) => (
+              <ReferenceLine
+                key={refLine.label}
+                y={refLine.y}
+                stroke={refLine.stroke ?? referenceLineDefaults.stroke}
+                strokeDasharray={refLine.strokeDasharray ?? referenceLineDefaults.strokeDasharray}
+                strokeWidth={refLine.strokeWidth ?? referenceLineDefaults.strokeWidth}
+                label={{
+                  value: refLine.label,
+                  position: 'right',
+                  fill: refLine.stroke ?? referenceLineDefaults.stroke,
+                  fontSize: referenceLineDefaults.labelFontSize,
+                  fontFamily: chartFontFamily,
+                }}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
