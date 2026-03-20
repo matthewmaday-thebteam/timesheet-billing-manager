@@ -182,7 +182,7 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
               strokeDasharray={lineGraphLines.priorYear.strokeDasharray}
               dot={false}
               activeDot={activeDotConfig}
-              connectNulls={false}
+              connectNulls={true}
             />
             {/* Reference Lines (e.g., flat benchmarks) */}
             {referenceLines.map((refLine) => (
