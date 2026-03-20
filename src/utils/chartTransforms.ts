@@ -25,7 +25,7 @@ export const HISTORICAL_ANNUAL_REVENUE: Record<number, number> = {
   2022: 846852,
   2023: 1187720,
   2024: 1245857,
-  2025: 1580000,
+  2025: 1508000,
 };
 
 /**
@@ -95,17 +95,21 @@ export function transformToLineChartData(
   const monthlyBudget = annualBudget / 12;  // ~$83.3k/month for $1M annual
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Build maps of month index (0-11) to monthly revenue for current and prior year
+  // Build map of month index (0-11) to monthly revenue for current year
   const revenueByMonth = new Map<number, number>();
-  const priorYearRevenueByMonth = new Map<number, number>();
   for (const [key, value] of revenueByMonthKey) {
     const [year, month] = key.split('-').map(Number);
     if (year === currentYear) {
       revenueByMonth.set(month - 1, value);
-    } else if (year === priorYear) {
-      priorYearRevenueByMonth.set(month - 1, value);
     }
   }
+
+  // Prior year revenue: simple calculation from HISTORICAL_ANNUAL_REVENUE
+  // Spread evenly across 12 months, accumulated cumulatively
+  const priorYearAnnualRevenue = HISTORICAL_ANNUAL_REVENUE[priorYear] ?? null;
+  const priorYearMonthlyRevenue = priorYearAnnualRevenue !== null
+    ? priorYearAnnualRevenue / 12
+    : null;
 
   // Find the last month with revenue data and calculate average monthly revenue
   let lastMonthWithData = -1;
@@ -128,8 +132,6 @@ export function transformToLineChartData(
 
   // Generate cumulative values for full year
   let cumulativeRevenue = 0;
-  let cumulativePriorYearRevenue = 0;
-  const hasPriorYearData = priorYearRevenueByMonth.size > 0;
 
   return months.map((monthName, index) => {
     // Cumulative target and budget (compounds each month)
@@ -139,11 +141,6 @@ export function transformToLineChartData(
     // Add this month's revenue to cumulative total (only for months with data)
     if (revenueByMonth.has(index)) {
       cumulativeRevenue += revenueByMonth.get(index)!;
-    }
-
-    // Prior year cumulative revenue
-    if (priorYearRevenueByMonth.has(index)) {
-      cumulativePriorYearRevenue += priorYearRevenueByMonth.get(index)!;
     }
 
     // Revenue extends as flat line into future months once earned
@@ -166,9 +163,10 @@ export function transformToLineChartData(
       worstCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * worstCaseMultiplier));
     }
 
-    // Prior year cumulative: show value if we have any prior year data up to this month
-    const priorYearValue = hasPriorYearData && cumulativePriorYearRevenue > 0
-      ? Math.round(cumulativePriorYearRevenue)
+    // Prior year cumulative: calculated from HISTORICAL_ANNUAL_REVENUE, not DB data
+    // Simple even spread: (annualRevenue / 12) * monthNumber
+    const priorYearValue = priorYearMonthlyRevenue !== null
+      ? Math.round(priorYearMonthlyRevenue * (index + 1))
       : null;
 
     return {

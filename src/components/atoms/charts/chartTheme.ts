@@ -100,7 +100,7 @@ export const lineGraphLines = {
   priorYear: {
     dataKey: 'priorYearRevenue' as const,
     name: '2025',
-    color: chartColors.axisText,            // vercel-gray-400 — subtle benchmark
+    color: chartColors.tooltipText,         // vercel-gray-600 = #000000 — BLACK per user request
     strokeDasharray: '6 3',
     strokeWidth: 1.5,
   },
