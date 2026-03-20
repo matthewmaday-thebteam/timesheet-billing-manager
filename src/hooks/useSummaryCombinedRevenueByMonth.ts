@@ -44,8 +44,13 @@ export function useSummaryCombinedRevenueByMonth({
   const [loading, setLoading] = useState(true);
 
   // Compute the date range for the query
+  // Ensure we always cover the full prior year so the prior-year cumulative
+  // revenue line has data for all 12 months (Jan-Dec of prior year)
   const startMonth = useMemo(() => {
-    return format(startOfMonth(subMonths(dateRange.start, extendedMonths)), 'yyyy-MM-dd');
+    const extendedStart = startOfMonth(subMonths(dateRange.start, extendedMonths));
+    const priorYearStart = new Date(dateRange.start.getFullYear() - 1, 0, 1); // Jan 1 of prior year
+    const earliest = new Date(Math.min(extendedStart.getTime(), priorYearStart.getTime()));
+    return format(earliest, 'yyyy-MM-dd');
   }, [dateRange.start, extendedMonths]);
 
   const endMonth = useMemo(() => {

@@ -52,6 +52,9 @@ const legendFormatter = (value: string) => (
 
 const yAxisFormatter = (value: number) => formatChartCurrency(value);
 
+// Prior year label (e.g., "2025" when current year is 2026)
+const priorYearLabel = String(new Date().getFullYear() - 1);
+
 // Chart margin configuration
 const chartMargin = { top: 5, right: 30, left: 20, bottom: 5 };
 
@@ -169,7 +172,19 @@ export const LineGraphAtom = forwardRef<HTMLDivElement, LineGraphAtomProps>(
               activeDot={activeDotConfig}
               connectNulls={false}
             />
-            {/* Reference Lines (e.g., prior-year benchmarks) */}
+            {/* Prior Year Cumulative Revenue Line (dashed benchmark) */}
+            <Line
+              type="monotone"
+              dataKey={lineGraphLines.priorYear.dataKey}
+              name={priorYearLabel}
+              stroke={lineGraphLines.priorYear.color}
+              strokeWidth={lineGraphLines.priorYear.strokeWidth}
+              strokeDasharray={lineGraphLines.priorYear.strokeDasharray}
+              dot={false}
+              activeDot={activeDotConfig}
+              connectNulls={false}
+            />
+            {/* Reference Lines (e.g., flat benchmarks) */}
             {referenceLines.map((refLine) => (
               <ReferenceLine
                 key={refLine.label}

@@ -97,6 +97,13 @@ export const lineGraphLines = {
     strokeDasharray: undefined,
     strokeWidth: 1.5,
   },
+  priorYear: {
+    dataKey: 'priorYearRevenue' as const,
+    name: '2025',
+    color: chartColors.axisText,            // vercel-gray-400 — subtle benchmark
+    strokeDasharray: '6 3',
+    strokeWidth: 1.5,
+  },
 } as const;
 
 /**

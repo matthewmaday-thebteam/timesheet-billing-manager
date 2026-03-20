@@ -76,8 +76,9 @@ export function transformResourcesToPieData(
  * - Budget: ~$83.3k/month compounding to annual budget by December
  * - Revenue: Cumulative earned revenue that extends as flat line into future months
  * - Best/Worst Case: Projections based on current growth rate with variance
+ * - Prior Year Revenue: Cumulative revenue from the prior year (month-over-month trend)
  *
- * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars
+ * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars (may include prior year data)
  * @param annualBudget - Annual budget in dollars (default: $1M)
  * @param targetRatio - Target multiplier (default: 1.8x)
  * @returns Array of 12 line graph data points (full year)
@@ -88,17 +89,21 @@ export function transformToLineChartData(
   targetRatio: number = TARGET_RATIO
 ): LineGraphDataPoint[] {
   const currentYear = new Date().getFullYear();
+  const priorYear = currentYear - 1;
   const annualTarget = annualBudget * targetRatio;
   const monthlyTarget = annualTarget / 12;  // $150k/month for $1.8M annual
   const monthlyBudget = annualBudget / 12;  // ~$83.3k/month for $1M annual
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Build a map of month index (0-11) to monthly revenue, filtering to current year
+  // Build maps of month index (0-11) to monthly revenue for current and prior year
   const revenueByMonth = new Map<number, number>();
+  const priorYearRevenueByMonth = new Map<number, number>();
   for (const [key, value] of revenueByMonthKey) {
     const [year, month] = key.split('-').map(Number);
     if (year === currentYear) {
       revenueByMonth.set(month - 1, value);
+    } else if (year === priorYear) {
+      priorYearRevenueByMonth.set(month - 1, value);
     }
   }
 
@@ -123,6 +128,8 @@ export function transformToLineChartData(
 
   // Generate cumulative values for full year
   let cumulativeRevenue = 0;
+  let cumulativePriorYearRevenue = 0;
+  const hasPriorYearData = priorYearRevenueByMonth.size > 0;
 
   return months.map((monthName, index) => {
     // Cumulative target and budget (compounds each month)
@@ -132,6 +139,11 @@ export function transformToLineChartData(
     // Add this month's revenue to cumulative total (only for months with data)
     if (revenueByMonth.has(index)) {
       cumulativeRevenue += revenueByMonth.get(index)!;
+    }
+
+    // Prior year cumulative revenue
+    if (priorYearRevenueByMonth.has(index)) {
+      cumulativePriorYearRevenue += priorYearRevenueByMonth.get(index)!;
     }
 
     // Revenue extends as flat line into future months once earned
@@ -154,6 +166,11 @@ export function transformToLineChartData(
       worstCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * worstCaseMultiplier));
     }
 
+    // Prior year cumulative: show value if we have any prior year data up to this month
+    const priorYearValue = hasPriorYearData && cumulativePriorYearRevenue > 0
+      ? Math.round(cumulativePriorYearRevenue)
+      : null;
+
     return {
       month: monthName,
       target: Math.round(cumulativeTarget),
@@ -161,6 +178,7 @@ export function transformToLineChartData(
       revenue: showRevenue ? Math.round(cumulativeRevenue) : null,
       bestCase,
       worstCase,
+      priorYearRevenue: priorYearValue,
     };
   });
 }
@@ -304,7 +322,9 @@ export function generateMockLineData(
   };
 
   let cumulativeRevenue = 0;
+  let cumulativePriorYear = 0;
   const avgMonthlyRevenue = monthlyBudget * 0.9; // Mock average
+  const mockPriorYearMonthly = monthlyBudget * 0.8; // Mock prior year slightly lower
 
   return months.map((month, index) => {
     // Cumulative target and budget
@@ -317,6 +337,9 @@ export function generateMockLineData(
       cumulativeRevenue += monthlyRevenue;
     }
     // For future months, cumulativeRevenue stays at last earned value (flat line)
+
+    // Mock prior year cumulative (all 12 months)
+    cumulativePriorYear += mockPriorYearMonthly * (0.9 + seededRandom(index + 100) * 0.2);
 
     // Calculate projections for future months
     let bestCase: number | null = null;
@@ -335,6 +358,7 @@ export function generateMockLineData(
       revenue: Math.round(cumulativeRevenue),
       bestCase,
       worstCase,
+      priorYearRevenue: Math.round(cumulativePriorYear),
     };
   });
 }

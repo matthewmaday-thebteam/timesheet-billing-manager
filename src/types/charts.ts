@@ -55,6 +55,8 @@ export interface LineGraphDataPoint {
   bestCase: number | null;
   /** Worst case projection (null for months with actual data) */
   worstCase: number | null;
+  /** Prior year cumulative revenue (null if no data for that month) */
+  priorYearRevenue: number | null;
 }
 
 /**

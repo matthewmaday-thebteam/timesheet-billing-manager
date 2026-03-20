@@ -29,12 +29,9 @@ import {
   transformToMoMGrowthData,
   transformToCAGRProjectionData,
   calculateGrowthStats,
-  HISTORICAL_ANNUAL_REVENUE,
 } from '../utils/chartTransforms';
-import { referenceLineDefaults } from './atoms/charts/chartTheme';
 import { formatCurrency, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
 import type { ResourceSummary, TimesheetEntry, RoundingIncrement } from '../types';
-import type { ChartReferenceLine } from '../types/charts';
 import type { MonthlyBillingResult } from '../utils/billingCalculations';
 
 /**
@@ -262,20 +259,6 @@ export function DashboardChartsRow({
     [combinedRevenueByMonth]
   );
 
-  // Prior-year revenue reference line (2025 annual revenue as benchmark)
-  const priorYearReferenceLines = useMemo<ChartReferenceLine[]>(() => {
-    const priorYear = new Date().getFullYear() - 1;
-    const priorYearRevenue = HISTORICAL_ANNUAL_REVENUE[priorYear];
-    if (!priorYearRevenue) return [];
-    return [{
-      y: priorYearRevenue,
-      label: `${priorYear}`,
-      stroke: referenceLineDefaults.stroke,
-      strokeDasharray: referenceLineDefaults.strokeDasharray,
-      strokeWidth: referenceLineDefaults.strokeWidth,
-    }];
-  }, []);
-
   // Top 5 by hours for the selected month
   const topFiveByHours = useMemo(
     () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup, 5, 'hours'),
@@ -434,7 +417,7 @@ export function DashboardChartsRow({
                 12-Month Revenue Trend
               </h3>
               {lineData.length > 0 ? (
-                <LineGraphAtom data={lineData} referenceLines={priorYearReferenceLines} />
+                <LineGraphAtom data={lineData} />
               ) : (
                 <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
                   No revenue data available
@@ -455,7 +438,7 @@ export function DashboardChartsRow({
                 />
               </div>
               {quarterlyData.some(d => d.revenue !== null && d.revenue > 0) ? (
-                <LineGraphAtom data={quarterlyData} showLegend={false} referenceLines={priorYearReferenceLines} />
+                <LineGraphAtom data={quarterlyData} showLegend={false} />
               ) : (
                 <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
                   No revenue data for {quarterOptions[Number(selectedQuarter) - 1].label}
