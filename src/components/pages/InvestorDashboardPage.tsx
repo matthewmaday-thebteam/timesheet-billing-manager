@@ -407,12 +407,8 @@ export function InvestorDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Revenue Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <MetricCard
-              title="Total Revenue (YTD)"
-              value={formatCurrency(ytdRevenue)}
-            />
+          {/* Monthly Revenue Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard
               title="Total Monthly Revenue (MTD)"
               value={formatCurrency(combinedTotalRevenue)}
@@ -422,12 +418,8 @@ export function InvestorDashboardPage() {
               value={formatCurrency(earnedTotalRevenue)}
             />
             <MetricCard
-              title={`Q${currentQuarter} Revenue`}
-              value={formatCurrency(quarterlyRevenue)}
-            />
-            <MetricCard
-              title="Average Rate"
-              value={`$${rateMetrics.averageRate.toFixed(2)}`}
+              title="Avg Daily Revenue"
+              value={formatCurrency(avgDailyRevenue)}
             />
             <MetricCard
               title="Projected Revenue"
@@ -435,8 +427,24 @@ export function InvestorDashboardPage() {
             />
           </div>
 
+          {/* Cumulative Revenue Row */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <MetricCard
+              title="Total Revenue (YTD)"
+              value={formatCurrency(ytdRevenue)}
+            />
+            <MetricCard
+              title={`Q${currentQuarter} Revenue`}
+              value={formatCurrency(quarterlyRevenue)}
+            />
+            <MetricCard
+              title="Average Rate"
+              value={`$${rateMetrics.averageRate.toFixed(2)}`}
+            />
+          </div>
+
           {/* Operational Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <MetricCard
               title="Projects"
               value={canonicalProjects.length.toLocaleString('en-US')}
@@ -456,10 +464,6 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Utilization"
               value={`${utilizationPercent.toFixed(1)}%`}
-            />
-            <MetricCard
-              title="Avg Daily Revenue"
-              value={formatCurrency(avgDailyRevenue)}
             />
           </div>
 
