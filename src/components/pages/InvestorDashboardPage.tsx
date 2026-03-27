@@ -136,6 +136,21 @@ export function InvestorDashboardPage() {
   // Combined total revenue
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Earned revenue: billed revenue + dollar value of hours rolled over or lost to max cap
+  // For milestone projects the milestone IS the earned amount (no rollover concept)
+  const rolledOverRevenue = useMemo(() => {
+    let extra = 0;
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        // Skip milestone-linked projects — milestone amount is the earned amount
+        if (project.projectId && milestoneByExternalProjectId.has(project.projectId)) continue;
+        extra += (project.carryoverOut + project.unbillableHours) * project.rate;
+      }
+    }
+    return extra;
+  }, [billingResult.companies, milestoneByExternalProjectId]);
+  const earnedTotalRevenue = combinedTotalRevenue + rolledOverRevenue;
+
   // ========== UTILIZATION CALCULATION (from EmployeesPage) ==========
   const { entities: employees } = useEmployeeTableEntities();
   const { timeOff } = useTimeOff({
@@ -361,7 +376,7 @@ export function InvestorDashboardPage() {
       ) : (
         <>
           {/* Revenue Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <MetricCard
               title="Total Revenue (YTD)"
               value={formatCurrency(ytdRevenue)}
@@ -369,6 +384,10 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Total Monthly Revenue (MTD)"
               value={formatCurrency(combinedTotalRevenue)}
+            />
+            <MetricCard
+              title="Total Earned Revenue (MTD)"
+              value={formatCurrency(earnedTotalRevenue)}
             />
             <MetricCard
               title={`Q${currentQuarter} Revenue`}
