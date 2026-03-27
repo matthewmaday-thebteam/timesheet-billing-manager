@@ -323,6 +323,8 @@ export function InvestorDashboardPage() {
 
   const avgDailyRevenue = workdaysInMonth > 0 ? earnedTotalRevenue / workdaysInMonth : 0;
   const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
+  const avgDailyBilledRevenue = workdaysInMonth > 0 ? combinedTotalRevenue / workdaysInMonth : 0;
+  const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
 
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
@@ -412,6 +414,8 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Total Monthly Revenue (MTD)"
               value={formatCurrency(combinedTotalRevenue)}
+              secondaryLabel="Projected"
+              secondaryValue={formatCurrency(projectedBilledRevenue)}
             />
             <MetricCard
               title="Total Earned Revenue (MTD)"
