@@ -306,7 +306,7 @@ export function InvestorDashboardPage() {
     }).length;
   }, [dateRange, holidays]);
 
-  const avgDailyRevenue = workdaysInMonth > 0 ? combinedTotalRevenue / workdaysInMonth : 0;
+  const avgDailyRevenue = workdaysInMonth > 0 ? earnedTotalRevenue / workdaysInMonth : 0;
 
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
