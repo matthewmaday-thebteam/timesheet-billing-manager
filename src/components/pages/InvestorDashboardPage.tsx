@@ -426,6 +426,8 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Avg Daily Revenue"
               value={formatCurrency(avgDailyRevenue)}
+              secondaryLabel="Billed"
+              secondaryValue={formatCurrency(avgDailyBilledRevenue)}
             />
           </div>
 
