@@ -28,8 +28,6 @@ import { CAGRChartAtom } from '../atoms/charts/CAGRChartAtom';
 import type { DateRange, MonthSelection, BulgarianHoliday } from '../../types';
 import { HISTORICAL_MONTHS } from '../../config/chartConfig';
 
-const TARGET_RATE_2026 = 60;
-
 export function InvestorDashboardPage() {
   const [dateRange] = useState<DateRange>(() => {
     const now = new Date();
@@ -221,15 +219,11 @@ export function InvestorDashboardPage() {
   const rateMetrics = useMemo(() => {
     let totalRate = 0;
     let ratedCount = 0;
-    let atTargetRateCount = 0;
 
     for (const project of projectsWithRates) {
       if (project.effectiveRate > 0) {
         totalRate += project.effectiveRate;
         ratedCount++;
-      }
-      if (project.effectiveRate >= TARGET_RATE_2026) {
-        atTargetRateCount++;
       }
     }
 
@@ -237,10 +231,72 @@ export function InvestorDashboardPage() {
 
     return {
       averageRate,
-      atTargetRateCount,
       totalProjects: projectsWithRates.length,
     };
   }, [projectsWithRates]);
+
+  const currentYear = new Date().getFullYear();
+
+  // ========== YTD REVENUE ==========
+  const ytdRevenue = useMemo(() => {
+    const yearPrefix = `${currentYear}-`;
+    let total = 0;
+    for (const [monthKey, amount] of combinedRevenueByMonth) {
+      if (monthKey.startsWith(yearPrefix)) {
+        total += amount;
+      }
+    }
+    return total;
+  }, [combinedRevenueByMonth, currentYear]);
+
+  // ========== QUARTERLY REVENUE ==========
+  const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+  const quarterlyRevenue = useMemo(() => {
+    const startMonth = (currentQuarter - 1) * 3 + 1;
+    const monthKeys = [0, 1, 2].map(offset => {
+      const m = startMonth + offset;
+      return `${currentYear}-${String(m).padStart(2, '0')}`;
+    });
+    let total = 0;
+    for (const key of monthKeys) {
+      total += combinedRevenueByMonth.get(key) ?? 0;
+    }
+    return total;
+  }, [combinedRevenueByMonth, currentYear, currentQuarter]);
+
+  // ========== COMPANY HOLIDAYS (current month, weekdays only) ==========
+  const companyHolidayCount = useMemo(() => {
+    const currentMonth = dateRange.start.getMonth();
+    let count = 0;
+    for (const h of holidays) {
+      const hDate = new Date(h.holiday_date);
+      if (hDate.getMonth() === currentMonth && !isWeekend(hDate)) {
+        count++;
+      }
+    }
+    return count;
+  }, [holidays, dateRange.start]);
+
+  // ========== RESOURCE ABSENCES (working days, current month) ==========
+  const resourceAbsenceDays = useMemo(() => {
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    let totalDays = 0;
+    for (const to of timeOff) {
+      const ptoStart = new Date(to.start_date);
+      const ptoEnd = new Date(to.end_date);
+      const overlapStart = ptoStart < dateRange.start ? dateRange.start : ptoStart;
+      const overlapEnd = ptoEnd > dateRange.end ? dateRange.end : ptoEnd;
+      if (overlapStart <= overlapEnd) {
+        const daysInRange = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
+        for (const day of daysInRange) {
+          if (!isWeekend(day) && !holidayDates.some(h => isSameDay(h, day))) {
+            totalDays++;
+          }
+        }
+      }
+    }
+    return totalDays;
+  }, [timeOff, dateRange, holidays]);
 
   // ========== CHART DATA ==========
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
@@ -285,7 +341,6 @@ export function InvestorDashboardPage() {
     [combinedRevenueByMonth]
   );
 
-  const currentYear = new Date().getFullYear();
   const isLoading = loading || billingsLoading || combinedRevenueLoading;
 
   return (
@@ -305,12 +360,28 @@ export function InvestorDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Top Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {/* Revenue Metrics Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard
-              title="Total Revenue"
+              title="Total Revenue (YTD)"
+              value={formatCurrency(ytdRevenue)}
+            />
+            <MetricCard
+              title="Total Monthly Revenue (MTD)"
               value={formatCurrency(combinedTotalRevenue)}
             />
+            <MetricCard
+              title={`Q${currentQuarter} Revenue`}
+              value={formatCurrency(quarterlyRevenue)}
+            />
+            <MetricCard
+              title="Average Rate"
+              value={`$${rateMetrics.averageRate.toFixed(2)}`}
+            />
+          </div>
+
+          {/* Operational Metrics Row */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <MetricCard
               title="Projects"
               value={canonicalProjects.length.toLocaleString('en-US')}
@@ -320,16 +391,16 @@ export function InvestorDashboardPage() {
               value={resources.length.toLocaleString('en-US')}
             />
             <MetricCard
+              title="Company Holidays"
+              value={companyHolidayCount.toLocaleString('en-US')}
+            />
+            <MetricCard
+              title="Resource Absences"
+              value={resourceAbsenceDays.toLocaleString('en-US')}
+            />
+            <MetricCard
               title="Utilization"
               value={`${utilizationPercent.toFixed(1)}%`}
-            />
-            <MetricCard
-              title="Average Rate"
-              value={`$${rateMetrics.averageRate.toFixed(2)}`}
-            />
-            <MetricCard
-              title={`At ${currentYear} Target`}
-              value={rateMetrics.atTargetRateCount.toLocaleString('en-US')}
             />
           </div>
 
