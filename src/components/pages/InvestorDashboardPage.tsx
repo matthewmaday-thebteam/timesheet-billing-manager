@@ -306,7 +306,23 @@ export function InvestorDashboardPage() {
     }).length;
   }, [dateRange, holidays]);
 
+  const remainingWorkdays = useMemo(() => {
+    const today = new Date();
+    const startDay = today > dateRange.end ? dateRange.end : today < dateRange.start ? dateRange.start : today;
+    const remainingDays = eachDayOfInterval({
+      start: startDay,
+      end: dateRange.end,
+    });
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    return remainingDays.filter(day => {
+      if (isWeekend(day)) return false;
+      if (holidayDates.some(h => isSameDay(h, day))) return false;
+      return true;
+    }).length;
+  }, [dateRange, holidays]);
+
   const avgDailyRevenue = workdaysInMonth > 0 ? earnedTotalRevenue / workdaysInMonth : 0;
+  const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
 
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
@@ -414,13 +430,13 @@ export function InvestorDashboardPage() {
               value={`$${rateMetrics.averageRate.toFixed(2)}`}
             />
             <MetricCard
-              title="Avg Daily Revenue"
-              value={formatCurrency(avgDailyRevenue)}
+              title="Projected Revenue"
+              value={formatCurrency(projectedRevenue)}
             />
           </div>
 
           {/* Operational Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <MetricCard
               title="Projects"
               value={canonicalProjects.length.toLocaleString('en-US')}
@@ -440,6 +456,10 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Utilization"
               value={`${utilizationPercent.toFixed(1)}%`}
+            />
+            <MetricCard
+              title="Avg Daily Revenue"
+              value={formatCurrency(avgDailyRevenue)}
             />
           </div>
 
