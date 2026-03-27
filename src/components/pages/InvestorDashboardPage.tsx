@@ -416,14 +416,12 @@ export function InvestorDashboardPage() {
               value={formatCurrency(combinedTotalRevenue)}
               secondaryLabel="Projected"
               secondaryValue={formatCurrency(projectedBilledRevenue)}
-              secondaryClassName="text-bteam-brand"
             />
             <MetricCard
               title="Total Earned Revenue (MTD)"
               value={formatCurrency(earnedTotalRevenue)}
               secondaryLabel="Projected"
               secondaryValue={formatCurrency(projectedRevenue)}
-              secondaryClassName="text-bteam-brand"
             />
             <MetricCard
               title="Avg Daily Revenue"
@@ -465,7 +463,7 @@ export function InvestorDashboardPage() {
             />
             <MetricCard
               title="Resource Absences"
-              value={`${resourceAbsenceDays.toLocaleString('en-US')} / ${(resources.length * workdaysInMonth).toLocaleString('en-US')} resource days`}
+              value={resourceAbsenceDays.toLocaleString('en-US')}
             />
             <MetricCard
               title="Utilization"
