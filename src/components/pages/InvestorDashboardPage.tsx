@@ -340,6 +340,22 @@ export function InvestorDashboardPage() {
     return Math.round((completedMonthsRevenue + projectedCurrentMonth) / month * 12);
   }, [combinedRevenueByMonth, currentYear, earnedTotalRevenue, avgDailyRevenue, remainingWorkdays]);
 
+  // ========== PROJECTED QUARTERLY REVENUE ==========
+  const projectedQuarterlyRevenue = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    const startMonth = (currentQuarter - 1) * 3 + 1;
+    const monthInQuarter = month - startMonth + 1; // 1, 2, or 3
+    const projectedCurrentMonth = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
+    if (monthInQuarter === 1) return projectedCurrentMonth * 3;
+    let completedQuarterMonthsRevenue = 0;
+    for (let m = startMonth; m < month; m++) {
+      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
+      completedQuarterMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+    }
+    return Math.round((completedQuarterMonthsRevenue + projectedCurrentMonth) / monthInQuarter * 3);
+  }, [combinedRevenueByMonth, currentYear, currentQuarter, earnedTotalRevenue, avgDailyRevenue, remainingWorkdays]);
+
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
     const holidayDates = holidays.map(h => new Date(h.holiday_date));
@@ -456,6 +472,8 @@ export function InvestorDashboardPage() {
             <MetricCard
               title={`Q${currentQuarter} Revenue`}
               value={formatCurrency(quarterlyRevenue)}
+              secondaryLabel="Projected"
+              secondaryValue={formatCurrency(projectedQuarterlyRevenue)}
             />
             <MetricCard
               title="Average Rate"
