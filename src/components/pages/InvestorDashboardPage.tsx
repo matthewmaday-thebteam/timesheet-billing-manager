@@ -326,6 +326,20 @@ export function InvestorDashboardPage() {
   const avgDailyBilledRevenue = workdaysInMonth > 0 ? combinedTotalRevenue / workdaysInMonth : 0;
   const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
 
+  // ========== PROJECTED ANNUAL REVENUE ==========
+  const projectedAnnualRevenue = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    const projectedCurrentMonth = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
+    if (month === 1) return projectedCurrentMonth * 12;
+    let completedMonthsRevenue = 0;
+    for (let m = 1; m < month; m++) {
+      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
+      completedMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+    }
+    return Math.round((completedMonthsRevenue + projectedCurrentMonth) / month * 12);
+  }, [combinedRevenueByMonth, currentYear, earnedTotalRevenue, avgDailyRevenue, remainingWorkdays]);
+
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
     const holidayDates = holidays.map(h => new Date(h.holiday_date));
@@ -436,6 +450,8 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Total Revenue (YTD)"
               value={formatCurrency(ytdRevenue)}
+              secondaryLabel="Projected"
+              secondaryValue={formatCurrency(projectedAnnualRevenue)}
             />
             <MetricCard
               title={`Q${currentQuarter} Revenue`}
