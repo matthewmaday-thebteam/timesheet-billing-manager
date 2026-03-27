@@ -3,6 +3,7 @@ interface MetricCardProps {
   value: string | number;
   secondaryLabel?: string;
   secondaryValue?: string;
+  secondaryClassName?: string;
   statusColor?: 'default' | 'green' | 'orange' | 'red';
   isWarning?: boolean;
   isAlert?: boolean;
@@ -17,6 +18,7 @@ export function MetricCard({
   value,
   secondaryLabel,
   secondaryValue,
+  secondaryClassName,
   statusColor = 'default',
   isWarning = false,
   isAlert = false,
@@ -75,7 +77,7 @@ export function MetricCard({
 
       {/* Optional Secondary Value */}
       {!loading && secondaryLabel && secondaryValue && (
-        <p className={`text-xs font-mono mt-1 ${titleClasses}`}>
+        <p className={`text-xs font-mono mt-1 ${secondaryClassName || titleClasses}`}>
           {secondaryLabel}: {secondaryValue}
         </p>
       )}
