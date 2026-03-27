@@ -408,7 +408,7 @@ export function InvestorDashboardPage() {
       ) : (
         <>
           {/* Monthly Revenue Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <MetricCard
               title="Total Monthly Revenue (MTD)"
               value={formatCurrency(combinedTotalRevenue)}
@@ -416,14 +416,12 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Total Earned Revenue (MTD)"
               value={formatCurrency(earnedTotalRevenue)}
+              secondaryLabel="Projected"
+              secondaryValue={formatCurrency(projectedRevenue)}
             />
             <MetricCard
               title="Avg Daily Revenue"
               value={formatCurrency(avgDailyRevenue)}
-            />
-            <MetricCard
-              title="Projected Revenue"
-              value={formatCurrency(projectedRevenue)}
             />
           </div>
 

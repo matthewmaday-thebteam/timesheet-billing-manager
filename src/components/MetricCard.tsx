@@ -1,6 +1,8 @@
 interface MetricCardProps {
   title: string;
   value: string | number;
+  secondaryLabel?: string;
+  secondaryValue?: string;
   statusColor?: 'default' | 'green' | 'orange' | 'red';
   isWarning?: boolean;
   isAlert?: boolean;
@@ -13,6 +15,8 @@ interface MetricCardProps {
 export function MetricCard({
   title,
   value,
+  secondaryLabel,
+  secondaryValue,
   statusColor = 'default',
   isWarning = false,
   isAlert = false,
@@ -68,6 +72,13 @@ export function MetricCard({
           {loading ? '\u2014' : value}
         </span>
       </div>
+
+      {/* Optional Secondary Value */}
+      {!loading && secondaryLabel && secondaryValue && (
+        <p className={`text-xs font-mono mt-1 ${titleClasses}`}>
+          {secondaryLabel}: {secondaryValue}
+        </p>
+      )}
 
       {/* Optional Action Button */}
       {!loading && onClick && (
