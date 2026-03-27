@@ -6,7 +6,6 @@ import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useBilling } from '../../hooks/useBilling';
 import { useBillings } from '../../hooks/useBillings';
 import { useCombinedRevenue } from '../../hooks/useCombinedRevenue';
-import { useResources } from '../../hooks/useResources';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { supabase } from '../../lib/supabase';
@@ -40,13 +39,12 @@ export function InvestorDashboardPage() {
   // Fetch timesheet data with extended months for trend charts
   const {
     loading,
+    resources: resourceSummaries,
   } = useTimesheetData(dateRange, { extendedMonths: HISTORICAL_MONTHS });
 
   // Fetch canonical project count
   const { projects: canonicalProjects } = useProjectTableEntities();
 
-  // Fetch resources count
-  const { resources } = useResources();
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -489,7 +487,7 @@ export function InvestorDashboardPage() {
             />
             <MetricCard
               title="Resources"
-              value={resources.length.toLocaleString('en-US')}
+              value={resourceSummaries.length.toLocaleString('en-US')}
             />
             <MetricCard
               title="Company Holidays"
