@@ -292,6 +292,22 @@ export function InvestorDashboardPage() {
     return count;
   }, [holidays, dateRange.start]);
 
+  // ========== WORKDAYS IN MONTH (for avg daily revenue) ==========
+  const workdaysInMonth = useMemo(() => {
+    const allDays = eachDayOfInterval({
+      start: dateRange.start,
+      end: dateRange.end,
+    });
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    return allDays.filter(day => {
+      if (isWeekend(day)) return false;
+      if (holidayDates.some(h => isSameDay(h, day))) return false;
+      return true;
+    }).length;
+  }, [dateRange, holidays]);
+
+  const avgDailyRevenue = workdaysInMonth > 0 ? combinedTotalRevenue / workdaysInMonth : 0;
+
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
     const holidayDates = holidays.map(h => new Date(h.holiday_date));
@@ -376,7 +392,7 @@ export function InvestorDashboardPage() {
       ) : (
         <>
           {/* Revenue Metrics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <MetricCard
               title="Total Revenue (YTD)"
               value={formatCurrency(ytdRevenue)}
@@ -396,6 +412,10 @@ export function InvestorDashboardPage() {
             <MetricCard
               title="Average Rate"
               value={`$${rateMetrics.averageRate.toFixed(2)}`}
+            />
+            <MetricCard
+              title="Avg Daily Revenue"
+              value={formatCurrency(avgDailyRevenue)}
             />
           </div>
 
