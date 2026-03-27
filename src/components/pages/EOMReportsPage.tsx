@@ -112,6 +112,15 @@ function CustomerRow({
             <span className="ml-1.5">Download</span>
           </Button>
         </Tooltip>
+        <Tooltip content="Send to QuickBooks">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled
+          >
+            <span className="ml-1.5">Send to QB</span>
+          </Button>
+        </Tooltip>
         <Tooltip content="Regenerate report">
           <Button
             variant="ghost"
@@ -158,7 +167,7 @@ function MonthAccordion({
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 flex items-center gap-3 p-4 text-left hover:bg-vercel-gray-50 transition-colors focus:outline-none focus:ring-1 focus:ring-black"
+          className="flex-1 flex items-center gap-3 p-4 text-left hover:bg-vercel-gray-50 transition-colors focus:outline-none"
         >
           <ChevronIcon expanded={expanded} />
           <span className="text-sm font-medium text-vercel-gray-600">{monthGroup.label}</span>
@@ -166,7 +175,7 @@ function MonthAccordion({
             {monthGroup.generatedCount}/{monthGroup.totalCount} reports generated
           </span>
         </button>
-        <div className="pr-4">
+        <div className="pr-4 flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -187,6 +196,13 @@ function MonthAccordion({
                 <span className="ml-1.5">Regenerate All</span>
               </>
             )}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled
+          >
+            Send All to QB
           </Button>
         </div>
       </div>
@@ -252,7 +268,7 @@ function YearAccordion({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-vercel-gray-100 hover:bg-vercel-gray-50 transition-colors focus:outline-none focus:ring-1 focus:ring-black text-left"
+        className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-vercel-gray-100 hover:bg-vercel-gray-50 transition-colors focus:outline-none text-left"
       >
         <ChevronIcon expanded={expanded} />
         <span className="text-lg font-semibold text-vercel-gray-600">{yearGroup.year}</span>
