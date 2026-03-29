@@ -14,6 +14,7 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useEOMReports, MONTH_NAMES } from '../../hooks/useEOMReports';
+import { useQBOConnection } from '../../hooks/useQBOConnection';
 import type { EOMCustomerReport, EOMMonthGroup } from '../../hooks/useEOMReports';
 import { Card } from '../Card';
 import { Button } from '../Button';
@@ -325,6 +326,23 @@ export function EOMReportsPage() {
     backfillAll,
   } = useEOMReports();
 
+  const {
+    isConnected: qboConnected,
+    realmId: qboRealmId,
+    isLoading: qboLoading,
+    error: qboError,
+    startConnection: qboStartConnection,
+    disconnect: qboDisconnect,
+  } = useQBOConnection();
+
+  // ---- QBO disconnect confirmation modal state ----
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+
+  const handleConfirmDisconnect = useCallback(async () => {
+    setShowDisconnectModal(false);
+    await qboDisconnect();
+  }, [qboDisconnect]);
+
   // ---- Regeneration confirmation modal state ----
   const [confirmModal, setConfirmModal] = useState<{
     customer: EOMCustomerReport;
@@ -369,26 +387,54 @@ export function EOMReportsPage() {
               Monthly CSV revenue reports per customer, generated after the 5th of each month.
             </p>
           </div>
-          <Button
-            variant="secondary"
-            size="md"
-            disabled={backfilling || loading}
-            onClick={backfillAll}
-          >
-            {backfilling ? (
-              <>
-                <Spinner size="sm" />
-                <span className="ml-2">Generating...</span>
-              </>
+          <div className="flex items-center gap-3">
+            {/* QBO Connection Status / Button */}
+            {qboLoading ? (
+              <Spinner size="sm" />
+            ) : qboConnected ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="success" size="sm">QB Connected</Badge>
+                <Tooltip content={qboRealmId ? `Realm: ${qboRealmId}` : 'Disconnect QuickBooks'}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDisconnectModal(true)}
+                  >
+                    Disconnect
+                  </Button>
+                </Tooltip>
+              </div>
             ) : (
-              'Generate All Missing'
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={qboStartConnection}
+              >
+                Connect to QuickBooks
+              </Button>
             )}
-          </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              disabled={backfilling || loading}
+              onClick={backfillAll}
+            >
+              {backfilling ? (
+                <>
+                  <Spinner size="sm" />
+                  <span className="ml-2">Generating...</span>
+                </>
+              ) : (
+                'Generate All Missing'
+              )}
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Error State */}
+      {/* Error States */}
       {error && <Alert message={error} icon="error" variant="error" />}
+      {qboError && <Alert message={qboError} icon="error" variant="error" />}
 
       {/* Loading State */}
       {loading && (
@@ -473,6 +519,29 @@ export function EOMReportsPage() {
             {confirmModal.customer.status === 'generated' && ' The previous version will be replaced.'}
           </p>
         )}
+      </Modal>
+
+      {/* QBO Disconnect Confirmation Modal */}
+      <Modal
+        isOpen={showDisconnectModal}
+        onClose={() => setShowDisconnectModal(false)}
+        title="Disconnect QuickBooks"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowDisconnectModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleConfirmDisconnect}>
+              Disconnect
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-vercel-gray-400">
+          This will remove the QuickBooks Online connection. You will need to re-authorize
+          to send invoices to QuickBooks.
+        </p>
       </Modal>
     </div>
   );

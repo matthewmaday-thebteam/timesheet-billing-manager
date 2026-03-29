@@ -1014,3 +1014,37 @@ export interface StagedProjectManagerChanges {
  * Lookup map from internal project UUID to array of manager display names.
  */
 export type ProjectManagerLookup = Map<string, string[]>;
+
+// ============================================================================
+// QuickBooks Online Integration Types
+// ============================================================================
+
+/**
+ * QBO OAuth connection status (client-safe — no tokens exposed).
+ */
+export interface QBOConnectionStatus {
+  isConnected: boolean;
+  realmId: string | null;
+  expiresAt: string | null;
+  refreshExpiresAt: string | null;
+}
+
+// ============================================================================
+// Employee Project Profit Types (Migration 065)
+// ============================================================================
+
+/**
+ * Row from the v_employee_project_profit database view.
+ * All monetary values are stored as integer cents (BIGINT in DB).
+ */
+export interface EmployeeProjectProfit {
+  canonical_entity_id: string;
+  canonical_project_id: string;
+  month: string;
+  employee_raw_minutes: number;
+  employee_rounded_minutes: number;
+  proportional_revenue_cents: number;
+  employee_cost_cents: number | null;
+  employee_profit_cents: number | null;
+  effective_cost_rate: number | null;
+}
