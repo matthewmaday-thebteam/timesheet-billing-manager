@@ -1029,6 +1029,29 @@ export interface QBOConnectionStatus {
   refreshExpiresAt: string | null;
 }
 
+/**
+ * QBO customer record returned by the qbo-customers Edge Function.
+ */
+export interface QBOCustomer {
+  id: string;
+  displayName: string;
+  companyName: string | null;
+  email: string | null;
+}
+
+/**
+ * QBO customer mapping record from the qbo_customer_mappings table.
+ * Links a Manifest company to a QuickBooks Online customer.
+ */
+export interface QBOCustomerMapping {
+  id: string;
+  company_id: string;
+  qbo_customer_id: string;
+  qbo_customer_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================================================
 // Employee Project Profit Types (Migration 065)
 // ============================================================================
