@@ -58,6 +58,18 @@ async function extractFnError(fnError: { message?: string; context?: Response })
 }
 
 /**
+ * Map QBO OAuth error codes from the callback to user-friendly messages.
+ */
+const QBO_ERROR_MESSAGES: Record<string, string> = {
+  invalid_request: 'QuickBooks returned an invalid request. Please try connecting again.',
+  invalid_state: 'The authorization session could not be verified. Please try connecting again.',
+  expired_state: 'The authorization session has expired. Please try connecting again.',
+  token_exchange_failed: 'QuickBooks rejected the authorization. Please try connecting again.',
+  token_exchange_invalid: 'QuickBooks returned an unexpected response. Please try connecting again.',
+  storage_failed: 'Failed to save the QuickBooks connection. Please try again or contact support.',
+};
+
+/**
  * Remove specified query parameters from the current URL without a page reload.
  */
 function cleanUrlParams(params: string[]): void {
@@ -145,12 +157,13 @@ export function useQBOConnection(): UseQBOConnectionResult {
       fetchStatus(true).then(() => {
         cleanUrlParams(['qbo_connected']);
       });
-    } else if (params.get('qbo_error') === 'true') {
-      // OAuth error return — set error and clean URL
-      const message = params.get('qbo_error_message') || 'QuickBooks connection failed';
-      setError(decodeURIComponent(message));
+    } else if (params.has('qbo_error')) {
+      // OAuth error return — map error code to user-friendly message and clean URL
+      const errorCode = params.get('qbo_error') || '';
+      const message = QBO_ERROR_MESSAGES[errorCode] || 'QuickBooks connection failed. Please try again.';
+      setError(message);
       setIsLoading(false);
-      cleanUrlParams(['qbo_error', 'qbo_error_message']);
+      cleanUrlParams(['qbo_error']);
     } else {
       // Normal mount — fetch status
       fetchStatus(true);
