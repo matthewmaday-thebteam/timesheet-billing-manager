@@ -17,6 +17,7 @@ import { useState } from 'react';
 import type { NavRoute } from './MainHeader';
 import { LegalModal } from './LegalModal';
 import { useActiveLegalDocuments } from '../hooks/useLegalDocuments';
+import { MANIFEST_VERSION } from '../data/releaseNotes';
 
 interface FooterProps {
   onNavigate?: (route: NavRoute) => void;
@@ -111,7 +112,7 @@ export function Footer({ onNavigate }: FooterProps) {
 
               {/* Version / Build info */}
               <p className="text-xs text-vercel-gray-300 font-mono">
-                Manifest v1.0
+                Manifest v{MANIFEST_VERSION}
               </p>
             </div>
           </div>

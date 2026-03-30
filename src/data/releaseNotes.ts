@@ -1,11 +1,16 @@
 export interface ReleaseNote {
+  version: string     // e.g., '1.0.0.99'
   date: string        // 'YYYY-MM-DD'
   title: string       // Short headline
   highlights: string[] // Bullet points of changes
 }
 
+/** Base build number: first release note = 1.0.0.97 */
+const BASE_BUILD = 97;
+
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: '',  // computed below
     date: '2026-03-30',
     title: 'Weekly Status Reports & Automated Email Delivery',
     highlights: [
@@ -18,6 +23,7 @@ export const releaseNotes: ReleaseNote[] = [
     ],
   },
   {
+    version: '',
     date: '2026-03-05',
     title: 'Security Hardening & Employee Fixes',
     highlights: [
@@ -29,6 +35,7 @@ export const releaseNotes: ReleaseNote[] = [
     ],
   },
   {
+    version: '',
     date: '2026-03-04',
     title: 'BambooHR Time-Off Sync Fix',
     highlights: [
@@ -37,4 +44,12 @@ export const releaseNotes: ReleaseNote[] = [
       'Added automatic cleanup of stale time-off records',
     ],
   },
-]
+];
+
+// Compute version numbers: newest = BASE_BUILD + count - 1, oldest = BASE_BUILD
+releaseNotes.forEach((note, i) => {
+  note.version = `1.0.0.${BASE_BUILD + releaseNotes.length - 1 - i}`;
+});
+
+/** Current app version (from the latest release note) */
+export const MANIFEST_VERSION = releaseNotes[0].version;
