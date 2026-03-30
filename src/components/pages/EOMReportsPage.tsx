@@ -67,6 +67,7 @@ interface CustomerRowProps {
   isDownloading: boolean;
   isRegenerating: boolean;
   isMappedToQBO: boolean;
+  qboConnected: boolean;
   onDownload: () => void;
   onRegenerate: () => void;
 }
@@ -76,6 +77,7 @@ function CustomerRow({
   isDownloading,
   isRegenerating,
   isMappedToQBO,
+  qboConnected,
   onDownload,
   onRegenerate,
 }: CustomerRowProps) {
@@ -116,15 +118,17 @@ function CustomerRow({
             <span className="ml-1.5">Download</span>
           </Button>
         </Tooltip>
-        <Tooltip content={isMappedToQBO ? 'Coming soon' : 'Map this company to a QuickBooks customer first'}>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled
-          >
-            <span className="ml-1.5">Send to QB</span>
-          </Button>
-        </Tooltip>
+        {qboConnected && isMappedToQBO && (
+          <Tooltip content="Coming soon">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled
+            >
+              <span className="ml-1.5">Send to QB</span>
+            </Button>
+          </Tooltip>
+        )}
         <Tooltip content="Regenerate report">
           <Button
             variant="ghost"
@@ -148,6 +152,7 @@ interface MonthAccordionProps {
   regeneratingReports: Map<string, boolean>;
   isGeneratingMonth: boolean;
   mappedCompanyIds: Set<string>;
+  qboConnected: boolean;
   onDownload: (storagePath: string, companyName: string, year: number, month: number) => void;
   onGenerateMonth: (year: number, month: number) => void;
   onOpenConfirmModal: (customer: EOMCustomerReport, year: number, month: number) => void;
@@ -160,6 +165,7 @@ function MonthAccordion({
   regeneratingReports,
   isGeneratingMonth,
   mappedCompanyIds,
+  qboConnected,
   onDownload,
   onOpenConfirmModal,
   onGenerateMonth,
@@ -203,13 +209,15 @@ function MonthAccordion({
               </>
             )}
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled
-          >
-            Send All to QB
-          </Button>
+          {qboConnected && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled
+            >
+              Send All to QB
+            </Button>
+          )}
         </div>
       </div>
 
@@ -227,6 +235,7 @@ function MonthAccordion({
                 isDownloading={downloadingReports.get(dKey) || false}
                 isRegenerating={regeneratingReports.get(rKey) || false}
                 isMappedToQBO={mappedCompanyIds.has(customer.companyId)}
+                qboConnected={qboConnected}
                 onDownload={() => {
                   if (customer.storagePath) {
                     onDownload(customer.storagePath, customer.companyName, monthGroup.year, monthGroup.month);
@@ -252,6 +261,7 @@ interface YearAccordionProps {
   regeneratingReports: Map<string, boolean>;
   generatingMonths: Map<string, boolean>;
   mappedCompanyIds: Set<string>;
+  qboConnected: boolean;
   onDownload: (storagePath: string, companyName: string, year: number, month: number) => void;
   onGenerateMonth: (year: number, month: number) => void;
   onOpenConfirmModal: (customer: EOMCustomerReport, year: number, month: number) => void;
@@ -265,6 +275,7 @@ function YearAccordion({
   regeneratingReports,
   generatingMonths,
   mappedCompanyIds,
+  qboConnected,
   onDownload,
   onGenerateMonth,
   onOpenConfirmModal,
@@ -304,6 +315,7 @@ function YearAccordion({
                 regeneratingReports={regeneratingReports}
                 isGeneratingMonth={generatingMonths.get(`${monthGroup.year}-${monthGroup.month}`) || false}
                 mappedCompanyIds={mappedCompanyIds}
+                qboConnected={qboConnected}
                 onDownload={onDownload}
                 onGenerateMonth={onGenerateMonth}
                 onOpenConfirmModal={onOpenConfirmModal}
@@ -504,6 +516,7 @@ export function EOMReportsPage() {
               regeneratingReports={regeneratingReports}
               generatingMonths={generatingMonths}
               mappedCompanyIds={mappedCompanyIds}
+              qboConnected={qboConnected}
               onDownload={downloadReport}
               onGenerateMonth={generateMonth}
               onOpenConfirmModal={handleOpenConfirmModal}
