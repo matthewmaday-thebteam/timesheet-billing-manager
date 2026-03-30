@@ -99,6 +99,13 @@ CREATE POLICY "Service role full access qbo_oauth_tokens"
     USING (true)
     WITH CHECK (true);
 
+-- qbo_oauth_tokens: authenticated users can read connection status (not tokens)
+DROP POLICY IF EXISTS "Authenticated users can read qbo_oauth_tokens" ON qbo_oauth_tokens;
+CREATE POLICY "Authenticated users can read qbo_oauth_tokens"
+    ON qbo_oauth_tokens FOR SELECT
+    TO authenticated
+    USING (true);
+
 -- qbo_oauth_state: service_role full access only
 DROP POLICY IF EXISTS "Service role full access qbo_oauth_state" ON qbo_oauth_state;
 CREATE POLICY "Service role full access qbo_oauth_state"
@@ -112,6 +119,7 @@ CREATE POLICY "Service role full access qbo_oauth_state"
 -- ============================================================================
 
 GRANT ALL ON qbo_oauth_tokens TO service_role;
+GRANT SELECT (id, realm_id, expires_at, refresh_expires_at, created_at, updated_at) ON qbo_oauth_tokens TO authenticated;
 GRANT ALL ON qbo_oauth_state TO service_role;
 
 -- ============================================================================
