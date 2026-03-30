@@ -23,7 +23,7 @@ const navItems: NavItemConfig[] = [
   { id: 'rates', label: 'Rates' },
   { id: 'revenue', label: 'Revenue' },
   { id: 'billings', label: 'Fixed Billing' },
-  { id: 'eom-reports', label: 'EOM Reports' },
+  { id: 'eom-reports', label: 'Reports' },
 ];
 
 interface MainHeaderProps {

@@ -32,7 +32,7 @@ const siteHierarchy = {
     { label: 'Rates', route: 'rates' as NavRoute },
     { label: 'Revenue', route: 'revenue' as NavRoute },
     { label: 'Fixed Billing', route: 'billings' as NavRoute },
-    { label: 'EOM Reports', route: 'eom-reports' as NavRoute },
+    { label: 'Reports', route: 'eom-reports' as NavRoute },
   ],
   'Management': [
     { label: 'Projects', route: 'projects' as NavRoute },
