@@ -76,10 +76,29 @@ CREATE TRIGGER trg_qbo_customer_mappings_updated_at
 
 ALTER TABLE qbo_customer_mappings ENABLE ROW LEVEL SECURITY;
 
--- Authenticated users: read-only
+-- Authenticated users: full access (mappings managed from frontend)
 DROP POLICY IF EXISTS "Authenticated read qbo_customer_mappings" ON qbo_customer_mappings;
 CREATE POLICY "Authenticated read qbo_customer_mappings"
     ON qbo_customer_mappings FOR SELECT
+    TO authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Authenticated write qbo_customer_mappings" ON qbo_customer_mappings;
+CREATE POLICY "Authenticated write qbo_customer_mappings"
+    ON qbo_customer_mappings FOR INSERT
+    TO authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Authenticated update qbo_customer_mappings" ON qbo_customer_mappings;
+CREATE POLICY "Authenticated update qbo_customer_mappings"
+    ON qbo_customer_mappings FOR UPDATE
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Authenticated delete qbo_customer_mappings" ON qbo_customer_mappings;
+CREATE POLICY "Authenticated delete qbo_customer_mappings"
+    ON qbo_customer_mappings FOR DELETE
     TO authenticated
     USING (true);
 
@@ -95,7 +114,7 @@ CREATE POLICY "Service role full access qbo_customer_mappings"
 -- STEP 5: GRANTS
 -- ============================================================================
 
-GRANT SELECT ON qbo_customer_mappings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON qbo_customer_mappings TO authenticated;
 GRANT ALL ON qbo_customer_mappings TO service_role;
 
 -- ============================================================================
