@@ -794,21 +794,30 @@ export function EOMReportsPage() {
       </section>
 
       {/* View Toggle */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={activeView === 'eom' ? 'primary' : 'secondary'}
-          size="sm"
+      <div className="flex items-center">
+        <button
+          type="button"
+          className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none ${
+            activeView === 'eom'
+              ? 'text-vercel-gray-600'
+              : 'text-vercel-gray-300 hover:text-vercel-gray-400'
+          }`}
           onClick={() => setActiveView('eom')}
         >
           End of Month
-        </Button>
-        <Button
-          variant={activeView === 'weekly' ? 'primary' : 'secondary'}
-          size="sm"
+        </button>
+        <div className="w-px h-5 bg-vercel-gray-200" />
+        <button
+          type="button"
+          className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none ${
+            activeView === 'weekly'
+              ? 'text-vercel-gray-600'
+              : 'text-vercel-gray-300 hover:text-vercel-gray-400'
+          }`}
           onClick={() => setActiveView('weekly')}
         >
           Weekly Status
-        </Button>
+        </button>
       </div>
       <div className="border-t border-vercel-gray-100" />
 
