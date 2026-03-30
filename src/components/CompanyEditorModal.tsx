@@ -1,15 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
+import { Select } from './Select';
+import type { SelectOption } from './Select';
 import { Spinner } from './Spinner';
 import { CompanyGroupSection } from './CompanyGroupSection';
 import { useCompanyGroup } from '../hooks/useCompanyGroup';
 import { useCompanyGroupMutations } from '../hooks/useCompanyGroupMutations';
+import { useQBOConnection } from '../hooks/useQBOConnection';
+import { useQBOCustomerMappings } from '../hooks/useQBOCustomerMappings';
 import type {
   Company,
   CompanyFormData,
   StagedCompanyGroupChanges,
+  QBOCustomer,
 } from '../types';
 
 interface CompanyEditorModalProps {
@@ -46,6 +51,12 @@ export function CompanyEditorModal({
   const [lastCompanyId, setLastCompanyId] = useState<string | null>(company?.id ?? null);
   const [stagedGroupChanges, setStagedGroupChanges] = useState<StagedCompanyGroupChanges>(EMPTY_STAGED_CHANGES);
 
+  // QBO state
+  const [qboCustomers, setQboCustomers] = useState<QBOCustomer[]>([]);
+  const [isLoadingQBOCustomers, setIsLoadingQBOCustomers] = useState(false);
+  const [selectedQBOCustomerId, setSelectedQBOCustomerId] = useState('');
+  const [originalQBOCustomerId, setOriginalQBOCustomerId] = useState('');
+
   // Fetch company group data
   const {
     role: companyRole,
@@ -56,13 +67,49 @@ export function CompanyEditorModal({
   // Group mutation hook
   const { saveChanges: saveGroupChanges, isSaving: isSavingGroup, saveError: groupSaveError } = useCompanyGroupMutations();
 
+  // QBO hooks
+  const { isConnected } = useQBOConnection();
+  const { fetchQBOCustomers, saveMapping, removeMapping, getMappingForCompany } = useQBOCustomerMappings();
+
   // Reset form when company changes
   const currentCompanyId = company?.id ?? null;
   if (currentCompanyId !== lastCompanyId) {
     setLastCompanyId(currentCompanyId);
     setFormData(getFormDataFromCompany(company));
     setStagedGroupChanges(EMPTY_STAGED_CHANGES);
+    // Reset QBO state
+    setQboCustomers([]);
+    setSelectedQBOCustomerId('');
+    setOriginalQBOCustomerId('');
   }
+
+  // Load QBO customers and current mapping when modal opens with a connected QBO account
+  useEffect(() => {
+    if (!isOpen || !isConnected || !company) return;
+
+    let cancelled = false;
+
+    async function loadQBOData() {
+      setIsLoadingQBOCustomers(true);
+      try {
+        const customers = await fetchQBOCustomers();
+        if (cancelled) return;
+        setQboCustomers(customers);
+
+        // Load existing mapping for this company
+        const mapping = getMappingForCompany(company!.id);
+        const mappedId = mapping?.qbo_customer_id ?? '';
+        setSelectedQBOCustomerId(mappedId);
+        setOriginalQBOCustomerId(mappedId);
+      } finally {
+        if (!cancelled) setIsLoadingQBOCustomers(false);
+      }
+    }
+
+    loadQBOData();
+
+    return () => { cancelled = true; };
+  }, [isOpen, isConnected, company, fetchQBOCustomers, getMappingForCompany]);
 
   const handleStagedChangesUpdate = useCallback((changes: StagedCompanyGroupChanges) => {
     setStagedGroupChanges(changes);
@@ -75,6 +122,15 @@ export function CompanyEditorModal({
   // Check if there are group changes to save
   const hasGroupChanges = stagedGroupChanges.additions.length > 0 || stagedGroupChanges.removals.size > 0;
   const hasExistingGroup = companyRole === 'primary';
+
+  // Build QBO customer select options
+  const qboCustomerOptions: SelectOption[] = [
+    { value: '', label: 'Not mapped' },
+    ...qboCustomers.map((c) => ({
+      value: c.id,
+      label: c.displayName,
+    })),
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +151,20 @@ export function CompanyEditorModal({
       if (groupResult.success) {
         setStagedGroupChanges(EMPTY_STAGED_CHANGES);
         onGroupChange?.();
+      }
+    }
+
+    // Save QBO mapping changes if the mapping changed
+    if (formSuccess && selectedQBOCustomerId !== originalQBOCustomerId) {
+      if (selectedQBOCustomerId === '') {
+        // Mapping was removed
+        await removeMapping(company.id);
+      } else {
+        // Mapping was added or changed — find the customer name
+        const selectedCustomer = qboCustomers.find(c => c.id === selectedQBOCustomerId);
+        if (selectedCustomer) {
+          await saveMapping(company.id, selectedCustomer.id, selectedCustomer.displayName);
+        }
       }
     }
 
@@ -135,6 +205,29 @@ export function CompanyEditorModal({
             placeholder={company.client_name}
             disabled={isLoading}
           />
+
+          {/* QuickBooks Customer Mapping */}
+          {isConnected && (
+            <div>
+              <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-1">
+                QuickBooks Customer
+              </label>
+              {isLoadingQBOCustomers ? (
+                <div className="flex items-center py-2">
+                  <Spinner size="sm" />
+                  <span className="ml-2 text-sm text-vercel-gray-400">Loading customers...</span>
+                </div>
+              ) : (
+                <Select
+                  value={selectedQBOCustomerId}
+                  onChange={setSelectedQBOCustomerId}
+                  options={qboCustomerOptions}
+                  placeholder="Not mapped"
+                  disabled={isLoading}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Divider */}
