@@ -11,21 +11,18 @@
  * @category Page
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useEOMReports, MONTH_NAMES } from '../../hooks/useEOMReports';
 import { useQBOConnection } from '../../hooks/useQBOConnection';
 import { useQBOCustomerMappings } from '../../hooks/useQBOCustomerMappings';
 import type { EOMCustomerReport, EOMMonthGroup } from '../../hooks/useEOMReports';
-import type { QBOCustomer } from '../../types';
 import { Card } from '../Card';
 import { Button } from '../Button';
 import { Badge } from '../Badge';
 import { Spinner } from '../Spinner';
 import { Alert } from '../Alert';
 import { Modal } from '../Modal';
-import { Select } from '../Select';
-import type { SelectOption } from '../Select';
 import { Tooltip } from '../Tooltip';
 
 // ============================================================================
@@ -320,247 +317,6 @@ function YearAccordion({
 }
 
 // ============================================================================
-// QBO CUSTOMER MAPPING MODAL
-// ============================================================================
-
-/** Local state for a single company row in the mapping modal */
-interface MappingRowState {
-  companyId: string;
-  companyName: string;
-  selectedQBOCustomerId: string;
-  originalQBOCustomerId: string;
-  isSaving: boolean;
-  saveSuccess: boolean;
-}
-
-interface QBOCustomerMappingModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  companies: { companyId: string; companyName: string }[];
-  getMappingForCompany: (companyId: string) => { qbo_customer_id: string; qbo_customer_name: string } | undefined;
-  fetchQBOCustomers: () => Promise<QBOCustomer[]>;
-  saveMapping: (companyId: string, qboCustomerId: string, qboCustomerName: string) => Promise<boolean>;
-  removeMapping: (companyId: string) => Promise<boolean>;
-}
-
-function QBOCustomerMappingModal({
-  isOpen,
-  onClose,
-  companies,
-  getMappingForCompany,
-  fetchQBOCustomers,
-  saveMapping,
-  removeMapping,
-}: QBOCustomerMappingModalProps) {
-  const [qboCustomers, setQboCustomers] = useState<QBOCustomer[]>([]);
-  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [rowStates, setRowStates] = useState<Map<string, MappingRowState>>(new Map());
-
-  // Build Select options from QBO customers
-  const qboCustomerOptions = useMemo<SelectOption[]>(() => {
-    const options: SelectOption[] = [
-      { value: '', label: 'Not mapped' },
-    ];
-    for (const customer of qboCustomers) {
-      const label = customer.companyName
-        ? `${customer.displayName} (${customer.companyName})`
-        : customer.displayName;
-      options.push({ value: customer.id, label });
-    }
-    return options;
-  }, [qboCustomers]);
-
-  // Fetch QBO customers when modal opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let cancelled = false;
-
-    async function loadCustomers() {
-      setIsLoadingCustomers(true);
-      setFetchError(null);
-
-      const customers = await fetchQBOCustomers();
-
-      if (cancelled) return;
-
-      if (customers.length === 0) {
-        setFetchError('No customers returned from QuickBooks. Please check your QBO connection.');
-      }
-
-      setQboCustomers(customers);
-      setIsLoadingCustomers(false);
-    }
-
-    loadCustomers();
-
-    return () => { cancelled = true; };
-  }, [isOpen, fetchQBOCustomers]);
-
-  // Initialize row states when companies or mappings change
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const newStates = new Map<string, MappingRowState>();
-    for (const company of companies) {
-      const existing = getMappingForCompany(company.companyId);
-      newStates.set(company.companyId, {
-        companyId: company.companyId,
-        companyName: company.companyName,
-        selectedQBOCustomerId: existing?.qbo_customer_id || '',
-        originalQBOCustomerId: existing?.qbo_customer_id || '',
-        isSaving: false,
-        saveSuccess: false,
-      });
-    }
-    setRowStates(newStates);
-  }, [isOpen, companies, getMappingForCompany]);
-
-  // Handle dropdown change for a company row
-  const handleSelectionChange = useCallback((companyId: string, qboCustomerId: string) => {
-    setRowStates(prev => {
-      const next = new Map(prev);
-      const existing = next.get(companyId);
-      if (existing) {
-        next.set(companyId, { ...existing, selectedQBOCustomerId: qboCustomerId, saveSuccess: false });
-      }
-      return next;
-    });
-  }, []);
-
-  // Save a single row mapping
-  const handleSaveRow = useCallback(async (companyId: string) => {
-    const row = rowStates.get(companyId);
-    if (!row) return;
-
-    // Mark as saving
-    setRowStates(prev => {
-      const next = new Map(prev);
-      next.set(companyId, { ...row, isSaving: true, saveSuccess: false });
-      return next;
-    });
-
-    let success: boolean;
-
-    if (row.selectedQBOCustomerId === '') {
-      // Remove mapping
-      success = await removeMapping(companyId);
-    } else {
-      // Find the QBO customer name for storage
-      const qboCustomer = qboCustomers.find(c => c.id === row.selectedQBOCustomerId);
-      const qboCustomerName = qboCustomer?.displayName || 'Unknown';
-      success = await saveMapping(companyId, row.selectedQBOCustomerId, qboCustomerName);
-    }
-
-    // Update row state
-    setRowStates(prev => {
-      const next = new Map(prev);
-      const current = next.get(companyId);
-      if (current) {
-        next.set(companyId, {
-          ...current,
-          isSaving: false,
-          saveSuccess: success,
-          originalQBOCustomerId: success ? current.selectedQBOCustomerId : current.originalQBOCustomerId,
-        });
-      }
-      return next;
-    });
-  }, [rowStates, qboCustomers, saveMapping, removeMapping]);
-
-  // Determine if a row has unsaved changes
-  const hasChanges = useCallback((companyId: string): boolean => {
-    const row = rowStates.get(companyId);
-    if (!row) return false;
-    return row.selectedQBOCustomerId !== row.originalQBOCustomerId;
-  }, [rowStates]);
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Map Companies to QuickBooks Customers"
-      maxWidth="3xl"
-    >
-      {/* Loading state */}
-      {isLoadingCustomers && (
-        <div className="flex items-center justify-center py-12">
-          <Spinner size="md" />
-          <span className="ml-3 text-sm text-vercel-gray-400">Loading QuickBooks customers...</span>
-        </div>
-      )}
-
-      {/* Error state */}
-      {fetchError && !isLoadingCustomers && (
-        <Alert message={fetchError} icon="error" variant="error" />
-      )}
-
-      {/* Mapping rows */}
-      {!isLoadingCustomers && !fetchError && (
-        <div className="space-y-3">
-          <p className="text-sm text-vercel-gray-400 mb-4">
-            Map each Manifest company to its corresponding QuickBooks customer. Changes are saved per row.
-          </p>
-
-          {companies.map(company => {
-            const row = rowStates.get(company.companyId);
-            if (!row) return null;
-
-            return (
-              <div
-                key={company.companyId}
-                className="flex items-center gap-3 py-2.5 px-3 rounded-md border border-vercel-gray-100 bg-white"
-              >
-                {/* Company name */}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-vercel-gray-600 truncate block">
-                    {company.companyName}
-                  </span>
-                </div>
-
-                {/* QBO customer dropdown */}
-                <div className="w-72 flex-shrink-0">
-                  <Select
-                    value={row.selectedQBOCustomerId}
-                    onChange={(value) => handleSelectionChange(company.companyId, value)}
-                    options={qboCustomerOptions}
-                    placeholder="Select QB customer..."
-                    disabled={row.isSaving}
-                  />
-                </div>
-
-                {/* Save button per row */}
-                <div className="flex-shrink-0 w-20">
-                  {row.saveSuccess && !hasChanges(company.companyId) ? (
-                    <Badge variant="success" size="sm">Saved</Badge>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={!hasChanges(company.companyId) || row.isSaving}
-                      onClick={() => handleSaveRow(company.companyId)}
-                    >
-                      {row.isSaving ? <Spinner size="sm" /> : 'Save'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {companies.length === 0 && (
-            <p className="text-sm text-vercel-gray-300 text-center py-6">
-              No companies found. Generate reports first to see companies here.
-            </p>
-          )}
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-// ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
 
@@ -591,36 +347,12 @@ export function EOMReportsPage() {
   const {
     mappings: qboMappings,
     error: qboMappingError,
-    fetchQBOCustomers,
-    saveMapping: qboSaveMapping,
-    removeMapping: qboRemoveMapping,
-    getMappingForCompany,
   } = useQBOCustomerMappings();
-
-  // ---- QBO customer mapping modal state ----
-  const [showMappingModal, setShowMappingModal] = useState(false);
 
   // ---- Build set of mapped company IDs for quick lookups ----
   const mappedCompanyIds = useMemo(() => {
     return new Set(qboMappings.map(m => m.company_id));
   }, [qboMappings]);
-
-  // ---- Extract unique companies from report data for the mapping modal ----
-  const uniqueCompanies = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const yearGroup of years) {
-      for (const monthGroup of yearGroup.months) {
-        for (const customer of monthGroup.customers) {
-          if (!seen.has(customer.companyId)) {
-            seen.set(customer.companyId, customer.companyName);
-          }
-        }
-      }
-    }
-    return Array.from(seen.entries())
-      .map(([companyId, companyName]) => ({ companyId, companyName }))
-      .sort((a, b) => a.companyName.localeCompare(b.companyName));
-  }, [years]);
 
   // ---- QBO disconnect confirmation modal state ----
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
@@ -681,13 +413,6 @@ export function EOMReportsPage() {
             ) : qboConnected ? (
               <div className="flex items-center gap-2">
                 <Badge variant="success" size="sm">QB Connected</Badge>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowMappingModal(true)}
-                >
-                  Map Customers
-                </Button>
                 <Tooltip content={qboRealmId ? `Realm: ${qboRealmId}` : 'Disconnect QuickBooks'}>
                   <Button
                     variant="ghost"
@@ -840,16 +565,6 @@ export function EOMReportsPage() {
         </p>
       </Modal>
 
-      {/* QBO Customer Mapping Modal */}
-      <QBOCustomerMappingModal
-        isOpen={showMappingModal}
-        onClose={() => setShowMappingModal(false)}
-        companies={uniqueCompanies}
-        getMappingForCompany={getMappingForCompany}
-        fetchQBOCustomers={fetchQBOCustomers}
-        saveMapping={qboSaveMapping}
-        removeMapping={qboRemoveMapping}
-      />
     </div>
   );
 }
