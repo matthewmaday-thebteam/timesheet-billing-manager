@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 //                token_exchange_failed, token_exchange_invalid, storage_failed
 // =============================================================================
 
-const APP_BASE_URL = Deno.env.get('APP_BASE_URL') || 'https://manifest.thebteam.com';
+const APP_BASE_URL = Deno.env.get('APP_BASE_URL') || 'https://manifest.yourbteam.com';
 const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 
 function redirectResponse(url: string): Response {
