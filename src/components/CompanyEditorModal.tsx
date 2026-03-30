@@ -69,7 +69,7 @@ export function CompanyEditorModal({
 
   // QBO hooks
   const { isConnected } = useQBOConnection();
-  const { fetchQBOCustomers, saveMapping, removeMapping, getMappingForCompany } = useQBOCustomerMappings();
+  const { fetchQBOCustomers, saveMapping, removeMapping, getMappingForCompany, error: qboMappingError } = useQBOCustomerMappings();
 
   // Reset form when company changes
   const currentCompanyId = company?.id ?? null;
@@ -155,20 +155,19 @@ export function CompanyEditorModal({
     }
 
     // Save QBO mapping changes if the mapping changed
+    let mappingSuccess = true;
     if (formSuccess && selectedQBOCustomerId !== originalQBOCustomerId) {
       if (selectedQBOCustomerId === '') {
-        // Mapping was removed
-        await removeMapping(company.id);
+        mappingSuccess = await removeMapping(company.id);
       } else {
-        // Mapping was added or changed — find the customer name
         const selectedCustomer = qboCustomers.find(c => c.id === selectedQBOCustomerId);
         if (selectedCustomer) {
-          await saveMapping(company.id, selectedCustomer.id, selectedCustomer.displayName);
+          mappingSuccess = await saveMapping(company.id, selectedCustomer.id, selectedCustomer.displayName);
         }
       }
     }
 
-    if (formSuccess) {
+    if (formSuccess && mappingSuccess) {
       onClose();
     }
   };
@@ -250,9 +249,9 @@ export function CompanyEditorModal({
         )}
 
         {/* Error display */}
-        {groupSaveError && (
+        {(groupSaveError || qboMappingError) && (
           <div className="p-3 bg-error-light border border-error rounded-md">
-            <p className="text-sm text-error">{groupSaveError}</p>
+            <p className="text-sm text-error">{groupSaveError || qboMappingError}</p>
           </div>
         )}
 
