@@ -27,7 +27,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 /** QBO API base URL for production. */
-const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
+const QBO_API_BASE = Deno.env.get('QBO_API_BASE') || 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 
 /** QBO API minor version for all requests. */
 const QBO_MINOR_VERSION = '73';
