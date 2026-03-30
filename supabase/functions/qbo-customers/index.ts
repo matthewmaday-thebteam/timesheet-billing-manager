@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { getValidToken } from '../_shared/qbo-token.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // =============================================================================
 // Edge Function: qbo-customers
@@ -32,6 +31,85 @@ const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 
 /** QBO API minor version for all requests. */
 const QBO_MINOR_VERSION = '73';
+
+// =============================================================================
+// Inline: QBO Token Management (from _shared/qbo-token.ts)
+// Supabase Edge Functions don't resolve _shared imports during remote bundling,
+// so the token utility is inlined here.
+// =============================================================================
+
+const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+
+async function getValidToken(supabase: SupabaseClient): Promise<{ access_token: string; realm_id: string }> {
+  const { data: tokenRow, error: fetchError } = await supabase
+    .from('qbo_oauth_tokens')
+    .select('*')
+    .limit(1)
+    .single();
+
+  if (fetchError || !tokenRow) {
+    throw new Error('No QuickBooks Online connection found. Please connect via Settings.');
+  }
+
+  const expiresAt = new Date(tokenRow.expires_at).getTime();
+  if (expiresAt - Date.now() > EXPIRY_BUFFER_MS) {
+    return { access_token: tokenRow.access_token, realm_id: tokenRow.realm_id };
+  }
+
+  const clientId = Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
+  const clientSecret = Deno.env.get('QUICKBOOKS_DEV_SECRET');
+  if (!clientId || !clientSecret) {
+    throw new Error('QBO client credentials are not configured.');
+  }
+
+  const refreshResponse = await fetch(INTUIT_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: tokenRow.refresh_token,
+    }),
+  });
+
+  if (!refreshResponse.ok) {
+    const errorBody = await refreshResponse.text();
+    console.error('QBO token refresh failed:', refreshResponse.status, errorBody);
+    throw new Error(`QBO token refresh failed (${refreshResponse.status}). The connection may need to be re-established.`);
+  }
+
+  const tokens = await refreshResponse.json();
+  if (!tokens.access_token || !tokens.refresh_token || !tokens.expires_in) {
+    console.error('QBO token refresh returned unexpected shape:', Object.keys(tokens));
+    throw new Error('QBO token refresh returned an invalid response. The connection may need to be re-established.');
+  }
+
+  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+  const newRefreshExpiresAt = tokens.x_refresh_token_expires_in
+    ? new Date(Date.now() + tokens.x_refresh_token_expires_in * 1000).toISOString()
+    : tokenRow.refresh_expires_at;
+
+  const { error: updateError } = await supabase
+    .from('qbo_oauth_tokens')
+    .update({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_type: tokens.token_type || 'bearer',
+      expires_at: newExpiresAt,
+      refresh_expires_at: newRefreshExpiresAt,
+    })
+    .eq('id', tokenRow.id);
+
+  if (updateError) {
+    console.error('Failed to persist refreshed QBO tokens:', updateError.message);
+  }
+
+  return { access_token: tokens.access_token, realm_id: tokenRow.realm_id };
+}
 
 serve(async (req) => {
   // --- CORS preflight ---
