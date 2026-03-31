@@ -620,8 +620,8 @@ export function InvestorDashboardPage() {
                   <Tooltip
                     contentStyle={tooltipStyle}
                     labelStyle={{ fontFamily: chartFontFamily }}
-                    formatter={(value: number, name: string) => [
-                      formatCurrency(value),
+                    formatter={(value?: number, name?: string) => [
+                      formatCurrency(value ?? 0),
                       name === 'earned' ? 'Earned' : 'Billed',
                     ]}
                     labelFormatter={(label: string) => `Day ${label}`}
