@@ -16,41 +16,50 @@ import {
   transformToMoMGrowthData,
   transformToCAGRProjectionData,
   calculateGrowthStats,
+  aggregateDailyRevenue,
 } from '../../utils/chartTransforms';
+import { chartColors, formatChartCurrency } from '../atoms/charts/chartTheme';
 import { MetricCard } from '../MetricCard';
 import { Card } from '../Card';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
+import { MonthPicker } from '../MonthPicker';
 import { LineGraphAtom } from '../atoms/charts/LineGraphAtom';
 import { BarChartAtom } from '../atoms/charts/BarChartAtom';
 import { CAGRChartAtom } from '../atoms/charts/CAGRChartAtom';
 import type { DateRange, MonthSelection, BulgarianHoliday } from '../../types';
 import { HISTORICAL_MONTHS } from '../../config/chartConfig';
+import { getCurrentMonth } from '../../hooks/useMonthlyRates';
 
 export function InvestorDashboardPage() {
-  const [dateRange] = useState<DateRange>(() => {
-    const now = new Date();
+  // Month selection state — drives all data fetching
+  const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
+
+  // Derive dateRange from selected month
+  const dateRange = useMemo<DateRange>(() => {
+    const monthDate = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
     return {
-      start: startOfMonth(now),
-      end: endOfMonth(now),
+      start: startOfMonth(monthDate),
+      end: endOfMonth(monthDate),
     };
-  });
+  }, [selectedMonth]);
+
+  // Determine if we're viewing a past (completed) month
+  const current = getCurrentMonth();
+  const isViewingPastMonth =
+    selectedMonth.year < current.year ||
+    (selectedMonth.year === current.year && selectedMonth.month < current.month);
 
   // Fetch timesheet data with extended months for trend charts
   const {
+    entries,
     loading,
     resources: resourceSummaries,
+    projectCanonicalIdLookup,
   } = useTimesheetData(dateRange, { extendedMonths: HISTORICAL_MONTHS });
 
   // Fetch canonical project count
   const { projects: canonicalProjects } = useProjectTableEntities();
-
-
-  // Convert dateRange to MonthSelection for the rates hook
-  const selectedMonth = useMemo<MonthSelection>(() => ({
-    year: dateRange.start.getFullYear(),
-    month: dateRange.start.getMonth() + 1,
-  }), [dateRange.start]);
 
   // Fetch monthly rates
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
@@ -305,6 +314,8 @@ export function InvestorDashboardPage() {
   }, [dateRange, holidays]);
 
   const remainingWorkdays = useMemo(() => {
+    // Past months are complete — no remaining workdays
+    if (isViewingPastMonth) return 0;
     const today = new Date();
     const startDay = today > dateRange.end ? dateRange.end : today < dateRange.start ? dateRange.start : today;
     const remainingDays = eachDayOfInterval({
@@ -317,7 +328,7 @@ export function InvestorDashboardPage() {
       if (holidayDates.some(h => isSameDay(h, day))) return false;
       return true;
     }).length;
-  }, [dateRange, holidays]);
+  }, [dateRange, holidays, isViewingPastMonth]);
 
   const avgDailyRevenue = workdaysInMonth > 0 ? earnedTotalRevenue / workdaysInMonth : 0;
   const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
@@ -375,6 +386,17 @@ export function InvestorDashboardPage() {
     return totalDays;
   }, [timeOff, dateRange, holidays]);
 
+  // ========== PROJECT RATES MAP (for daily revenue chart) ==========
+  const projectRatesMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of projectsWithRates) {
+      if (p.externalProjectId && p.effectiveRate > 0) {
+        map.set(p.externalProjectId, p.effectiveRate);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
   // ========== CHART DATA ==========
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
   const lineData = useMemo(
@@ -418,16 +440,40 @@ export function InvestorDashboardPage() {
     [combinedRevenueByMonth]
   );
 
+  // Daily revenue bar chart data
+  const dailyRevenueData = useMemo(
+    () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup),
+    [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup]
+  );
+
+  // Currency formatter for daily revenue Y-axis
+  const dailyRevenueYAxisFormatter = useMemo(
+    () => (value: number) => formatChartCurrency(value),
+    []
+  );
+
+  // Currency formatter for daily revenue tooltip
+  const dailyRevenueTooltipFormatter = useMemo(
+    () => (value: number) => formatCurrency(value),
+    []
+  );
+
   const isLoading = loading || billingsLoading || combinedRevenueLoading;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-vercel-gray-600">Investor Dashboard</h1>
-        <p className="text-sm text-vercel-gray-400 mt-1">
-          Key metrics for <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Investor Dashboard</h1>
+          <p className="text-sm text-vercel-gray-400 mt-1">
+            Key metrics for <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
+          </p>
+        </div>
+        <MonthPicker
+          selectedMonth={selectedMonth}
+          onChange={setSelectedMonth}
+        />
       </div>
 
       {isLoading ? (
@@ -440,16 +486,16 @@ export function InvestorDashboardPage() {
           {/* Monthly Revenue Row */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <MetricCard
-              title="Total Monthly Revenue (MTD)"
+              title={isViewingPastMonth ? 'Total Monthly Revenue' : 'Total Monthly Revenue (MTD)'}
               value={formatCurrency(combinedTotalRevenue)}
-              secondaryLabel="Projected"
-              secondaryValue={formatCurrency(projectedBilledRevenue)}
+              secondaryLabel={isViewingPastMonth ? undefined : 'Projected'}
+              secondaryValue={isViewingPastMonth ? undefined : formatCurrency(projectedBilledRevenue)}
             />
             <MetricCard
-              title="Total Earned Revenue (MTD)"
+              title={isViewingPastMonth ? 'Total Earned Revenue' : 'Total Earned Revenue (MTD)'}
               value={formatCurrency(earnedTotalRevenue)}
-              secondaryLabel="Projected"
-              secondaryValue={formatCurrency(projectedRevenue)}
+              secondaryLabel={isViewingPastMonth ? undefined : 'Projected'}
+              secondaryValue={isViewingPastMonth ? undefined : formatCurrency(projectedRevenue)}
             />
             <MetricCard
               title="Avg Daily Revenue"
@@ -502,6 +548,26 @@ export function InvestorDashboardPage() {
               value={`${utilizationPercent.toFixed(1)}%`}
             />
           </div>
+
+          {/* Daily Revenue */}
+          <Card variant="default" padding="lg">
+            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+              Daily Revenue
+            </h3>
+            {dailyRevenueData.some(d => d.value !== null && d.value > 0) ? (
+              <BarChartAtom
+                data={dailyRevenueData}
+                fillColor={chartColors.bteamBrand}
+                valueFormatter={dailyRevenueTooltipFormatter}
+                yAxisFormatter={dailyRevenueYAxisFormatter}
+                valueLabel="Revenue"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No revenue data for this month
+              </div>
+            )}
+          </Card>
 
           {/* 12-Month Revenue Trend (2/3) + Quarterly Revenue (1/3) */}
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">

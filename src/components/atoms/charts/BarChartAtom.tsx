@@ -56,12 +56,19 @@ export interface BarChartAtomProps extends HTMLAttributes<HTMLDivElement> {
   showGrid?: boolean;
   /** Format function for values (default: percentage) */
   valueFormatter?: (value: number) => string;
+  /** Format function for Y-axis ticks (default: percentage) */
+  yAxisFormatter?: (value: number) => string;
   /** Label for the value in tooltip */
   valueLabel?: string;
+  /** Single fill color for all bars (overrides positive/negative coloring) */
+  fillColor?: string;
 }
 
 // Default formatter for percentage values
 const defaultFormatter = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+
+// Default Y-axis formatter for percentage values
+const defaultYAxisFormatter = (value: number) => `${value}%`;
 
 // Chart margin configuration
 const chartMargin = { top: 5, right: 30, left: 20, bottom: 5 };
@@ -74,7 +81,9 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
       showTooltip = true,
       showGrid = true,
       valueFormatter = defaultFormatter,
+      yAxisFormatter = defaultYAxisFormatter,
       valueLabel = 'Growth',
+      fillColor,
       className = '',
       ...props
     },
@@ -113,7 +122,7 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
               tick={axisTickStyle}
               axisLine={axisLineStyle}
               tickLine={axisLineStyle}
-              tickFormatter={(value) => `${value}%`}
+              tickFormatter={yAxisFormatter}
             />
             {/* Zero reference line */}
             <ReferenceLine y={0} stroke={chartColors.axisLine} strokeWidth={1} />
@@ -129,11 +138,13 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
                 <Cell
                   key={`cell-${index}`}
                   fill={
-                    entry.value === null
-                      ? chartColors.axisLine
-                      : entry.value >= 0
-                        ? chartColors.success
-                        : chartColors.error
+                    fillColor
+                      ? (entry.value === null ? chartColors.axisLine : fillColor)
+                      : entry.value === null
+                        ? chartColors.axisLine
+                        : entry.value >= 0
+                          ? chartColors.success
+                          : chartColors.error
                   }
                 />
               ))}

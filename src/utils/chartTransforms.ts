@@ -7,6 +7,7 @@
  * @category Utils
  */
 
+import { getDaysInMonth } from 'date-fns';
 import type { ResourceSummary } from '../types';
 import type {
   PieChartDataPoint,
@@ -15,6 +16,7 @@ import type {
   MoMGrowthDataPoint,
   CAGRProjectionDataPoint,
 } from '../types/charts';
+import type { BarChartDataPoint } from '../components/atoms/charts/BarChartAtom';
 import { TARGET_RATIO, ANNUAL_BUDGET, TOP_N_RESOURCES } from '../config/chartConfig';
 
 /**
@@ -593,4 +595,61 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
     cagr,
     yoyGrowthRates,
   };
+}
+
+/**
+ * Aggregate timesheet entries into daily revenue for a bar chart.
+ * Groups entries by day-of-month, looks up each entry's hourly rate via the
+ * project rates map (using canonical project ID when available), and sums
+ * (total_minutes / 60) * rate per day.
+ *
+ * Returns one BarChartDataPoint per calendar day of the month (1 through
+ * getDaysInMonth), with days that have no entries set to value 0.
+ *
+ * @param entries - Timesheet entries for the selected month
+ * @param projectRates - Map of external project_id to hourly rate
+ * @param monthDate - Any Date within the target month (used to determine days-in-month)
+ * @param projectCanonicalIdLookup - Optional map from external project_id to canonical project_id
+ * @returns Array of BarChartDataPoint with `month` set to the day number string
+ */
+export function aggregateDailyRevenue(
+  entries: Array<{
+    work_date: string;
+    project_id: string | null;
+    total_minutes: number;
+  }>,
+  projectRates: Map<string, number>,
+  monthDate: Date,
+  projectCanonicalIdLookup?: Map<string, string>
+): BarChartDataPoint[] {
+  const totalDays = getDaysInMonth(monthDate);
+
+  // Initialise every day to 0
+  const revenueByDay = new Map<number, number>();
+  for (let d = 1; d <= totalDays; d++) {
+    revenueByDay.set(d, 0);
+  }
+
+  for (const entry of entries) {
+    // Extract day number from YYYY-MM-DD
+    const day = Number(entry.work_date.substring(8, 10));
+    if (day < 1 || day > totalDays) continue;
+
+    const projectId = entry.project_id || '';
+    const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
+    const rate = projectRates.get(canonicalProjectId) ?? 0;
+    const revenue = (entry.total_minutes / 60) * rate;
+
+    revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + revenue);
+  }
+
+  const result: BarChartDataPoint[] = [];
+  for (let d = 1; d <= totalDays; d++) {
+    result.push({
+      month: String(d),
+      value: Math.round(revenueByDay.get(d) ?? 0),
+    });
+  }
+
+  return result;
 }
