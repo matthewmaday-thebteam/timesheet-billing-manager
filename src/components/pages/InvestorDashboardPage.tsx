@@ -413,19 +413,20 @@ export function InvestorDashboardPage() {
     return map;
   }, [projectsWithRates]);
 
-  // ========== BILLING RATIOS (for daily revenue earned vs billed split) ==========
-  const billingRatios = useMemo(() => {
-    const ratios = new Map<string, number>();
+  // ========== BILLING CAPS (for cumulative daily billing on capped projects) ==========
+  const billingCaps = useMemo(() => {
+    const caps = new Map<string, number>();
     for (const company of billingResult.companies) {
       for (const project of company.projects) {
-        if (!project.projectId) continue;
+        if (!project.projectId || !project.maximumApplied) continue;
         const canonicalId = projectCanonicalIdLookup?.get(project.projectId) || project.projectId;
-        const denominator = project.billedRevenue + (project.carryoverOut + project.unbillableHours) * project.rate;
-        const ratio = denominator > 0 ? project.billedRevenue / denominator : 1;
-        ratios.set(canonicalId, ratio);
+        // billedHours = the configured max cap (when maximumApplied is true)
+        // carryoverIn = hours carried from previous month that count toward the cap
+        // effectiveRemaining = new hours available before cap is hit
+        caps.set(canonicalId, project.billedHours - project.carryoverIn);
       }
     }
-    return ratios;
+    return caps;
   }, [billingResult.companies, projectCanonicalIdLookup]);
 
   // ========== CHART DATA ==========
@@ -473,8 +474,8 @@ export function InvestorDashboardPage() {
 
   // Daily revenue bar chart data (earned + billed per day)
   const dailyRevenueData = useMemo(
-    () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingRatios),
-    [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingRatios]
+    () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingCaps),
+    [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingCaps]
   );
 
   const isLoading = loading || billingsLoading || combinedRevenueLoading;

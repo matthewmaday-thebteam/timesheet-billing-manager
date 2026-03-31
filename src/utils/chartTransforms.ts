@@ -21,12 +21,13 @@ import { TARGET_RATIO, ANNUAL_BUDGET, TOP_N_RESOURCES } from '../config/chartCon
 /**
  * A single day's revenue data with earned and billed breakdowns.
  * Earned = all hours worked x rate.
- * Billed = earned scaled by per-project billing ratio (accounts for caps/carryover).
+ * Billed = earned adjusted by cumulative daily billing caps (overages appear
+ * only after cumulative hours hit the project cap, not as a flat ratio).
  */
 export interface DailyRevenueDataPoint {
   day: string;       // "1", "2", ... "31"
   earned: number;    // hours x rate (all work)
-  billed: number;    // earned scaled by billing ratio
+  billed: number;    // earned adjusted by cumulative cap tracking
 }
 
 /**
@@ -609,9 +610,8 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
 
 /**
  * Aggregate timesheet entries into daily revenue for a bar chart.
- * Groups entries by day-of-month, looks up each entry's hourly rate via the
- * project rates map (using canonical project ID when available), and sums
- * (total_minutes / 60) * rate per day.
+ * Uses cumulative daily billing: the gap between earned and billed only
+ * appears AFTER cumulative hours hit a project's cap, not as a flat ratio.
  *
  * Returns one DailyRevenueDataPoint per calendar day of the month (1 through
  * getDaysInMonth), with days that have no entries set to earned/billed 0.
@@ -620,7 +620,9 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
  * @param projectRates - Map of external project_id to hourly rate
  * @param monthDate - Any Date within the target month (used to determine days-in-month)
  * @param projectCanonicalIdLookup - Optional map from external project_id to canonical project_id
- * @param billingRatios - Optional map of canonical project ID to billing ratio (billed/earned). Defaults to 1.0 for unmapped projects.
+ * @param billingCaps - Map of canonical project ID to effective remaining hours before cap
+ *   (billedHours - carryoverIn). Only projects where maximumApplied is true are in this map.
+ *   Projects NOT in the map have no cap (billed = earned always).
  * @returns Array of DailyRevenueDataPoint with `day` set to the day number string
  */
 export function aggregateDailyRevenue(
@@ -632,7 +634,7 @@ export function aggregateDailyRevenue(
   projectRates: Map<string, number>,
   monthDate: Date,
   projectCanonicalIdLookup?: Map<string, string>,
-  billingRatios: Map<string, number> = new Map()
+  billingCaps: Map<string, number> = new Map()
 ): DailyRevenueDataPoint[] {
   const totalDays = getDaysInMonth(monthDate);
 
@@ -644,20 +646,72 @@ export function aggregateDailyRevenue(
     billedByDay.set(d, 0);
   }
 
+  // First pass: group entries by canonical project ID
+  const entriesByProject = new Map<string, Array<{
+    work_date: string;
+    total_minutes: number;
+    day: number;
+  }>>();
+
   for (const entry of entries) {
-    // Extract day number from YYYY-MM-DD
     const day = Number(entry.work_date.substring(8, 10));
     if (day < 1 || day > totalDays) continue;
 
     const projectId = entry.project_id || '';
     const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
-    const rate = projectRates.get(canonicalProjectId) ?? 0;
-    const earned = (entry.total_minutes / 60) * rate;
-    const ratio = billingRatios.get(canonicalProjectId) ?? 1.0;
-    const billed = earned * ratio;
 
-    earnedByDay.set(day, (earnedByDay.get(day) ?? 0) + earned);
-    billedByDay.set(day, (billedByDay.get(day) ?? 0) + billed);
+    if (!entriesByProject.has(canonicalProjectId)) {
+      entriesByProject.set(canonicalProjectId, []);
+    }
+    entriesByProject.get(canonicalProjectId)!.push({
+      work_date: entry.work_date,
+      total_minutes: entry.total_minutes,
+      day,
+    });
+  }
+
+  // Second pass: process each project's entries with cumulative cap tracking
+  for (const [canonicalProjectId, projectEntries] of entriesByProject) {
+    const rate = projectRates.get(canonicalProjectId) ?? 0;
+
+    // Sort entries by work_date for chronological cumulative tracking
+    projectEntries.sort((a, b) => a.work_date.localeCompare(b.work_date));
+
+    if (!billingCaps.has(canonicalProjectId)) {
+      // No cap — billed = earned for every entry
+      for (const entry of projectEntries) {
+        const earnedRevenue = (entry.total_minutes / 60) * rate;
+        earnedByDay.set(entry.day, (earnedByDay.get(entry.day) ?? 0) + earnedRevenue);
+        billedByDay.set(entry.day, (billedByDay.get(entry.day) ?? 0) + earnedRevenue);
+      }
+    } else {
+      // Capped project — track cumulative hours
+      const effectiveRemaining = billingCaps.get(canonicalProjectId)!;
+      let cumulativeHours = 0;
+
+      for (const entry of projectEntries) {
+        const earnedHours = entry.total_minutes / 60;
+        const earnedRevenue = earnedHours * rate;
+        const hoursBeforeCap = Math.max(0, effectiveRemaining - cumulativeHours);
+
+        let billedRevenue: number;
+        if (hoursBeforeCap <= 0) {
+          // Cap already hit — nothing billed
+          billedRevenue = 0;
+        } else if (earnedHours <= hoursBeforeCap) {
+          // Fully within cap
+          billedRevenue = earnedRevenue;
+        } else {
+          // Partial — cap hit mid-entry
+          billedRevenue = (hoursBeforeCap / earnedHours) * earnedRevenue;
+        }
+
+        cumulativeHours += earnedHours;
+
+        earnedByDay.set(entry.day, (earnedByDay.get(entry.day) ?? 0) + earnedRevenue);
+        billedByDay.set(entry.day, (billedByDay.get(entry.day) ?? 0) + billedRevenue);
+      }
+    }
   }
 
   const result: DailyRevenueDataPoint[] = [];
