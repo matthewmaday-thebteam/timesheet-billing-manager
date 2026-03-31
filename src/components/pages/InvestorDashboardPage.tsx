@@ -18,7 +18,23 @@ import {
   calculateGrowthStats,
   aggregateDailyRevenue,
 } from '../../utils/chartTransforms';
-import { chartColors, formatChartCurrency } from '../atoms/charts/chartTheme';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  chartColors,
+  formatChartCurrency,
+  axisTickStyle,
+  axisLineStyle,
+  tooltipStyle,
+  chartFontFamily,
+} from '../atoms/charts/chartTheme';
 import { MetricCard } from '../MetricCard';
 import { Card } from '../Card';
 import { Select } from '../Select';
@@ -28,7 +44,7 @@ import { LineGraphAtom } from '../atoms/charts/LineGraphAtom';
 import { BarChartAtom } from '../atoms/charts/BarChartAtom';
 import { CAGRChartAtom } from '../atoms/charts/CAGRChartAtom';
 import type { DateRange, MonthSelection, BulgarianHoliday } from '../../types';
-import { HISTORICAL_MONTHS } from '../../config/chartConfig';
+import { HISTORICAL_MONTHS, CHART_HEIGHT } from '../../config/chartConfig';
 import { getCurrentMonth } from '../../hooks/useMonthlyRates';
 
 export function InvestorDashboardPage() {
@@ -397,6 +413,21 @@ export function InvestorDashboardPage() {
     return map;
   }, [projectsWithRates]);
 
+  // ========== BILLING RATIOS (for daily revenue earned vs billed split) ==========
+  const billingRatios = useMemo(() => {
+    const ratios = new Map<string, number>();
+    for (const company of billingResult.companies) {
+      for (const project of company.projects) {
+        if (!project.projectId) continue;
+        const canonicalId = projectCanonicalIdLookup?.get(project.projectId) || project.projectId;
+        const denominator = project.billedRevenue + (project.carryoverOut + project.unbillableHours) * project.rate;
+        const ratio = denominator > 0 ? project.billedRevenue / denominator : 1;
+        ratios.set(canonicalId, ratio);
+      }
+    }
+    return ratios;
+  }, [billingResult.companies, projectCanonicalIdLookup]);
+
   // ========== CHART DATA ==========
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
   const lineData = useMemo(
@@ -440,22 +471,10 @@ export function InvestorDashboardPage() {
     [combinedRevenueByMonth]
   );
 
-  // Daily revenue bar chart data
+  // Daily revenue bar chart data (earned + billed per day)
   const dailyRevenueData = useMemo(
-    () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup),
-    [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup]
-  );
-
-  // Currency formatter for daily revenue Y-axis
-  const dailyRevenueYAxisFormatter = useMemo(
-    () => (value: number) => formatChartCurrency(value),
-    []
-  );
-
-  // Currency formatter for daily revenue tooltip
-  const dailyRevenueTooltipFormatter = useMemo(
-    () => (value: number) => formatCurrency(value),
-    []
+    () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingRatios),
+    [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingRatios]
   );
 
   const isLoading = loading || billingsLoading || combinedRevenueLoading;
@@ -551,17 +570,75 @@ export function InvestorDashboardPage() {
 
           {/* Daily Revenue */}
           <Card variant="default" padding="lg">
-            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
-              Daily Revenue
-            </h3>
-            {dailyRevenueData.some(d => d.value !== null && d.value > 0) ? (
-              <BarChartAtom
-                data={dailyRevenueData}
-                fillColor={chartColors.bteamBrand}
-                valueFormatter={dailyRevenueTooltipFormatter}
-                yAxisFormatter={dailyRevenueYAxisFormatter}
-                valueLabel="Revenue"
-              />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-vercel-gray-600">
+                Daily Revenue
+              </h3>
+              <div className="flex items-center gap-4 text-xs text-vercel-gray-400 font-mono">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: chartColors.bteamBrand }}
+                  />
+                  Billed
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: chartColors.bteamBrand, opacity: 0.3 }}
+                  />
+                  Earned
+                </span>
+              </div>
+            </div>
+            {dailyRevenueData.some(d => d.earned > 0 || d.billed > 0) ? (
+              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                <BarChart
+                  data={dailyRevenueData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  barGap={-20}
+                  barSize={20}
+                  barCategoryGap="10%"
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={chartColors.gridLine}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="day"
+                    tick={axisTickStyle}
+                    axisLine={axisLineStyle}
+                    tickLine={axisLineStyle}
+                  />
+                  <YAxis
+                    tick={axisTickStyle}
+                    axisLine={axisLineStyle}
+                    tickLine={axisLineStyle}
+                    tickFormatter={formatChartCurrency}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    labelStyle={{ fontFamily: chartFontFamily }}
+                    formatter={(value: number, name: string) => [
+                      formatCurrency(value),
+                      name === 'earned' ? 'Earned' : 'Billed',
+                    ]}
+                    labelFormatter={(label: string) => `Day ${label}`}
+                  />
+                  <Bar
+                    dataKey="earned"
+                    fill={chartColors.bteamBrand}
+                    opacity={0.3}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="billed"
+                    fill={chartColors.bteamBrand}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
                 No revenue data for this month

@@ -16,8 +16,18 @@ import type {
   MoMGrowthDataPoint,
   CAGRProjectionDataPoint,
 } from '../types/charts';
-import type { BarChartDataPoint } from '../components/atoms/charts/BarChartAtom';
 import { TARGET_RATIO, ANNUAL_BUDGET, TOP_N_RESOURCES } from '../config/chartConfig';
+
+/**
+ * A single day's revenue data with earned and billed breakdowns.
+ * Earned = all hours worked x rate.
+ * Billed = earned scaled by per-project billing ratio (accounts for caps/carryover).
+ */
+export interface DailyRevenueDataPoint {
+  day: string;       // "1", "2", ... "31"
+  earned: number;    // hours x rate (all work)
+  billed: number;    // earned scaled by billing ratio
+}
 
 /**
  * Historical annual revenue data (hardcoded).
@@ -603,14 +613,15 @@ export function calculateGrowthStats(revenueByMonthKey: Map<string, number>): {
  * project rates map (using canonical project ID when available), and sums
  * (total_minutes / 60) * rate per day.
  *
- * Returns one BarChartDataPoint per calendar day of the month (1 through
- * getDaysInMonth), with days that have no entries set to value 0.
+ * Returns one DailyRevenueDataPoint per calendar day of the month (1 through
+ * getDaysInMonth), with days that have no entries set to earned/billed 0.
  *
  * @param entries - Timesheet entries for the selected month
  * @param projectRates - Map of external project_id to hourly rate
  * @param monthDate - Any Date within the target month (used to determine days-in-month)
  * @param projectCanonicalIdLookup - Optional map from external project_id to canonical project_id
- * @returns Array of BarChartDataPoint with `month` set to the day number string
+ * @param billingRatios - Optional map of canonical project ID to billing ratio (billed/earned). Defaults to 1.0 for unmapped projects.
+ * @returns Array of DailyRevenueDataPoint with `day` set to the day number string
  */
 export function aggregateDailyRevenue(
   entries: Array<{
@@ -620,14 +631,17 @@ export function aggregateDailyRevenue(
   }>,
   projectRates: Map<string, number>,
   monthDate: Date,
-  projectCanonicalIdLookup?: Map<string, string>
-): BarChartDataPoint[] {
+  projectCanonicalIdLookup?: Map<string, string>,
+  billingRatios: Map<string, number> = new Map()
+): DailyRevenueDataPoint[] {
   const totalDays = getDaysInMonth(monthDate);
 
-  // Initialise every day to 0
-  const revenueByDay = new Map<number, number>();
+  // Initialise every day to { earned: 0, billed: 0 }
+  const earnedByDay = new Map<number, number>();
+  const billedByDay = new Map<number, number>();
   for (let d = 1; d <= totalDays; d++) {
-    revenueByDay.set(d, 0);
+    earnedByDay.set(d, 0);
+    billedByDay.set(d, 0);
   }
 
   for (const entry of entries) {
@@ -638,16 +652,20 @@ export function aggregateDailyRevenue(
     const projectId = entry.project_id || '';
     const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
     const rate = projectRates.get(canonicalProjectId) ?? 0;
-    const revenue = (entry.total_minutes / 60) * rate;
+    const earned = (entry.total_minutes / 60) * rate;
+    const ratio = billingRatios.get(canonicalProjectId) ?? 1.0;
+    const billed = earned * ratio;
 
-    revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + revenue);
+    earnedByDay.set(day, (earnedByDay.get(day) ?? 0) + earned);
+    billedByDay.set(day, (billedByDay.get(day) ?? 0) + billed);
   }
 
-  const result: BarChartDataPoint[] = [];
+  const result: DailyRevenueDataPoint[] = [];
   for (let d = 1; d <= totalDays; d++) {
     result.push({
-      month: String(d),
-      value: Math.round(revenueByDay.get(d) ?? 0),
+      day: String(d),
+      earned: Math.round(earnedByDay.get(d) ?? 0),
+      billed: Math.round(billedByDay.get(d) ?? 0),
     });
   }
 
