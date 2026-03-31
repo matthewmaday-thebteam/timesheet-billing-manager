@@ -11,6 +11,18 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-03-31',
+    title: 'Investor Dashboard: Month Selector & Daily Revenue Chart',
+    highlights: [
+      'Added month selector to scope all Investor Dashboard data to any month, not just the current one',
+      'Past months show final totals — "Projected" values and "MTD" labels are hidden for completed months',
+      'New Daily Revenue bar chart shows per-day revenue breakdown for the selected month',
+      'Chart displays overlapping Billed (solid) and Earned (semi-transparent) bars to visualize billing cap impact',
+      'Extended BarChartAtom with yAxisFormatter and fillColor props for currency display',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-03-30',
     title: 'Weekly Status Reports & Automated Email Delivery',
     highlights: [
