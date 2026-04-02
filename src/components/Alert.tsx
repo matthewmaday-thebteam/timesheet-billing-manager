@@ -24,11 +24,13 @@ interface AlertProps {
   icon?: 'error' | 'info' | 'warning';
   /** Visual variant */
   variant?: 'default' | 'warning' | 'error' | 'brand';
+  /** Optional close handler — shows dismiss button when provided */
+  onClose?: () => void;
   /** Optional additional content */
   children?: React.ReactNode;
 }
 
-export function Alert({ message, icon = 'error', variant = 'default', children }: AlertProps) {
+export function Alert({ message, icon = 'error', variant = 'default', onClose, children }: AlertProps) {
   const icons = {
     error: (
       <path
@@ -81,14 +83,26 @@ export function Alert({ message, icon = 'error', variant = 'default', children }
     <div className={`p-3 border rounded-lg ${containerClasses}`}>
       <div className="flex items-center gap-2">
         <svg
-          className={`w-4 h-4 ${iconClasses}`}
+          className={`w-4 h-4 flex-shrink-0 ${iconClasses}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
           {icons[icon]}
         </svg>
-        <span className={`text-sm ${textClasses}`}>{message}</span>
+        <span className={`text-sm flex-1 ${textClasses}`}>{message}</span>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`ml-auto flex-shrink-0 p-0.5 rounded hover:bg-black/5 transition-colors ${iconClasses}`}
+            aria-label="Dismiss"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
       {children && (
         <div className={`mt-2 ${textClasses}`}>

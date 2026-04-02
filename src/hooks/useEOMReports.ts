@@ -42,6 +42,7 @@ export interface EOMCustomerReport {
   companyId: string;
   clientId: string;
   companyName: string;
+  reportId: string | null;
   status: ReportStatus;
   generatedAt: string | null;
   generationNumber: number | null;
@@ -176,6 +177,11 @@ export function useEOMReports(): UseEOMReportsResult {
     const yearMap = new Map<number, Map<number, EOMCustomerReport[]>>();
 
     for (const row of rows) {
+      // Hide zero-revenue companies — nothing to invoice
+      if (row.has_report && (row.total_revenue_cents === null || row.total_revenue_cents === 0)) {
+        continue;
+      }
+
       if (!yearMap.has(row.report_year)) {
         yearMap.set(row.report_year, new Map());
       }
@@ -188,6 +194,7 @@ export function useEOMReports(): UseEOMReportsResult {
         companyId: row.company_id,
         clientId: row.client_id,
         companyName: row.company_name,
+        reportId: row.report_id,
         status: getReportStatus(row),
         generatedAt: row.generated_at,
         generationNumber: row.generation_number,

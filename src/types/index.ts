@@ -1052,6 +1052,29 @@ export interface QBOCustomerMapping {
   updated_at: string;
 }
 
+/**
+ * QBO invoice log entry from the qbo_invoice_log table.
+ * Tracks each invoice sent (or attempted) to QuickBooks Online.
+ */
+export interface QBOInvoiceLogEntry {
+  id: string;
+  eom_report_id: string | null;
+  company_id: string;
+  report_year: number;
+  report_month: number;
+  qbo_customer_id: string;
+  qbo_invoice_id: string | null;
+  invoice_number: string | null;
+  total_amount_cents: number;
+  line_item_count: number;
+  status: 'pending' | 'sent' | 'error';
+  error_message: string | null;
+  sent_at: string | null;
+  sent_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================================================
 // Employee Project Profit Types (Migration 065)
 // ============================================================================

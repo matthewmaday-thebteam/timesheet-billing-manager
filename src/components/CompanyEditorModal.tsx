@@ -223,6 +223,7 @@ export function CompanyEditorModal({
                   options={qboCustomerOptions}
                   placeholder="Not mapped"
                   disabled={isLoading}
+                  className="w-full"
                 />
               )}
             </div>

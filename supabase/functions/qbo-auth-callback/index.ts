@@ -83,8 +83,8 @@ serve(async (req) => {
     await supabaseAdmin.from('qbo_oauth_state').delete().eq('id', stateRow.id);
 
     // --- Exchange authorization code for tokens ---
-    const clientId = Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
-    const clientSecret = Deno.env.get('QUICKBOOKS_DEV_SECRET');
+    const clientId = Deno.env.get('QUICKBOOKS_PROD_CLIENTID') || Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
+    const clientSecret = Deno.env.get('QUICKBOOKS_PROD_SECRET') || Deno.env.get('QUICKBOOKS_DEV_SECRET');
     const redirectUri = Deno.env.get('QUICKBOOKS_DEV_REDIRECT');
 
     if (!clientId || !clientSecret || !redirectUri) {

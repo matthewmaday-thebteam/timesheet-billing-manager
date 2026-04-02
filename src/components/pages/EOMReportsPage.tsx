@@ -18,7 +18,9 @@ import { useWeeklyReports } from '../../hooks/useWeeklyReports';
 import type { WeeklyCompanyReport, WeekGroup, WeeklyMonthGroup } from '../../hooks/useWeeklyReports';
 import { useQBOConnection } from '../../hooks/useQBOConnection';
 import { useQBOCustomerMappings } from '../../hooks/useQBOCustomerMappings';
+import { useQBOInvoices } from '../../hooks/useQBOInvoices';
 import type { EOMCustomerReport, EOMMonthGroup } from '../../hooks/useEOMReports';
+import type { QBOInvoiceLogEntry } from '../../types';
 import { Card } from '../Card';
 import { Button } from '../Button';
 import { Badge } from '../Badge';
@@ -78,8 +80,11 @@ interface CustomerRowProps {
   isRegenerating: boolean;
   isMappedToQBO: boolean;
   qboConnected: boolean;
+  invoiceStatus: QBOInvoiceLogEntry | undefined;
+  isSendingInvoice: boolean;
   onDownload: () => void;
   onRegenerate: () => void;
+  onSendInvoice: () => void;
 }
 
 function CustomerRow({
@@ -88,8 +93,11 @@ function CustomerRow({
   isRegenerating,
   isMappedToQBO,
   qboConnected,
+  invoiceStatus,
+  isSendingInvoice,
   onDownload,
   onRegenerate,
+  onSendInvoice,
 }: CustomerRowProps) {
   const statusBadge = (() => {
     switch (customer.status) {
@@ -128,17 +136,81 @@ function CustomerRow({
             <span className="ml-1.5">Download</span>
           </Button>
         </Tooltip>
-        {qboConnected && isMappedToQBO && (
-          <Tooltip content="Coming soon">
+        {qboConnected && isMappedToQBO && (() => {
+          if (invoiceStatus?.status === 'sent') {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Button variant="secondary" size="sm" disabled>
+                  <span className="ml-1.5">Sent</span>
+                </Button>
+                <Tooltip content={invoiceStatus.sent_at ? `Sent ${format(new Date(invoiceStatus.sent_at), 'MMM d, yyyy h:mm a')}` : 'Sent to QuickBooks'}>
+                  <Badge variant="success" size="sm">
+                    {invoiceStatus.invoice_number || 'Sent'}
+                  </Badge>
+                </Tooltip>
+              </div>
+            );
+          }
+          if (invoiceStatus?.status === 'error') {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={isSendingInvoice}
+                  onClick={onSendInvoice}
+                >
+                  {isSendingInvoice ? <Spinner size="sm" /> : null}
+                  <span className="ml-1.5">Retry</span>
+                </Button>
+                <Tooltip content={invoiceStatus.error_message || 'Invoice send failed'}>
+                  <Badge variant="error" size="sm">Error</Badge>
+                </Tooltip>
+              </div>
+            );
+          }
+          if (invoiceStatus?.status === 'pending' || isSendingInvoice) {
+            // Check if pending entry is stale (older than 5 minutes) — edge function may have crashed
+            const isPendingStale = invoiceStatus?.status === 'pending'
+              && invoiceStatus.created_at
+              && (Date.now() - new Date(invoiceStatus.created_at).getTime()) > 5 * 60 * 1000;
+
+            if (isPendingStale && !isSendingInvoice) {
+              return (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={onSendInvoice}
+                  >
+                    <span className="ml-1.5">Retry</span>
+                  </Button>
+                  <Tooltip content="Send timed out — the previous attempt did not complete">
+                    <Badge variant="warning" size="sm">Timed out</Badge>
+                  </Tooltip>
+                </div>
+              );
+            }
+
+            return (
+              <Button variant="secondary" size="sm" disabled>
+                <Spinner size="sm" />
+                <span className="ml-1.5">Sending...</span>
+              </Button>
+            );
+          }
+          // No invoice status — ready to send
+          return (
             <Button
               variant="secondary"
               size="sm"
-              disabled
+              disabled={customer.status !== 'generated'}
+              onClick={onSendInvoice}
             >
               <span className="ml-1.5">Send to QB</span>
             </Button>
-          </Tooltip>
-        )}
+          );
+        })()}
         <Tooltip content="Regenerate report">
           <Button
             variant="ghost"
@@ -163,9 +235,14 @@ interface MonthAccordionProps {
   isGeneratingMonth: boolean;
   mappedCompanyIds: Set<string>;
   qboConnected: boolean;
+  sendingCompanies: Map<string, boolean>;
+  sendAllProgress: { current: number; total: number } | null;
+  getInvoiceStatus: (companyId: string, year: number, month: number) => QBOInvoiceLogEntry | undefined;
   onDownload: (storagePath: string, companyName: string, year: number, month: number) => void;
   onGenerateMonth: (year: number, month: number) => void;
   onOpenConfirmModal: (customer: EOMCustomerReport, year: number, month: number) => void;
+  onOpenSendInvoiceModal: (customer: EOMCustomerReport, year: number, month: number) => void;
+  onOpenSendAllModal: (monthGroup: EOMMonthGroup) => void;
 }
 
 function MonthAccordion({
@@ -176,9 +253,14 @@ function MonthAccordion({
   isGeneratingMonth,
   mappedCompanyIds,
   qboConnected,
+  sendingCompanies,
+  sendAllProgress,
+  getInvoiceStatus,
   onDownload,
   onOpenConfirmModal,
   onGenerateMonth,
+  onOpenSendInvoiceModal,
+  onOpenSendAllModal,
 }: MonthAccordionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -219,15 +301,45 @@ function MonthAccordion({
               </>
             )}
           </Button>
-          {qboConnected && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled
-            >
-              Send All to QB
-            </Button>
-          )}
+          {qboConnected && (() => {
+            // Check if any mapped company in this month is currently sending
+            const anySending = monthGroup.customers.some(c =>
+              mappedCompanyIds.has(c.companyId) &&
+              sendingCompanies.get(`${c.companyId}-${monthGroup.year}-${monthGroup.month}`)
+            );
+            // Check if all mapped companies already have 'sent' status
+            const mappedCustomers = monthGroup.customers.filter(c => mappedCompanyIds.has(c.companyId));
+            const allSent = mappedCustomers.length > 0 && mappedCustomers.every(c => {
+              const status = getInvoiceStatus(c.companyId, monthGroup.year, monthGroup.month);
+              return status?.status === 'sent';
+            });
+            const hasMapped = mappedCustomers.length > 0;
+
+            return (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!hasMapped || allSent || anySending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenSendAllModal(monthGroup);
+                }}
+              >
+                {anySending ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span className="ml-1.5">
+                      {sendAllProgress
+                        ? `Sending ${sendAllProgress.current} of ${sendAllProgress.total}...`
+                        : 'Sending...'}
+                    </span>
+                  </>
+                ) : (
+                  'Send All to QB'
+                )}
+              </Button>
+            );
+          })()}
         </div>
       </div>
 
@@ -237,6 +349,7 @@ function MonthAccordion({
           {monthGroup.customers.map(customer => {
             const rKey = `${customer.companyId}-${monthGroup.year}-${monthGroup.month}`;
             const dKey = `${customer.storagePath}-${monthGroup.year}-${monthGroup.month}`;
+            const iKey = `${customer.companyId}-${monthGroup.year}-${monthGroup.month}`;
 
             return (
               <CustomerRow
@@ -246,6 +359,8 @@ function MonthAccordion({
                 isRegenerating={regeneratingReports.get(rKey) || false}
                 isMappedToQBO={mappedCompanyIds.has(customer.companyId)}
                 qboConnected={qboConnected}
+                invoiceStatus={getInvoiceStatus(customer.companyId, monthGroup.year, monthGroup.month)}
+                isSendingInvoice={sendingCompanies.get(iKey) || false}
                 onDownload={() => {
                   if (customer.storagePath) {
                     onDownload(customer.storagePath, customer.companyName, monthGroup.year, monthGroup.month);
@@ -253,6 +368,9 @@ function MonthAccordion({
                 }}
                 onRegenerate={() => {
                   onOpenConfirmModal(customer, monthGroup.year, monthGroup.month);
+                }}
+                onSendInvoice={() => {
+                  onOpenSendInvoiceModal(customer, monthGroup.year, monthGroup.month);
                 }}
               />
             );
@@ -272,9 +390,14 @@ interface EOMYearAccordionProps {
   generatingMonths: Map<string, boolean>;
   mappedCompanyIds: Set<string>;
   qboConnected: boolean;
+  sendingCompanies: Map<string, boolean>;
+  sendAllProgress: { year: number; month: number; current: number; total: number } | null;
+  getInvoiceStatus: (companyId: string, year: number, month: number) => QBOInvoiceLogEntry | undefined;
   onDownload: (storagePath: string, companyName: string, year: number, month: number) => void;
   onGenerateMonth: (year: number, month: number) => void;
   onOpenConfirmModal: (customer: EOMCustomerReport, year: number, month: number) => void;
+  onOpenSendInvoiceModal: (customer: EOMCustomerReport, year: number, month: number) => void;
+  onOpenSendAllModal: (monthGroup: EOMMonthGroup) => void;
 }
 
 function EOMYearAccordion({
@@ -286,9 +409,14 @@ function EOMYearAccordion({
   generatingMonths,
   mappedCompanyIds,
   qboConnected,
+  sendingCompanies,
+  sendAllProgress,
+  getInvoiceStatus,
   onDownload,
   onGenerateMonth,
   onOpenConfirmModal,
+  onOpenSendInvoiceModal,
+  onOpenSendAllModal,
 }: EOMYearAccordionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -325,9 +453,18 @@ function EOMYearAccordion({
                 isGeneratingMonth={generatingMonths.get(`${monthGroup.year}-${monthGroup.month}`) || false}
                 mappedCompanyIds={mappedCompanyIds}
                 qboConnected={qboConnected}
+                sendingCompanies={sendingCompanies}
+                sendAllProgress={
+                  sendAllProgress?.year === monthGroup.year && sendAllProgress?.month === monthGroup.month
+                    ? { current: sendAllProgress.current, total: sendAllProgress.total }
+                    : null
+                }
+                getInvoiceStatus={getInvoiceStatus}
                 onDownload={onDownload}
                 onGenerateMonth={onGenerateMonth}
                 onOpenConfirmModal={onOpenConfirmModal}
+                onOpenSendInvoiceModal={onOpenSendInvoiceModal}
+                onOpenSendAllModal={onOpenSendAllModal}
               />
             );
           })}
@@ -642,6 +779,15 @@ export function EOMReportsPage() {
     error: qboMappingError,
   } = useQBOCustomerMappings();
 
+  const {
+    sendingCompanies,
+    sendInvoice,
+    sendAllForMonth,
+    getInvoiceStatus,
+    error: qboInvoiceError,
+    clearError: clearQboInvoiceError,
+  } = useQBOInvoices();
+
   const mappedCompanyIds = useMemo(() => {
     return new Set(qboMappings.map(m => m.company_id));
   }, [qboMappings]);
@@ -675,6 +821,72 @@ export function EOMReportsPage() {
     setConfirmModal(null);
     await regenerateReport(year, month, customer.companyId);
   }, [confirmModal, regenerateReport]);
+
+  // ---- QBO Send Invoice confirmation modal state ----
+  const [sendInvoiceModal, setSendInvoiceModal] = useState<{
+    customer: EOMCustomerReport;
+    year: number;
+    month: number;
+  } | null>(null);
+
+  const handleOpenSendInvoiceModal = useCallback((
+    customer: EOMCustomerReport,
+    year: number,
+    month: number,
+  ) => {
+    setSendInvoiceModal({ customer, year, month });
+  }, []);
+
+  const handleConfirmSendInvoice = useCallback(async () => {
+    if (!sendInvoiceModal) return;
+    const { customer, year, month } = sendInvoiceModal;
+    setSendInvoiceModal(null);
+    const success = await sendInvoice(customer.companyId, year, month, customer.reportId ?? undefined);
+    if (success) {
+      setInvoiceAlert({ type: 'success', message: `Invoice for ${customer.companyName} sent to QuickBooks.` });
+    }
+  }, [sendInvoiceModal, sendInvoice]);
+
+  // ---- QBO Send All Invoices confirmation modal state ----
+  const [sendAllModal, setSendAllModal] = useState<{
+    monthGroup: EOMMonthGroup;
+    unsent: Array<{ companyId: string; companyName: string; eomReportId?: string }>;
+  } | null>(null);
+
+  const handleOpenSendAllModal = useCallback((monthGroup: EOMMonthGroup) => {
+    // Collect mapped companies that don't have 'sent' status
+    const unsent = monthGroup.customers
+      .filter(c => {
+        if (!mappedCompanyIds.has(c.companyId)) return false;
+        const status = getInvoiceStatus(c.companyId, monthGroup.year, monthGroup.month);
+        return status?.status !== 'sent';
+      })
+      .map(c => ({ companyId: c.companyId, companyName: c.companyName, eomReportId: c.reportId ?? undefined }));
+
+    if (unsent.length > 0) {
+      setSendAllModal({ monthGroup, unsent });
+    }
+  }, [mappedCompanyIds, getInvoiceStatus]);
+
+  const handleConfirmSendAll = useCallback(async () => {
+    if (!sendAllModal) return;
+    const { monthGroup, unsent } = sendAllModal;
+    setSendAllModal(null);
+    await sendAllForMonth(
+      monthGroup.year,
+      monthGroup.month,
+      unsent.map(c => ({ companyId: c.companyId, eomReportId: c.eomReportId })),
+      (current, total) => setSendAllProgress({ year: monthGroup.year, month: monthGroup.month, current, total }),
+    );
+    setSendAllProgress(null);
+    setInvoiceAlert({ type: 'success', message: `Invoices for ${unsent.length} ${unsent.length === 1 ? 'company' : 'companies'} sent to QuickBooks.` });
+  }, [sendAllModal, sendAllForMonth]);
+
+  // ---- QBO invoice success/feedback alert ----
+  const [invoiceAlert, setInvoiceAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // ---- Send All progress tracking ----
+  const [sendAllProgress, setSendAllProgress] = useState<{ year: number; month: number; current: number; total: number } | null>(null);
 
   // ---- Weekly Resend confirmation modal state ----
   const [weeklyResendModal, setWeeklyResendModal] = useState<{
@@ -825,6 +1037,17 @@ export function EOMReportsPage() {
       {error && <Alert message={error} icon="error" variant="error" />}
       {qboError && <Alert message={qboError} icon="error" variant="error" />}
       {qboMappingError && <Alert message={qboMappingError} icon="error" variant="error" />}
+      {qboInvoiceError && <Alert message={qboInvoiceError} icon="error" variant="error" onClose={clearQboInvoiceError} />}
+
+      {/* Invoice success alert */}
+      {activeView === 'eom' && invoiceAlert && (
+        <Alert
+          message={invoiceAlert.message}
+          icon={invoiceAlert.type === 'success' ? 'info' : 'error'}
+          variant={invoiceAlert.type === 'success' ? 'default' : 'error'}
+          onClose={() => setInvoiceAlert(null)}
+        />
+      )}
 
       {/* Weekly Resend Alert */}
       {activeView === 'weekly' && weeklyResendAlert && (
@@ -889,9 +1112,14 @@ export function EOMReportsPage() {
                   generatingMonths={generatingMonths}
                   mappedCompanyIds={mappedCompanyIds}
                   qboConnected={qboConnected}
+                  sendingCompanies={sendingCompanies}
+                  sendAllProgress={sendAllProgress}
+                  getInvoiceStatus={getInvoiceStatus}
                   onDownload={eomDownloadReport}
                   onGenerateMonth={generateMonth}
                   onOpenConfirmModal={handleOpenConfirmModal}
+                  onOpenSendInvoiceModal={handleOpenSendInvoiceModal}
+                  onOpenSendAllModal={handleOpenSendAllModal}
                 />
               ))}
             </div>
@@ -1016,6 +1244,66 @@ export function EOMReportsPage() {
           This will remove the QuickBooks Online connection. You will need to re-authorize
           to send invoices to QuickBooks.
         </p>
+      </Modal>
+
+      {/* QBO Send Invoice Confirmation Modal */}
+      <Modal
+        isOpen={sendInvoiceModal !== null}
+        onClose={() => setSendInvoiceModal(null)}
+        title="Send Invoice to QuickBooks"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSendInvoiceModal(null)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleConfirmSendInvoice}>
+              Send
+            </Button>
+          </>
+        }
+      >
+        {sendInvoiceModal && (
+          <p className="text-sm text-vercel-gray-400">
+            Are you sure you want to send an invoice to QuickBooks for{' '}
+            <span className="font-medium text-vercel-gray-600">{sendInvoiceModal.customer.companyName}</span>
+            {' '}&mdash;{' '}
+            <span className="font-medium text-vercel-gray-600">
+              {MONTH_NAMES[sendInvoiceModal.month - 1]} {sendInvoiceModal.year}
+            </span>?
+          </p>
+        )}
+      </Modal>
+
+      {/* QBO Send All Invoices Confirmation Modal */}
+      <Modal
+        isOpen={sendAllModal !== null}
+        onClose={() => setSendAllModal(null)}
+        title="Send All Invoices to QuickBooks"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSendAllModal(null)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleConfirmSendAll}>
+              Send All
+            </Button>
+          </>
+        }
+      >
+        {sendAllModal && (
+          <p className="text-sm text-vercel-gray-400">
+            Send invoices to QuickBooks for{' '}
+            <span className="font-medium text-vercel-gray-600">
+              {sendAllModal.unsent.length} {sendAllModal.unsent.length === 1 ? 'company' : 'companies'}
+            </span>
+            {' '}for{' '}
+            <span className="font-medium text-vercel-gray-600">
+              {MONTH_NAMES[sendAllModal.monthGroup.month - 1]} {sendAllModal.monthGroup.year}
+            </span>?
+          </p>
+        )}
       </Modal>
 
     </div>

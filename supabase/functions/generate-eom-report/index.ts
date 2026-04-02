@@ -13,7 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 //   { year, month, companyId }     — generate for ONE company
 //   { backfill: true }             — generate for ALL eligible months/companies
 //
-// Validation: Reports can only be generated after the 5th of the following
+// Validation: Reports can only be generated after the 1st of the following
 // month (Europe/Sofia timezone). Backfill mode relaxes this for past months.
 //
 // Read-only guarantee: ZERO writes to any source data table.
@@ -31,6 +31,27 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// =============================================================================
+// Paginated fetch — guarantees all rows regardless of Supabase default limits
+// =============================================================================
+
+async function fetchAllRows<T>(
+  queryBuilder: ReturnType<ReturnType<typeof createClient>['from']>,
+  pageSize = 1000,
+): Promise<{ data: T[]; error: null } | { data: null; error: { message: string } }> {
+  const allData: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    allData.push(...(data as T[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { data: allData, error: null };
 }
 
 // =============================================================================
@@ -188,13 +209,13 @@ function isMonthEligible(year: number, month: number, isBackfill: boolean): bool
     return true;
   }
 
-  // Standard rule: current date in Sofia >= 5th of following month
+  // Standard rule: current date in Sofia >= 1st of following month
   const followingMonth = month === 12 ? 1 : month + 1;
   const followingYear = month === 12 ? year + 1 : year;
 
   if (sofiaYear > followingYear) return true;
   if (sofiaYear === followingYear && sofiaMonth > followingMonth) return true;
-  if (sofiaYear === followingYear && sofiaMonth === followingMonth && sofiaDay >= 5) return true;
+  if (sofiaYear === followingYear && sofiaMonth === followingMonth && sofiaDay >= 1) return true;
 
   return false;
 }
@@ -488,11 +509,14 @@ async function generateCompanyReport(
         .eq('company_id', companyId),
 
       // 2a. Timesheet entries for the month (all companies — filtered after resolution)
-      supabase
-        .from('v_timesheet_entries')
-        .select('project_id, task_name, total_minutes')
-        .gte('work_date', rangeStart)
-        .lt('work_date', rangeEnd),
+      // Uses paginated fetch to guarantee all rows are returned.
+      fetchAllRows<TaskEntry>(
+        supabase
+          .from('v_timesheet_entries')
+          .select('project_id, task_name, total_minutes')
+          .gte('work_date', rangeStart)
+          .lt('work_date', rangeEnd),
+      ),
 
       // 2b. All projects (for external <> internal ID mapping)
       supabase
@@ -888,7 +912,7 @@ serve(async (req) => {
   }
 
   try {
-    // --- Authenticate caller (any authenticated user) ---
+    // --- Authenticate caller (user or service_role for cron) ---
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Missing authorization header' }, 401);
@@ -899,13 +923,36 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const token = authHeader.replace('Bearer ', '');
 
-    // Verify the caller is an authenticated user (same pattern as admin-users)
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
-    if (authError || !user) {
-      return jsonResponse({ error: 'Unauthorized: authentication required' }, 401);
+    // Allow service_role key (used by pg_cron) — no user context needed
+    let generatedByUserId: string | null = null;
+
+    // Check if the token is a service_role JWT by decoding the payload
+    let isServiceRole = false;
+    try {
+      const payloadB64 = token.split('.')[1];
+      if (payloadB64) {
+        const payload = JSON.parse(atob(payloadB64));
+        if (payload.role === 'service_role') {
+          isServiceRole = true;
+        }
+      }
+    } catch {
+      // Not a valid JWT — fall through to user auth
+    }
+
+    if (isServiceRole) {
+      // Trusted cron/service call — no user to attribute
+      generatedByUserId = null;
+    } else {
+      // Verify the caller is an authenticated user (same pattern as admin-users)
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+      if (authError || !user) {
+        return jsonResponse({ error: 'Unauthorized: authentication required' }, 401);
+      }
+      generatedByUserId = user.id;
     }
 
     // --- Service-role client for privileged operations ---
@@ -956,7 +1003,7 @@ serve(async (req) => {
           row.company_id,
           row.report_year,
           row.report_month,
-          user.id, // track who triggered the backfill
+          generatedByUserId,
         );
         results.push(result);
       }
@@ -974,13 +1021,13 @@ serve(async (req) => {
         const followingYear = month === 12 ? year + 1 : year;
         return jsonResponse({
           error: `Report for ${year}-${String(month).padStart(2, '0')} cannot be generated yet. ` +
-            `Available after ${followingYear}-${String(followingMonth).padStart(2, '0')}-05 (Europe/Sofia timezone).`,
+            `Available after ${followingYear}-${String(followingMonth).padStart(2, '0')}-01 (Europe/Sofia timezone).`,
         }, 400);
       }
 
       if (companyId) {
         // Single company
-        const result = await generateCompanyReport(supabase, companyId, year, month, user.id);
+        const result = await generateCompanyReport(supabase, companyId, year, month, generatedByUserId);
         results.push(result);
       } else {
         // All companies for this month — query the availability view
@@ -1026,7 +1073,7 @@ serve(async (req) => {
         }
 
         for (const cid of companyIds) {
-          const result = await generateCompanyReport(supabase, cid, year, month, user.id);
+          const result = await generateCompanyReport(supabase, cid, year, month, generatedByUserId);
           results.push(result);
         }
       }

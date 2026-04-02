@@ -57,8 +57,8 @@ async function getValidToken(supabase: SupabaseClient): Promise<{ access_token: 
     return { access_token: tokenRow.access_token, realm_id: tokenRow.realm_id };
   }
 
-  const clientId = Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
-  const clientSecret = Deno.env.get('QUICKBOOKS_DEV_SECRET');
+  const clientId = Deno.env.get('QUICKBOOKS_PROD_CLIENTID') || Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
+  const clientSecret = Deno.env.get('QUICKBOOKS_PROD_SECRET') || Deno.env.get('QUICKBOOKS_DEV_SECRET');
   if (!clientId || !clientSecret) {
     throw new Error('QBO client credentials are not configured.');
   }
@@ -154,41 +154,49 @@ serve(async (req) => {
     // --- Get a valid QBO access token (auto-refreshes if needed) ---
     const { access_token, realm_id } = await getValidToken(supabaseAdmin);
 
-    // --- Query QBO for active customers ---
-    const query = 'SELECT * FROM Customer WHERE Active = true';
-    const qboUrl = `${QBO_API_BASE}/${realm_id}/query?query=${encodeURIComponent(query)}&minorversion=${QBO_MINOR_VERSION}`;
+    // --- Query QBO for active customers (paginated — QBO returns max 1000 per request) ---
+    // deno-lint-ignore no-explicit-any
+    let rawCustomers: any[] = [];
+    let startPosition = 1;
+    const pageSize = 1000;
 
-    const qboResponse = await fetch(qboUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${access_token}`,
-        'Accept': 'application/json',
-      },
-    });
+    while (true) {
+      const query = `SELECT * FROM Customer WHERE Active = true STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
+      const qboUrl = `${QBO_API_BASE}/${realm_id}/query?query=${encodeURIComponent(query)}&minorversion=${QBO_MINOR_VERSION}`;
 
-    if (!qboResponse.ok) {
-      const errorBody = await qboResponse.text();
-      console.error('QBO customer query failed:', qboResponse.status, errorBody);
+      const qboResponse = await fetch(qboUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Accept': 'application/json',
+        },
+      });
 
-      // Provide a user-friendly message for common failure modes
-      if (qboResponse.status === 401) {
+      if (!qboResponse.ok) {
+        const errorBody = await qboResponse.text();
+        console.error('QBO customer query failed:', qboResponse.status, errorBody);
+
+        if (qboResponse.status === 401) {
+          return jsonResponse(
+            { error: 'QuickBooks connection has expired. Please reconnect via Settings.' },
+            401,
+          );
+        }
+
         return jsonResponse(
-          { error: 'QuickBooks connection has expired. Please reconnect via Settings.' },
-          401,
+          { error: `Failed to fetch customers from QuickBooks (${qboResponse.status})` },
+          502,
         );
       }
 
-      return jsonResponse(
-        { error: `Failed to fetch customers from QuickBooks (${qboResponse.status})` },
-        502,
-      );
+      const qboData = await qboResponse.json();
+      const pageCustomers = qboData?.QueryResponse?.Customer ?? [];
+      rawCustomers = rawCustomers.concat(pageCustomers);
+
+      // If we got fewer than pageSize, we've reached the end
+      if (pageCustomers.length < pageSize) break;
+      startPosition += pageSize;
     }
-
-    const qboData = await qboResponse.json();
-
-    // --- Transform QBO response into a clean shape ---
-    // QueryResponse.Customer may be undefined if no customers exist
-    const rawCustomers = qboData?.QueryResponse?.Customer ?? [];
 
     const customers = rawCustomers.map((c: Record<string, unknown>) => ({
       id: String(c.Id),

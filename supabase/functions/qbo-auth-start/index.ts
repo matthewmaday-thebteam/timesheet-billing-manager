@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     // --- Read QBO configuration from secrets ---
-    const clientId = Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
+    const clientId = Deno.env.get('QUICKBOOKS_PROD_CLIENTID') || Deno.env.get('QUICKBOOKS_DEV_CLIENTID');
     const redirectUri = Deno.env.get('QUICKBOOKS_DEV_REDIRECT');
 
     if (!clientId || !redirectUri) {
