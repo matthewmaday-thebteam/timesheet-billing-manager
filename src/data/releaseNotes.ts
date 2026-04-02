@@ -11,6 +11,22 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-04-02',
+    title: 'QuickBooks Invoice Generation & EOM Report Scheduling',
+    highlights: [
+      'New "Send to QB" on EOM Reports: create QuickBooks invoices directly from monthly billing data with one click',
+      'Invoices include per-project task breakdown with hours, Net 10 payment terms, wire transfer details, and customer email',
+      'Product/Service mapping: hourly projects use "Time and Materials", milestones use "Fixed Bid Development"',
+      'Duplicate prevention: each company-month can only have one invoice, with clear Sent/Error/Retry status indicators',
+      '"Send All to QB" batch action with sequential sending and real-time progress ("Sending 3 of 7...")',
+      'EOM report generation moved from the 5th to the 1st of each month with automated pg_cron scheduling',
+      'QBO customer dropdown now shows all customers (was limited to first 100) and spans full modal width',
+      'Zero-revenue companies (e.g. internal, unassigned) are now hidden from EOM Reports',
+      'QuickBooks integration upgraded to production credentials with automatic fallback',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-03-31',
     title: 'Investor Dashboard: Month Selector & Daily Revenue Chart',
     highlights: [
