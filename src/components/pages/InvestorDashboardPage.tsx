@@ -228,8 +228,6 @@ export function InvestorDashboardPage() {
 
   // ========== DB-SOURCED WORKDAY & REVENUE METRICS ==========
   const companyHolidayCount = investorMetrics?.company_holiday_count ?? 0;
-  const workdaysInMonth = investorMetrics?.total_workdays ?? 0;
-  const remainingWorkdays = investorMetrics?.remaining_workdays ?? 0;
   const avgDailyRevenue = (investorMetrics?.avg_daily_earned_revenue_cents ?? 0) / 100;
   const avgDailyBilledRevenue = (investorMetrics?.avg_daily_billed_revenue_cents ?? 0) / 100;
   const projectedRevenue = (investorMetrics?.projected_earned_revenue_cents ?? 0) / 100;
