@@ -4,10 +4,10 @@ import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useBilling } from '../../hooks/useBilling';
-import { useBillings } from '../../hooks/useBillings';
 import { useCombinedRevenue } from '../../hooks/useCombinedRevenue';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
+import { useInvestorMetrics } from '../../hooks/useInvestorMetrics';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/billing';
 import {
@@ -80,9 +80,6 @@ export function InvestorDashboardPage() {
   // Fetch monthly rates
   const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
-  // Fetch fixed billings
-  const { companyBillings, isLoading: billingsLoading } = useBillings({ dateRange });
-
   // Compute combined revenue for all 12 chart months
   const { combinedRevenueByMonth, loading: combinedRevenueLoading } = useCombinedRevenue({
     dateRange,
@@ -90,89 +87,16 @@ export function InvestorDashboardPage() {
   });
 
   // Use billing from summary table
-  const { totalRevenue, billingResult } = useBilling({
+  const { billingResult } = useBilling({
     selectedMonth,
   });
 
-  // Build lookup: internal UUID -> externalProjectId
-  const internalToExternalId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of projectsWithRates) {
-      if (p.projectId && p.externalProjectId) {
-        map.set(p.projectId, p.externalProjectId);
-      }
-    }
-    return map;
-  }, [projectsWithRates]);
+  // Fetch pre-calculated investor metrics from DB
+  const { data: investorMetrics, loading: investorMetricsLoading } = useInvestorMetrics(selectedMonth);
 
-  // Build milestone lookup
-  const milestoneByExternalProjectId = useMemo(() => {
-    const map = new Map<string, { totalCents: number; billingId: string }>();
-    for (const company of companyBillings) {
-      for (const billing of company.billings) {
-        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
-          const externalId = internalToExternalId.get(billing.linkedProjectId);
-          if (externalId) {
-            const existing = map.get(externalId);
-            map.set(externalId, {
-              totalCents: (existing?.totalCents || 0) + billing.totalCents,
-              billingId: billing.id,
-            });
-          }
-        }
-      }
-    }
-    return map;
-  }, [companyBillings, internalToExternalId]);
-
-  // Calculate filtered billing cents (excludes linked milestones)
-  const filteredBillingCents = useMemo(() => {
-    let total = 0;
-    for (const company of companyBillings) {
-      for (const billing of company.billings) {
-        if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
-          const externalId = internalToExternalId.get(billing.linkedProjectId);
-          if (externalId) continue;
-        }
-        total += billing.totalCents;
-      }
-    }
-    return total;
-  }, [companyBillings, internalToExternalId]);
-
-  // Calculate milestone adjustment
-  const milestoneAdjustment = useMemo(() => {
-    let adjustment = 0;
-    for (const company of billingResult.companies) {
-      for (const project of company.projects) {
-        if (project.projectId) {
-          const milestone = milestoneByExternalProjectId.get(project.projectId);
-          if (milestone) {
-            adjustment += (milestone.totalCents / 100) - project.billedRevenue;
-          }
-        }
-      }
-    }
-    return adjustment;
-  }, [billingResult.companies, milestoneByExternalProjectId]);
-
-  // Combined total revenue
-  const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
-
-  // Earned revenue: billed revenue + dollar value of hours rolled over or lost to max cap
-  // For milestone projects the milestone IS the earned amount (no rollover concept)
-  const rolledOverRevenue = useMemo(() => {
-    let extra = 0;
-    for (const company of billingResult.companies) {
-      for (const project of company.projects) {
-        // Skip milestone-linked projects — milestone amount is the earned amount
-        if (project.projectId && milestoneByExternalProjectId.has(project.projectId)) continue;
-        extra += (project.carryoverOut + project.unbillableHours) * project.rate;
-      }
-    }
-    return extra;
-  }, [billingResult.companies, milestoneByExternalProjectId]);
-  const earnedTotalRevenue = combinedTotalRevenue + rolledOverRevenue;
+  // Revenue metrics from DB (investor metrics RPC)
+  const combinedTotalRevenue = (investorMetrics?.combined_total_revenue_cents ?? 0) / 100;
+  const earnedTotalRevenue = (investorMetrics?.earned_total_revenue_cents ?? 0) / 100;
 
   // ========== UTILIZATION CALCULATION (from EmployeesPage) ==========
   const { entities: employees } = useEmployeeTableEntities();
@@ -302,68 +226,27 @@ export function InvestorDashboardPage() {
     return total;
   }, [combinedRevenueByMonth, currentYear, currentQuarter]);
 
-  // ========== COMPANY HOLIDAYS (current month, weekdays only) ==========
-  const companyHolidayCount = useMemo(() => {
-    const currentMonth = dateRange.start.getMonth();
-    let count = 0;
-    for (const h of holidays) {
-      const hDate = new Date(h.holiday_date);
-      if (hDate.getMonth() === currentMonth && !isWeekend(hDate)) {
-        count++;
-      }
-    }
-    return count;
-  }, [holidays, dateRange.start]);
-
-  // ========== WORKDAYS IN MONTH (for avg daily revenue) ==========
-  const workdaysInMonth = useMemo(() => {
-    const allDays = eachDayOfInterval({
-      start: dateRange.start,
-      end: dateRange.end,
-    });
-    const holidayDates = holidays.map(h => new Date(h.holiday_date));
-    return allDays.filter(day => {
-      if (isWeekend(day)) return false;
-      if (holidayDates.some(h => isSameDay(h, day))) return false;
-      return true;
-    }).length;
-  }, [dateRange, holidays]);
-
-  const remainingWorkdays = useMemo(() => {
-    // Past months are complete — no remaining workdays
-    if (isViewingPastMonth) return 0;
-    const today = new Date();
-    const startDay = today > dateRange.end ? dateRange.end : today < dateRange.start ? dateRange.start : today;
-    const remainingDays = eachDayOfInterval({
-      start: startDay,
-      end: dateRange.end,
-    });
-    const holidayDates = holidays.map(h => new Date(h.holiday_date));
-    return remainingDays.filter(day => {
-      if (isWeekend(day)) return false;
-      if (holidayDates.some(h => isSameDay(h, day))) return false;
-      return true;
-    }).length;
-  }, [dateRange, holidays, isViewingPastMonth]);
-
-  const avgDailyRevenue = workdaysInMonth > 0 ? earnedTotalRevenue / workdaysInMonth : 0;
-  const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
-  const avgDailyBilledRevenue = workdaysInMonth > 0 ? combinedTotalRevenue / workdaysInMonth : 0;
-  const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
+  // ========== DB-SOURCED WORKDAY & REVENUE METRICS ==========
+  const companyHolidayCount = investorMetrics?.company_holiday_count ?? 0;
+  const workdaysInMonth = investorMetrics?.total_workdays ?? 0;
+  const remainingWorkdays = investorMetrics?.remaining_workdays ?? 0;
+  const avgDailyRevenue = (investorMetrics?.avg_daily_earned_revenue_cents ?? 0) / 100;
+  const avgDailyBilledRevenue = (investorMetrics?.avg_daily_billed_revenue_cents ?? 0) / 100;
+  const projectedRevenue = (investorMetrics?.projected_earned_revenue_cents ?? 0) / 100;
+  const projectedBilledRevenue = (investorMetrics?.projected_billed_revenue_cents ?? 0) / 100;
 
   // ========== PROJECTED ANNUAL REVENUE ==========
   const projectedAnnualRevenue = useMemo(() => {
     const now = new Date();
     const month = now.getMonth() + 1; // 1-based
-    const projectedCurrentMonth = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
-    if (month === 1) return projectedCurrentMonth * 12;
+    if (month === 1) return projectedRevenue * 12;
     let completedMonthsRevenue = 0;
     for (let m = 1; m < month; m++) {
       const key = `${currentYear}-${String(m).padStart(2, '0')}`;
       completedMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
     }
-    return Math.round((completedMonthsRevenue + projectedCurrentMonth) / month * 12);
-  }, [combinedRevenueByMonth, currentYear, earnedTotalRevenue, avgDailyRevenue, remainingWorkdays]);
+    return Math.round((completedMonthsRevenue + projectedRevenue) / month * 12);
+  }, [combinedRevenueByMonth, currentYear, projectedRevenue]);
 
   // ========== PROJECTED QUARTERLY REVENUE ==========
   const projectedQuarterlyRevenue = useMemo(() => {
@@ -371,15 +254,14 @@ export function InvestorDashboardPage() {
     const month = now.getMonth() + 1; // 1-based
     const startMonth = (currentQuarter - 1) * 3 + 1;
     const monthInQuarter = month - startMonth + 1; // 1, 2, or 3
-    const projectedCurrentMonth = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
-    if (monthInQuarter === 1) return projectedCurrentMonth * 3;
+    if (monthInQuarter === 1) return projectedRevenue * 3;
     let completedQuarterMonthsRevenue = 0;
     for (let m = startMonth; m < month; m++) {
       const key = `${currentYear}-${String(m).padStart(2, '0')}`;
       completedQuarterMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
     }
-    return Math.round((completedQuarterMonthsRevenue + projectedCurrentMonth) / monthInQuarter * 3);
-  }, [combinedRevenueByMonth, currentYear, currentQuarter, earnedTotalRevenue, avgDailyRevenue, remainingWorkdays]);
+    return Math.round((completedQuarterMonthsRevenue + projectedRevenue) / monthInQuarter * 3);
+  }, [combinedRevenueByMonth, currentYear, currentQuarter, projectedRevenue]);
 
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
@@ -478,7 +360,7 @@ export function InvestorDashboardPage() {
     [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingCaps]
   );
 
-  const isLoading = loading || billingsLoading || combinedRevenueLoading;
+  const isLoading = loading || combinedRevenueLoading || investorMetricsLoading;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -518,7 +400,7 @@ export function InvestorDashboardPage() {
               secondaryValue={isViewingPastMonth ? undefined : formatCurrency(projectedRevenue)}
             />
             <MetricCard
-              title="Avg Daily Revenue"
+              title={isViewingPastMonth ? 'Avg Daily Revenue' : 'Avg Daily Revenue (thru yesterday)'}
               value={formatCurrency(avgDailyRevenue)}
               secondaryLabel="Billed"
               secondaryValue={formatCurrency(avgDailyBilledRevenue)}
