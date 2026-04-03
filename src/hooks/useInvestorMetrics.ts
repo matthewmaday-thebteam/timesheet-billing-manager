@@ -28,6 +28,7 @@ export interface InvestorMetricsData {
   company_holiday_count: number;
   projected_earned_revenue_cents: number;
   projected_billed_revenue_cents: number;
+  fixed_lump_revenue_cents: number;
 }
 
 interface UseInvestorMetricsReturn {
@@ -86,6 +87,7 @@ export function useInvestorMetrics(selectedMonth: MonthSelection): UseInvestorMe
           company_holiday_count: 0,
           projected_earned_revenue_cents: 0,
           projected_billed_revenue_cents: 0,
+          fixed_lump_revenue_cents: 0,
         });
       } else {
         setData(row as InvestorMetricsData);
