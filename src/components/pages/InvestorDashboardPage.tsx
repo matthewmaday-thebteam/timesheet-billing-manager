@@ -229,36 +229,7 @@ export function InvestorDashboardPage() {
   // ========== DB-SOURCED WORKDAY & REVENUE METRICS ==========
   const companyHolidayCount = investorMetrics?.company_holiday_count ?? 0;
   const completedWorkdays = investorMetrics?.completed_workdays ?? 0;
-  const projectedRevenue = (investorMetrics?.projected_earned_revenue_cents ?? 0) / 100;
-  const projectedBilledRevenue = (investorMetrics?.projected_billed_revenue_cents ?? 0) / 100;
-
-  // ========== PROJECTED ANNUAL REVENUE ==========
-  const projectedAnnualRevenue = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-based
-    if (month === 1) return projectedRevenue * 12;
-    let completedMonthsRevenue = 0;
-    for (let m = 1; m < month; m++) {
-      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
-      completedMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
-    }
-    return Math.round((completedMonthsRevenue + projectedRevenue) / month * 12);
-  }, [combinedRevenueByMonth, currentYear, projectedRevenue]);
-
-  // ========== PROJECTED QUARTERLY REVENUE ==========
-  const projectedQuarterlyRevenue = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-based
-    const startMonth = (currentQuarter - 1) * 3 + 1;
-    const monthInQuarter = month - startMonth + 1; // 1, 2, or 3
-    if (monthInQuarter === 1) return projectedRevenue * 3;
-    let completedQuarterMonthsRevenue = 0;
-    for (let m = startMonth; m < month; m++) {
-      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
-      completedQuarterMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
-    }
-    return Math.round((completedQuarterMonthsRevenue + projectedRevenue) / monthInQuarter * 3);
-  }, [combinedRevenueByMonth, currentYear, currentQuarter, projectedRevenue]);
+  const remainingWorkdays = investorMetrics?.remaining_workdays ?? 0;
 
   // ========== RESOURCE ABSENCES (working days, current month) ==========
   const resourceAbsenceDays = useMemo(() => {
@@ -377,6 +348,38 @@ export function InvestorDashboardPage() {
       avgDailyBilledRevenue: billedSum / completedWorkdays,
     };
   }, [dailyRevenueData, completedWorkdays, isViewingPastMonth]);
+
+  // Projected monthly: MTD + (avg daily * remaining workdays)
+  const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
+  const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
+
+  // ========== PROJECTED ANNUAL REVENUE ==========
+  const projectedAnnualRevenue = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    if (month === 1) return projectedRevenue * 12;
+    let completedMonthsRevenue = 0;
+    for (let m = 1; m < month; m++) {
+      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
+      completedMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+    }
+    return Math.round((completedMonthsRevenue + projectedRevenue) / month * 12);
+  }, [combinedRevenueByMonth, currentYear, projectedRevenue]);
+
+  // ========== PROJECTED QUARTERLY REVENUE ==========
+  const projectedQuarterlyRevenue = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    const startMonth = (currentQuarter - 1) * 3 + 1;
+    const monthInQuarter = month - startMonth + 1; // 1, 2, or 3
+    if (monthInQuarter === 1) return projectedRevenue * 3;
+    let completedQuarterMonthsRevenue = 0;
+    for (let m = startMonth; m < month; m++) {
+      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
+      completedQuarterMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+    }
+    return Math.round((completedQuarterMonthsRevenue + projectedRevenue) / monthInQuarter * 3);
+  }, [combinedRevenueByMonth, currentYear, currentQuarter, projectedRevenue]);
 
   const isLoading = loading || combinedRevenueLoading || investorMetricsLoading;
 
