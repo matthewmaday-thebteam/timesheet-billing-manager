@@ -228,8 +228,7 @@ export function InvestorDashboardPage() {
 
   // ========== DB-SOURCED WORKDAY & REVENUE METRICS ==========
   const companyHolidayCount = investorMetrics?.company_holiday_count ?? 0;
-  const avgDailyRevenue = (investorMetrics?.avg_daily_earned_revenue_cents ?? 0) / 100;
-  const avgDailyBilledRevenue = (investorMetrics?.avg_daily_billed_revenue_cents ?? 0) / 100;
+  const completedWorkdays = investorMetrics?.completed_workdays ?? 0;
   const projectedRevenue = (investorMetrics?.projected_earned_revenue_cents ?? 0) / 100;
   const projectedBilledRevenue = (investorMetrics?.projected_billed_revenue_cents ?? 0) / 100;
 
@@ -357,6 +356,27 @@ export function InvestorDashboardPage() {
     () => aggregateDailyRevenue(entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingCaps),
     [entries, projectRatesMap, dateRange.start, projectCanonicalIdLookup, billingCaps]
   );
+
+  // Avg daily revenue: average of each completed workday's per-day revenue.
+  // Excludes today (partial day) — only sums through yesterday.
+  const { avgDailyRevenue, avgDailyBilledRevenue } = useMemo(() => {
+    const today = new Date();
+    const lastDayToInclude = isViewingPastMonth
+      ? dailyRevenueData.length
+      : today.getDate() - 1;
+
+    let earnedSum = 0;
+    let billedSum = 0;
+    for (let i = 0; i < lastDayToInclude && i < dailyRevenueData.length; i++) {
+      earnedSum += dailyRevenueData[i].earned;
+      billedSum += dailyRevenueData[i].billed;
+    }
+
+    return {
+      avgDailyRevenue: earnedSum / completedWorkdays,
+      avgDailyBilledRevenue: billedSum / completedWorkdays,
+    };
+  }, [dailyRevenueData, completedWorkdays, isViewingPastMonth]);
 
   const isLoading = loading || combinedRevenueLoading || investorMetricsLoading;
 
