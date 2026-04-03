@@ -106,6 +106,15 @@ export function InvestorDashboardPage() {
     approvedOnly: true,
   });
 
+  // Rest-of-year time off (for projected annual vacation deductions)
+  const [yearStart] = useState(() => new Date());
+  const [yearEnd] = useState(() => new Date(new Date().getFullYear(), 11, 31));
+  const { timeOff: yearRemainingTimeOff } = useTimeOff({
+    startDate: yearStart,
+    endDate: yearEnd,
+    approvedOnly: true,
+  });
+
   const [holidays, setHolidays] = useState<BulgarianHoliday[]>([]);
   useEffect(() => {
     async function fetchHolidays() {
@@ -353,18 +362,61 @@ export function InvestorDashboardPage() {
   const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
   const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
 
-  // ========== PROJECTED ANNUAL REVENUE ==========
-  const projectedAnnualRevenue = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-based
-    if (month === 1) return projectedRevenue * 12;
-    let completedMonthsRevenue = 0;
-    for (let m = 1; m < month; m++) {
-      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
-      completedMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+  // ========== REMAINING YEAR WORKDAYS (today through Dec 31) ==========
+  const remainingYearWorkdays = useMemo(() => {
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    const days = eachDayOfInterval({ start: yearStart, end: yearEnd });
+    return days.filter(day => {
+      if (isWeekend(day)) return false;
+      if (holidayDates.some(h => isSameDay(h, day))) return false;
+      return true;
+    }).length;
+  }, [holidays, yearStart, yearEnd]);
+
+  // ========== REMAINING VACATION DAYS BY EMPLOYMENT TYPE ==========
+  const { ftVacationDays, ptVacationDays } = useMemo(() => {
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    let ftDays = 0;
+    let ptDays = 0;
+
+    for (const employee of employees) {
+      const empType = employee.employment_type?.name;
+      if (empType !== 'Full-time' && empType !== 'Part-time') continue;
+
+      const displayName = [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.external_label;
+
+      for (const to of yearRemainingTimeOff) {
+        if (to.employee_name !== displayName && to.resource_id !== employee.id) continue;
+
+        const ptoStart = new Date(to.start_date);
+        const ptoEnd = new Date(to.end_date);
+        const overlapStart = ptoStart < yearStart ? yearStart : ptoStart;
+        const overlapEnd = ptoEnd > yearEnd ? yearEnd : ptoEnd;
+
+        if (overlapStart <= overlapEnd) {
+          const ptoDays = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
+          for (const day of ptoDays) {
+            if (!isWeekend(day) && !holidayDates.some(h => isSameDay(h, day))) {
+              if (empType === 'Full-time') ftDays++;
+              else ptDays++;
+            }
+          }
+        }
+      }
     }
-    return Math.round((completedMonthsRevenue + projectedRevenue) / month * 12);
-  }, [combinedRevenueByMonth, currentYear, projectedRevenue]);
+
+    return { ftVacationDays: ftDays, ptVacationDays: ptDays };
+  }, [employees, yearRemainingTimeOff, holidays, yearStart, yearEnd]);
+
+  // ========== PROJECTED ANNUAL REVENUE ==========
+  // YTD + (avg daily * remaining workdays) - vacation deductions
+  const projectedAnnualRevenue = useMemo(() => {
+    const avgRate = rateMetrics.averageRate;
+    return ytdRevenue
+      + (avgDailyRevenue * remainingYearWorkdays)
+      - (ftVacationDays * 8 * avgRate)
+      - (ptVacationDays * 5 * avgRate);
+  }, [ytdRevenue, avgDailyRevenue, remainingYearWorkdays, ftVacationDays, ptVacationDays, rateMetrics.averageRate]);
 
   // ========== PROJECTED QUARTERLY REVENUE ==========
   const projectedQuarterlyRevenue = useMemo(() => {
