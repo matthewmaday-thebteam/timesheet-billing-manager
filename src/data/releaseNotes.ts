@@ -11,6 +11,18 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-04-03',
+    title: 'Investor Dashboard Projection Fixes',
+    highlights: [
+      'Fixed Avg Daily Revenue: now averages actual per-day revenue values instead of dividing monthly total by workdays — excludes today (partial day)',
+      'Fixed Projected Monthly Revenue: MTD + (avg daily × remaining workdays) instead of inflated RPC calculation',
+      'Fixed Projected YTD: YTD + (avg daily × remaining year workdays) − scheduled vacation deductions for full-time (8 hrs) and part-time (5 hrs) employees',
+      'Fixed Projected Quarterly Revenue: same formula scoped to the current quarter instead of multiplying one month\'s projection by 3',
+      'Added rest-of-year time off fetch to power vacation-adjusted projections',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-04-02',
     title: 'QuickBooks Invoice Generation & EOM Report Scheduling',
     highlights: [
