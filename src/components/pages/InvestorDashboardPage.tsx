@@ -419,19 +419,63 @@ export function InvestorDashboardPage() {
   }, [ytdRevenue, avgDailyRevenue, remainingYearWorkdays, ftVacationDays, ptVacationDays, rateMetrics.averageRate]);
 
   // ========== PROJECTED QUARTERLY REVENUE ==========
-  const projectedQuarterlyRevenue = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-based
-    const startMonth = (currentQuarter - 1) * 3 + 1;
-    const monthInQuarter = month - startMonth + 1; // 1, 2, or 3
-    if (monthInQuarter === 1) return projectedRevenue * 3;
-    let completedQuarterMonthsRevenue = 0;
-    for (let m = startMonth; m < month; m++) {
-      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
-      completedQuarterMonthsRevenue += combinedRevenueByMonth.get(key) ?? 0;
+  // Quarter so far + (avg daily * remaining quarter workdays) - vacation deductions
+  const quarterEnd = useMemo(() => {
+    const endMonth = currentQuarter * 3; // Q1→3, Q2→6, Q3→9, Q4→12
+    return new Date(currentYear, endMonth, 0); // last day of that month
+  }, [currentYear, currentQuarter]);
+
+  const remainingQuarterWorkdays = useMemo(() => {
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    const days = eachDayOfInterval({ start: yearStart, end: quarterEnd });
+    return days.filter(day => {
+      if (isWeekend(day)) return false;
+      if (holidayDates.some(h => isSameDay(h, day))) return false;
+      return true;
+    }).length;
+  }, [holidays, yearStart, quarterEnd]);
+
+  const { ftQuarterVacDays, ptQuarterVacDays } = useMemo(() => {
+    const holidayDates = holidays.map(h => new Date(h.holiday_date));
+    let ftDays = 0;
+    let ptDays = 0;
+
+    for (const employee of employees) {
+      const empType = employee.employment_type?.name;
+      if (empType !== 'Full-time' && empType !== 'Part-time') continue;
+
+      const displayName = [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.external_label;
+
+      for (const to of yearRemainingTimeOff) {
+        if (to.employee_name !== displayName && to.resource_id !== employee.id) continue;
+
+        const ptoStart = new Date(to.start_date);
+        const ptoEnd = new Date(to.end_date);
+        const overlapStart = ptoStart < yearStart ? yearStart : ptoStart;
+        const overlapEnd = ptoEnd > quarterEnd ? quarterEnd : ptoEnd;
+
+        if (overlapStart <= overlapEnd) {
+          const ptoDays = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
+          for (const day of ptoDays) {
+            if (!isWeekend(day) && !holidayDates.some(h => isSameDay(h, day))) {
+              if (empType === 'Full-time') ftDays++;
+              else ptDays++;
+            }
+          }
+        }
+      }
     }
-    return Math.round((completedQuarterMonthsRevenue + projectedRevenue) / monthInQuarter * 3);
-  }, [combinedRevenueByMonth, currentYear, currentQuarter, projectedRevenue]);
+
+    return { ftQuarterVacDays: ftDays, ptQuarterVacDays: ptDays };
+  }, [employees, yearRemainingTimeOff, holidays, yearStart, quarterEnd]);
+
+  const projectedQuarterlyRevenue = useMemo(() => {
+    const avgRate = rateMetrics.averageRate;
+    return quarterlyRevenue
+      + (avgDailyRevenue * remainingQuarterWorkdays)
+      - (ftQuarterVacDays * 8 * avgRate)
+      - (ptQuarterVacDays * 5 * avgRate);
+  }, [quarterlyRevenue, avgDailyRevenue, remainingQuarterWorkdays, ftQuarterVacDays, ptQuarterVacDays, rateMetrics.averageRate]);
 
   const isLoading = loading || combinedRevenueLoading || investorMetricsLoading;
 
