@@ -11,6 +11,8 @@ export interface SyncRun {
   source_total: number;
   manifest_total: number;
   deleted_count: number;
+  source_hours: number | null;
+  manifest_hours: number | null;
   error_message: string | null;
   summary: Record<string, unknown> | null;
   created_at: string;

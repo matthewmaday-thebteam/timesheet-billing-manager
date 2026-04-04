@@ -386,6 +386,46 @@ serve(async (req) => {
     console.log(`[sync-clockify] Upsert complete: ${totalUpserted} rows`);
 
     // =========================================================================
+    // Compute total hours for diagnostics (source vs manifest)
+    // =========================================================================
+    // source_hours: sum of total_minutes from built rows (what we tried to upsert) / 60
+    // manifest_hours: sum of total_minutes from the DB after upsert (what's actually stored)
+    let sourceHours: number | null = null;
+    let manifestHours: number | null = null;
+
+    if (rows.length > 0) {
+      let totalSourceMinutes = 0;
+      for (const row of rows) {
+        totalSourceMinutes += row.total_minutes;
+      }
+      sourceHours = Math.round((totalSourceMinutes / 60) * 100) / 100;
+    }
+
+    // Query the DB for actual stored hours in the sync date range
+    try {
+      const diagRangeStart = rangeStartISO.split('T')[0];
+      const diagRangeEnd = rangeEndISO.split('T')[0];
+      const { data: dbTotals } = await supabase
+        .from('timesheet_daily_rollups')
+        .select('total_minutes')
+        .eq('clockify_workspace_id', clockifyWorkspaceId)
+        .gte('work_date', diagRangeStart)
+        .lte('work_date', diagRangeEnd);
+
+      if (dbTotals && dbTotals.length > 0) {
+        let totalDbMinutes = 0;
+        for (const row of dbTotals) {
+          totalDbMinutes += row.total_minutes || 0;
+        }
+        manifestHours = Math.round((totalDbMinutes / 60) * 100) / 100;
+      }
+    } catch {
+      // Non-blocking — manifest_hours will be null if query fails
+    }
+
+    console.log(`[sync-clockify] Hours — source: ${sourceHours}, manifest: ${manifestHours}`);
+
+    // =========================================================================
     // STEP 5: Conditional cleanup — delete stale entries (n8n Node 6)
     // =========================================================================
     // Only runs if fetch was complete AND upsert succeeded.
@@ -908,6 +948,8 @@ serve(async (req) => {
         source_total: rows.length,
         manifest_total: totalUpserted,
         deleted_count: deletedCount,
+        source_hours: sourceHours,
+        manifest_hours: manifestHours,
         error_message: upsertError || (fetchErrors.length > 0 ? fetchErrors[0].message : null),
         summary: result,
       });

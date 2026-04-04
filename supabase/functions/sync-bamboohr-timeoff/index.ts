@@ -373,6 +373,49 @@ serve(async (req) => {
     );
 
     // =========================================================================
+    // Compute total days for diagnostics (source vs manifest)
+    // =========================================================================
+    // source_hours: total days from BambooHR fetched requests (stored as days, UI labels accordingly)
+    // manifest_hours: total days from upserted rows
+    let sourceDays: number | null = null;
+    let manifestDays: number | null = null;
+
+    if (timeOffRequests.length > 0) {
+      let totalSourceDays = 0;
+      for (const req of timeOffRequests) {
+        const reqAmount = req.amount as { amount?: number } | number | undefined;
+        const amount = typeof reqAmount === 'object' && reqAmount !== null
+          ? Number(reqAmount.amount || 0)
+          : Number(reqAmount || 0);
+        if (Number.isFinite(amount) && amount > 0) {
+          totalSourceDays += amount;
+        }
+      }
+      sourceDays = Math.round(totalSourceDays * 100) / 100;
+    }
+
+    // Query the actual DB for stored days in the sync date range
+    try {
+      const { data: dbTotals } = await supabase
+        .from('employee_time_off')
+        .select('total_days')
+        .lte('start_date', rangeEndDate)
+        .gte('end_date', rangeStartDate);
+
+      if (dbTotals && dbTotals.length > 0) {
+        let totalDbDays = 0;
+        for (const row of dbTotals) {
+          totalDbDays += row.total_days || 0;
+        }
+        manifestDays = Math.round(totalDbDays * 100) / 100;
+      }
+    } catch {
+      // Non-blocking — manifestDays will remain null if query fails
+    }
+
+    console.log(`[sync-bamboohr-timeoff] Days — source: ${sourceDays}, manifest: ${manifestDays}`);
+
+    // =========================================================================
     // RECONCILIATION: Generate sync_alerts for discrepancies
     // =========================================================================
     // Wrapped in try/catch so reconciliation failures never block core sync.
@@ -694,6 +737,8 @@ serve(async (req) => {
         source_total: timeOffRequests.length,
         manifest_total: timeOffUpserted,
         deleted_count: timeOffDeleted,
+        source_hours: sourceDays,
+        manifest_hours: manifestDays,
         error_message: timeOffError,
         summary: result,
       });

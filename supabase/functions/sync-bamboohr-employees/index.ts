@@ -166,6 +166,8 @@ serve(async (req) => {
         source_total: employees.length,
         manifest_total: employeesUpserted,
         deleted_count: 0,
+        source_hours: null,
+        manifest_hours: null,
         error_message: employeesUpsertError,
         summary: result,
       });
