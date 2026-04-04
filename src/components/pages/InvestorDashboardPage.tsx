@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { startOfMonth, endOfMonth, format, eachDayOfInterval, isWeekend, isSameDay, min } from 'date-fns';
+import { format, eachDayOfInterval, isWeekend, isSameDay, min } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
@@ -39,32 +39,29 @@ import { MetricCard } from '../MetricCard';
 import { Card } from '../Card';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
-import { MonthPicker } from '../MonthPicker';
+import { RangeSelector } from '../RangeSelector';
 import { LineGraphAtom } from '../atoms/charts/LineGraphAtom';
 import { BarChartAtom } from '../atoms/charts/BarChartAtom';
 import { CAGRChartAtom } from '../atoms/charts/CAGRChartAtom';
-import type { DateRange, MonthSelection, BulgarianHoliday } from '../../types';
+import { useDateFilter } from '../../contexts/DateFilterContext';
+import type { MonthSelection, BulgarianHoliday } from '../../types';
 import { HISTORICAL_MONTHS, CHART_HEIGHT } from '../../config/chartConfig';
-import { getCurrentMonth } from '../../hooks/useMonthlyRates';
 
 export function InvestorDashboardPage() {
-  // Month selection state — drives all data fetching
-  const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
+  // Global date filter — shared across all pages via DateFilterContext
+  const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
-  // Derive dateRange from selected month
-  const dateRange = useMemo<DateRange>(() => {
-    const monthDate = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
-    return {
-      start: startOfMonth(monthDate),
-      end: endOfMonth(monthDate),
-    };
-  }, [selectedMonth]);
+  // Convert dateRange to MonthSelection for hooks that need it
+  const selectedMonth = useMemo<MonthSelection>(() => ({
+    year: dateRange.start.getFullYear(),
+    month: dateRange.start.getMonth() + 1,
+  }), [dateRange.start]);
 
   // Determine if we're viewing a past (completed) month
-  const current = getCurrentMonth();
+  const now = new Date();
   const isViewingPastMonth =
-    selectedMonth.year < current.year ||
-    (selectedMonth.year === current.year && selectedMonth.month < current.month);
+    selectedMonth.year < now.getFullYear() ||
+    (selectedMonth.year === now.getFullYear() && selectedMonth.month < now.getMonth() + 1);
 
   // Fetch timesheet data with extended months for trend charts
   const {
@@ -489,11 +486,17 @@ export function InvestorDashboardPage() {
             Key metrics for <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
           </p>
         </div>
-        <MonthPicker
-          selectedMonth={selectedMonth}
-          onChange={setSelectedMonth}
-        />
       </div>
+
+      {/* Range Selector */}
+      <RangeSelector
+        variant="dateRange"
+        dateRange={dateRange}
+        onChange={setDateRange}
+        controlledMode={mode}
+        controlledSelectedMonth={filterSelectedMonth}
+        onFilterChange={setFilter}
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
