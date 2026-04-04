@@ -240,7 +240,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
-  // Projected annual revenue from DB (single source of truth for chart bands)
+  // Projected annual revenue — client-side shared hook (single source of truth for chart bands)
   const { projectedAnnualRevenue } = useProjectedAnnualRevenue();
 
   // Loading state for utilization inputs (employees, timeOff, holidays, rates)

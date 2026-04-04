@@ -92,8 +92,8 @@ export function InvestorDashboardPage() {
   // Fetch pre-calculated investor metrics from DB
   const { data: investorMetrics, loading: investorMetricsLoading } = useInvestorMetrics(selectedMonth);
 
-  // Projected annual revenue from DB (single source of truth for chart bands and metric card)
-  const { projectedAnnualRevenue: dbProjectedAnnualRevenue } = useProjectedAnnualRevenue();
+  // Projected annual revenue — client-side shared hook (single source of truth)
+  const { projectedAnnualRevenue: hookProjectedAnnualRevenue } = useProjectedAnnualRevenue();
 
   // Revenue metrics from DB (investor metrics RPC)
   const combinedTotalRevenue = (investorMetrics?.combined_total_revenue_cents ?? 0) / 100;
@@ -297,9 +297,9 @@ export function InvestorDashboardPage() {
   );
 
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  // Use DB-computed projectedAnnualRevenue for best/worst case bands (+/- 15%)
-  // Falls back to CAGR-based value if DB value not yet available
-  const effectiveProjectedRevenue = dbProjectedAnnualRevenue ?? growthStats.projectedAnnualRevenue;
+  // Use shared client-side projected revenue for best/worst case bands (+/- 15%)
+  // No CAGR fallback — identical formula as local calculation below
+  const effectiveProjectedRevenue = hookProjectedAnnualRevenue ?? null;
   const lineData = useMemo(
     () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, effectiveProjectedRevenue),
     [combinedRevenueByMonth, effectiveProjectedRevenue]
@@ -366,61 +366,10 @@ export function InvestorDashboardPage() {
   const projectedRevenue = earnedTotalRevenue + (avgDailyRevenue * remainingWorkdays);
   const projectedBilledRevenue = combinedTotalRevenue + (avgDailyBilledRevenue * remainingWorkdays);
 
-  // ========== REMAINING YEAR WORKDAYS (today through Dec 31) ==========
-  const remainingYearWorkdays = useMemo(() => {
-    const holidayDates = holidays.map(h => new Date(h.holiday_date));
-    const days = eachDayOfInterval({ start: yearStart, end: yearEnd });
-    return days.filter(day => {
-      if (isWeekend(day)) return false;
-      if (holidayDates.some(h => isSameDay(h, day))) return false;
-      return true;
-    }).length;
-  }, [holidays, yearStart, yearEnd]);
-
-  // ========== REMAINING VACATION DAYS BY EMPLOYMENT TYPE ==========
-  const { ftVacationDays, ptVacationDays } = useMemo(() => {
-    const holidayDates = holidays.map(h => new Date(h.holiday_date));
-    let ftDays = 0;
-    let ptDays = 0;
-
-    for (const employee of employees) {
-      const empType = employee.employment_type?.name;
-      if (empType !== 'Full-time' && empType !== 'Part-time') continue;
-
-      const displayName = [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.external_label;
-
-      for (const to of yearRemainingTimeOff) {
-        if (to.employee_name !== displayName && to.resource_id !== employee.id) continue;
-
-        const ptoStart = new Date(to.start_date);
-        const ptoEnd = new Date(to.end_date);
-        const overlapStart = ptoStart < yearStart ? yearStart : ptoStart;
-        const overlapEnd = ptoEnd > yearEnd ? yearEnd : ptoEnd;
-
-        if (overlapStart <= overlapEnd) {
-          const ptoDays = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
-          for (const day of ptoDays) {
-            if (!isWeekend(day) && !holidayDates.some(h => isSameDay(h, day))) {
-              if (empType === 'Full-time') ftDays++;
-              else ptDays++;
-            }
-          }
-        }
-      }
-    }
-
-    return { ftVacationDays: ftDays, ptVacationDays: ptDays };
-  }, [employees, yearRemainingTimeOff, holidays, yearStart, yearEnd]);
-
   // ========== PROJECTED ANNUAL REVENUE ==========
-  // YTD + (avg daily * remaining workdays) - vacation deductions
-  const projectedAnnualRevenue = useMemo(() => {
-    const avgRate = rateMetrics.averageRate;
-    return ytdRevenue
-      + (avgDailyRevenue * remainingYearWorkdays)
-      - (ftVacationDays * 8 * avgRate)
-      - (ptVacationDays * 5 * avgRate);
-  }, [ytdRevenue, avgDailyRevenue, remainingYearWorkdays, ftVacationDays, ptVacationDays, rateMetrics.averageRate]);
+  // Uses the shared hook value — identical formula computed in useProjectedAnnualRevenue
+  // (remainingYearWorkdays, ftVacationDays, ptVacationDays now computed inside the hook)
+  const projectedAnnualRevenue = hookProjectedAnnualRevenue;
 
   // ========== PROJECTED QUARTERLY REVENUE ==========
   // Quarter so far + (avg daily * remaining quarter workdays) - vacation deductions
@@ -540,7 +489,7 @@ export function InvestorDashboardPage() {
               title="Total Revenue (YTD)"
               value={formatCurrency(ytdRevenue)}
               secondaryLabel="Projected"
-              secondaryValue={formatCurrency(dbProjectedAnnualRevenue ?? projectedAnnualRevenue)}
+              secondaryValue={projectedAnnualRevenue != null ? formatCurrency(projectedAnnualRevenue) : '—'}
             />
             <MetricCard
               title={`Q${currentQuarter} Revenue`}
