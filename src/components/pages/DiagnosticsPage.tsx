@@ -6,6 +6,7 @@ import { useSyncRuns } from '../../hooks/useSyncRuns';
 /** Map sync_type DB values to human-readable labels */
 const SYNC_TYPE_LABELS: Record<string, string> = {
   clockify_timesheets: 'Clockify',
+  clickup_timesheets: 'ClickUp',
   bamboohr_timeoff: 'BambooHR Time Off',
   bamboohr_employees: 'BambooHR Employees',
 };
@@ -13,6 +14,7 @@ const SYNC_TYPE_LABELS: Record<string, string> = {
 /** Unit suffix for hours/days columns based on sync type */
 function getValueUnit(syncType: string): string | null {
   if (syncType === 'clockify_timesheets') return 'hrs';
+  if (syncType === 'clickup_timesheets') return 'hrs';
   if (syncType === 'bamboohr_timeoff') return 'days';
   return null;
 }
