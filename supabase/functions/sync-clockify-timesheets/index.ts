@@ -508,9 +508,11 @@ serve(async (req) => {
     // =========================================================================
     // Wrapped in try/catch — reconciliation failures never block core sync.
     // Alert types:
-    //   clockify_sync_incomplete (error)  — fetch failed or hit safety limit
-    //   clockify_zero_entries (warning)   — 0 entries returned
+    //   clockify_sync_incomplete (error)    — fetch failed or hit safety limit
+    //   clockify_zero_entries (warning)     — 0 entries returned
     //   clockify_high_deletion_count (warning) — cleanup deleted > 50 entries
+    //   clockify_hours_mismatch (warning)   — Clockify total minutes per user
+    //                                         don't match Manifest rollups
     // Auto-resolve on next successful sync.
     // =========================================================================
     let reconciliationResult: Record<string, unknown> = {
@@ -671,6 +673,168 @@ serve(async (req) => {
             })
             .eq('id', alert.id);
           alertsResolved++;
+        }
+      }
+
+      // --- Alert: clockify_hours_mismatch ---
+      // Compare Clockify raw totals per user against Manifest (timesheet_daily_rollups)
+      // Only run if fetch completed and upsert succeeded (data is reliable)
+      if (fetchComplete && !upsertError && allTimeEntries.length > 0) {
+        try {
+          console.log('[sync-clockify] Starting hours mismatch reconciliation...');
+
+          // 1. Sum Clockify raw entries per userId using Math.ceil(seconds / 60)
+          const clockifyTotalsByUser: Record<string, { minutes: number; name: string }> = {};
+          for (const entry of allTimeEntries) {
+            const userId = (entry?.userId as string) || null;
+            if (!userId) continue;
+
+            const timeInterval = entry?.timeInterval as Record<string, unknown> | undefined;
+            const durationSeconds = typeof timeInterval?.duration === 'number'
+              ? timeInterval.duration
+              : 0;
+
+            if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) continue;
+
+            const minutes = Math.ceil(durationSeconds / 60);
+
+            if (!clockifyTotalsByUser[userId]) {
+              clockifyTotalsByUser[userId] = {
+                minutes: 0,
+                name: (entry?.userName as string) || 'Unknown',
+              };
+            }
+            clockifyTotalsByUser[userId].minutes += minutes;
+          }
+
+          // 2. Query Manifest's timesheet_daily_rollups for the same date range, grouped by user_id
+          const rangeStartDate = rangeStartISO.split('T')[0];
+          const rangeEndDate = rangeEndISO.split('T')[0];
+
+          const { data: manifestRollups, error: manifestError } = await supabase
+            .from('timesheet_daily_rollups')
+            .select('user_id, total_minutes')
+            .eq('clockify_workspace_id', clockifyWorkspaceId)
+            .gte('work_date', rangeStartDate)
+            .lte('work_date', rangeEndDate);
+
+          if (manifestError) {
+            throw new Error(`Manifest rollups query error: ${manifestError.message}`);
+          }
+
+          const manifestTotalsByUser: Record<string, number> = {};
+          for (const row of (manifestRollups || [])) {
+            const userId = row.user_id;
+            if (userId) {
+              manifestTotalsByUser[userId] = (manifestTotalsByUser[userId] || 0) + (row.total_minutes || 0);
+            }
+          }
+
+          // 3. Compare per user and generate mismatch alerts
+          const allUserIds = new Set([
+            ...Object.keys(clockifyTotalsByUser),
+            ...Object.keys(manifestTotalsByUser),
+          ]);
+
+          const mismatchedUserIds: string[] = [];
+
+          for (const userId of allUserIds) {
+            const clockifyMinutes = clockifyTotalsByUser[userId]?.minutes || 0;
+            const manifestMinutes = manifestTotalsByUser[userId] || 0;
+
+            if (clockifyMinutes !== manifestMinutes) {
+              mismatchedUserIds.push(userId);
+              const userName = clockifyTotalsByUser[userId]?.name || 'Unknown';
+
+              const newMetadata = {
+                clockify_minutes: clockifyMinutes,
+                manifest_minutes: manifestMinutes,
+                range_start: rangeStartDate,
+                range_end: rangeEndDate,
+              };
+
+              // Check if an active alert already exists for this user
+              const { data: existingAlert } = await supabase
+                .from('sync_alerts')
+                .select('id, metadata, dismissed_at')
+                .eq('alert_type', 'clockify_hours_mismatch')
+                .eq('entity_id', userId)
+                .is('resolved_at', null)
+                .maybeSingle();
+
+              if (existingAlert) {
+                // Alert exists — check if values changed
+                const oldMeta = existingAlert.metadata as Record<string, unknown> || {};
+                const valuesChanged = oldMeta.clockify_minutes !== clockifyMinutes
+                  || oldMeta.manifest_minutes !== manifestMinutes;
+
+                if (valuesChanged) {
+                  // Values changed — update and clear dismissed_at so it reappears
+                  await supabase
+                    .from('sync_alerts')
+                    .update({
+                      title: `Hours mismatch: ${userName} has ${clockifyMinutes} minutes in Clockify but ${manifestMinutes} minutes in Manifest`,
+                      metadata: newMetadata,
+                      dismissed_at: null,
+                      dismissed_by: null,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', existingAlert.id);
+
+                  alertsCreated++;
+                }
+                // If values are the same, leave it alone (keep dismissed state)
+              } else {
+                // No active alert — insert new one
+                await supabase
+                  .from('sync_alerts')
+                  .insert({
+                    alert_type: 'clockify_hours_mismatch',
+                    severity: 'warning',
+                    title: `Hours mismatch: ${userName} has ${clockifyMinutes} minutes in Clockify but ${manifestMinutes} minutes in Manifest`,
+                    entity_type: 'user',
+                    entity_id: userId,
+                    entity_name: userName,
+                    metadata: newMetadata,
+                  });
+
+                alertsCreated++;
+              }
+            }
+          }
+
+          // 4. Auto-resolve mismatch alerts for users that now match
+          const { data: activeMismatchAlerts } = await supabase
+            .from('sync_alerts')
+            .select('id, entity_id')
+            .eq('alert_type', 'clockify_hours_mismatch')
+            .is('resolved_at', null);
+
+          for (const alert of (activeMismatchAlerts || [])) {
+            if (alert.entity_id && !mismatchedUserIds.includes(alert.entity_id)) {
+              await supabase
+                .from('sync_alerts')
+                .update({
+                  resolved_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', alert.id);
+
+              alertsResolved++;
+            }
+          }
+
+          console.log(
+            `[sync-clockify] Hours mismatch reconciliation: ` +
+            `${mismatchedUserIds.length} mismatches found, ` +
+            `users checked: ${allUserIds.size}`,
+          );
+        } catch (hoursMismatchError) {
+          // Hours mismatch reconciliation failure is non-blocking
+          console.error(
+            '[sync-clockify] Hours mismatch reconciliation error (non-blocking):',
+            hoursMismatchError instanceof Error ? hoursMismatchError.message : String(hoursMismatchError),
+          );
         }
       }
 

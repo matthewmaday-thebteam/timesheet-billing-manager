@@ -1,8 +1,9 @@
 /**
- * useSyncAlerts - Fetch and manage BambooHR reconciliation alerts.
+ * useSyncAlerts - Fetch and manage sync reconciliation alerts.
  *
  * Provides active (unresolved, undismissed) alerts for dashboard display
  * and a dismiss function that records the dismissal with the current user.
+ * Covers alerts from all sync sources: BambooHR and Clockify.
  *
  * @official 2026-04-04
  * @category Hook
@@ -18,7 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export interface SyncAlert {
   id: string;
-  alert_type: 'timeoff_days_mismatch' | 'unmatched_resource';
+  alert_type: 'timeoff_days_mismatch' | 'unmatched_resource' | 'clockify_sync_incomplete' | 'clockify_zero_entries' | 'clockify_high_deletion_count' | 'clockify_hours_mismatch';
   severity: 'warning' | 'error';
   title: string;
   detail: string | null;

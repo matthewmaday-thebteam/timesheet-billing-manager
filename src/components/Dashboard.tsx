@@ -267,7 +267,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <h2 className="text-lg font-bold text-error-text">
-                BambooHR Sync Alerts
+                Sync Alerts
               </h2>
               <Badge variant="error" size="md">
                 {syncAlerts.length} {syncAlerts.length === 1 ? 'issue' : 'issues'}
@@ -302,6 +302,11 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
                   {alert.metadata && typeof alert.metadata === 'object' && 'bamboo_days' in alert.metadata && (
                     <p className="text-xs mt-1">
                       BambooHR: {String(alert.metadata.bamboo_days)} days | Manifest: {String(alert.metadata.manifest_days)} days
+                    </p>
+                  )}
+                  {alert.metadata && typeof alert.metadata === 'object' && 'clockify_minutes' in alert.metadata && (
+                    <p className="text-xs mt-1">
+                      Clockify: {String(alert.metadata.clockify_minutes)} min | Manifest: {String(alert.metadata.manifest_minutes)} min
                     </p>
                   )}
                 </Alert>
