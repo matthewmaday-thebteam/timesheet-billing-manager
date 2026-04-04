@@ -286,10 +286,18 @@ export function InvestorDashboardPage() {
   }, [billingResult.companies, projectCanonicalIdLookup]);
 
   // ========== CHART DATA ==========
-  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  const lineData = useMemo(
-    () => transformToLineChartData(combinedRevenueByMonth),
+  // Growth stats (computed first — lineData depends on projectedAnnualRevenue)
+  const growthStats = useMemo(
+    () => calculateGrowthStats(combinedRevenueByMonth),
     [combinedRevenueByMonth]
+  );
+
+  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
+  // Pass CAGR-based projectedAnnualRevenue for best/worst case bands (+/- 15%)
+  // NOTE: Uses growthStats.projectedAnnualRevenue (CAGR-based), NOT the page's own refined projection
+  const lineData = useMemo(
+    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, growthStats.projectedAnnualRevenue),
+    [combinedRevenueByMonth, growthStats.projectedAnnualRevenue]
   );
 
   // Quarter selector state — defaults to current quarter
@@ -319,12 +327,6 @@ export function InvestorDashboardPage() {
   // CAGR data
   const cagrData = useMemo(
     () => transformToCAGRProjectionData(combinedRevenueByMonth),
-    [combinedRevenueByMonth]
-  );
-
-  // Growth stats
-  const growthStats = useMemo(
-    () => calculateGrowthStats(combinedRevenueByMonth),
     [combinedRevenueByMonth]
   );
 

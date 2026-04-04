@@ -94,12 +94,15 @@ export function transformResourcesToPieData(
  * @param revenueByMonthKey - Map of YYYY-MM keys to monthly revenue in dollars (may include prior year data)
  * @param annualBudget - Annual budget in dollars (default: $1M)
  * @param targetRatio - Target multiplier (default: 1.8x)
+ * @param projectedAnnualRevenue - CAGR-based projected annual revenue from calculateGrowthStats().
+ *   When provided, bestCase/worstCase use +/- 15% of this value interpolated across months.
  * @returns Array of 12 line graph data points (full year)
  */
 export function transformToLineChartData(
   revenueByMonthKey: Map<string, number>,
   annualBudget: number = ANNUAL_BUDGET,
-  targetRatio: number = TARGET_RATIO
+  targetRatio: number = TARGET_RATIO,
+  projectedAnnualRevenue?: number | null
 ): LineGraphDataPoint[] {
   const currentYear = new Date().getFullYear();
   const priorYear = currentYear - 1;
@@ -124,24 +127,13 @@ export function transformToLineChartData(
     ? priorYearAnnualRevenue / 12
     : null;
 
-  // Find the last month with revenue data and calculate average monthly revenue
+  // Find the last month with revenue data
   let lastMonthWithData = -1;
-  let totalRevenue = 0;
-  let monthsWithRevenue = 0;
   for (let i = 0; i < 12; i++) {
     if (revenueByMonth.has(i)) {
       lastMonthWithData = i;
-      totalRevenue += revenueByMonth.get(i)!;
-      monthsWithRevenue++;
     }
   }
-
-  // Calculate average monthly revenue for projections
-  const avgMonthlyRevenue = monthsWithRevenue > 0 ? totalRevenue / monthsWithRevenue : 0;
-
-  // Variance for best/worst case (20% above/below average growth)
-  const bestCaseMultiplier = 1.2;
-  const worstCaseMultiplier = 0.8;
 
   // Generate cumulative values for full year
   let cumulativeRevenue = 0;
@@ -162,18 +154,14 @@ export function transformToLineChartData(
     const showRevenue = hasAnyData && index >= 0;
 
     // Calculate projections for future months (after last month with data)
+    // Uses CAGR-based projectedAnnualRevenue with +/- 15% for best/worst case
     let bestCase: number | null = null;
     let worstCase: number | null = null;
 
-    if (hasAnyData && index > lastMonthWithData) {
-      // Number of months into the future from last data point
-      const monthsAhead = index - lastMonthWithData;
-
-      // Best case: current revenue + (months ahead × avg monthly × best multiplier)
-      bestCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * bestCaseMultiplier));
-
-      // Worst case: current revenue + (months ahead × avg monthly × worst multiplier)
-      worstCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * worstCaseMultiplier));
+    if (hasAnyData && index > lastMonthWithData && projectedAnnualRevenue != null && projectedAnnualRevenue > 0) {
+      // Interpolate cumulative year-end values proportionally across months
+      bestCase = Math.round(projectedAnnualRevenue * 1.15 * (index + 1) / 12);
+      worstCase = Math.round(projectedAnnualRevenue * 0.85 * (index + 1) / 12);
     }
 
     // Prior year cumulative: calculated from HISTORICAL_ANNUAL_REVENUE, not DB data
@@ -334,8 +322,9 @@ export function generateMockLineData(
 
   let cumulativeRevenue = 0;
   let cumulativePriorYear = 0;
-  const avgMonthlyRevenue = monthlyBudget * 0.9; // Mock average
   const mockPriorYearMonthly = monthlyBudget * 0.8; // Mock prior year slightly lower
+  // Mock projected annual revenue for best/worst case bands
+  const mockProjectedAnnual = annualBudget * 1.1;
 
   return months.map((month, index) => {
     // Cumulative target and budget
@@ -352,14 +341,13 @@ export function generateMockLineData(
     // Mock prior year cumulative (all 12 months)
     cumulativePriorYear += mockPriorYearMonthly * (0.9 + seededRandom(index + 100) * 0.2);
 
-    // Calculate projections for future months
+    // Calculate projections for future months using +/- 15% of projected annual
     let bestCase: number | null = null;
     let worstCase: number | null = null;
 
     if (index >= monthsWithData) {
-      const monthsAhead = index - monthsWithData + 1;
-      bestCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 1.2));
-      worstCase = Math.round(cumulativeRevenue + (monthsAhead * avgMonthlyRevenue * 0.8));
+      bestCase = Math.round(mockProjectedAnnual * 1.15 * (index + 1) / 12);
+      worstCase = Math.round(mockProjectedAnnual * 0.85 * (index + 1) / 12);
     }
 
     return {

@@ -229,10 +229,17 @@ export function DashboardChartsRow({
     [resources]
   );
 
-  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  const lineData = useMemo(
-    () => transformToLineChartData(combinedRevenueByMonth),
+  // Growth statistics for display (computed first — lineData depends on projectedAnnualRevenue)
+  const growthStats = useMemo(
+    () => calculateGrowthStats(combinedRevenueByMonth),
     [combinedRevenueByMonth]
+  );
+
+  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
+  // Pass CAGR-based projectedAnnualRevenue for best/worst case bands (+/- 15%)
+  const lineData = useMemo(
+    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, growthStats.projectedAnnualRevenue),
+    [combinedRevenueByMonth, growthStats.projectedAnnualRevenue]
   );
 
   // Quarterly chart data — slice of the 12-month data for the selected quarter
@@ -250,12 +257,6 @@ export function DashboardChartsRow({
   // CAGR Projection data
   const cagrData = useMemo(
     () => transformToCAGRProjectionData(combinedRevenueByMonth),
-    [combinedRevenueByMonth]
-  );
-
-  // Growth statistics for display
-  const growthStats = useMemo(
-    () => calculateGrowthStats(combinedRevenueByMonth),
     [combinedRevenueByMonth]
   );
 
