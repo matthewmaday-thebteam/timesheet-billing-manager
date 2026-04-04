@@ -11,6 +11,24 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-04-04',
+    title: 'BambooHR Sync Migration & Reconciliation Alerts',
+    highlights: [
+      'Migrated BambooHR sync from n8n to Supabase Edge Functions: employee directory syncs daily, time-off syncs every 2 hours via pg_cron',
+      'New reconciliation alerts: detects time-off day mismatches between BambooHR and Manifest, and flags unmatched resources on the dashboard',
+      'Alerts are group-aware (respects physical person groups) and employment-type-aware (excludes contractors, vendors, and extended leave)',
+      'Dashboard alert banners with dismiss functionality and red nav badge showing active alert count',
+      'Alerts auto-resolve when discrepancies are fixed on the next sync cycle',
+      'New "Extended Leave" employment type for employees on long-term leave: excluded from utilization, expected hours, and BambooHR linking',
+      'Employee Editor now allows saving Extended Leave resources with 0 expected hours',
+      'Added Profit column to Employee Performance table across all 4 tiers (employee, company, project, task) with CSV export',
+      'Paginated data fetching across timesheet queries and revenue report Edge Functions to guarantee complete results',
+      'Fixed date range queries to use interval overlap logic, resolving false mismatches for cross-year time-off records',
+      'Removed legacy test accounts (John Smith, Kalin Test, Jane Doe) from BambooHR employees',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-04-03',
     title: 'Investor Dashboard Projection Fixes',
     highlights: [
