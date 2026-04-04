@@ -61,9 +61,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const token = authHeader.replace('Bearer ', '');
 
-    // If the token IS the service role key, it's a cron/server call — trusted.
-    // Otherwise, validate as a user session via getUser().
-    if (token !== supabaseServiceKey) {
+    // Check if the JWT has service_role — handles both JWT and sb_secret_ env var formats
+    let isServiceRole = false;
+    try {
+      const payloadB64 = token.split('.')[1];
+      if (payloadB64) {
+        const payload = JSON.parse(atob(payloadB64));
+        isServiceRole = payload.role === 'service_role';
+      }
+    } catch {
+      // Not a valid JWT — fall through to user session check
+    }
+
+    if (!isServiceRole) {
       const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: `Bearer ${token}` } },
       });
@@ -97,7 +107,8 @@ serve(async (req) => {
     }
 
     const syncRunAt = new Date().toISOString();
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Use the JWT token for the Supabase client (env var may be sb_secret_ format)
+    const supabase = createClient(supabaseUrl, isServiceRole ? token : supabaseServiceKey);
 
     console.log(`[sync-bamboohr-timeoff] Starting sync: ${rangeStartDate} to ${rangeEndDate}`);
 
@@ -362,6 +373,231 @@ serve(async (req) => {
     );
 
     // =========================================================================
+    // RECONCILIATION: Generate sync_alerts for discrepancies
+    // =========================================================================
+    // Wrapped in try/catch so reconciliation failures never block core sync.
+    let reconciliationResult = {
+      mismatch_alerts_created: 0,
+      mismatch_alerts_resolved: 0,
+      unmatched_alerts_created: 0,
+      unmatched_alerts_resolved: 0,
+      reconciliation_error: null as string | null,
+    };
+
+    try {
+      console.log('[sync-bamboohr-timeoff] Starting reconciliation...');
+
+      // -----------------------------------------------------------------------
+      // Step A: Days Mismatch Detection
+      // -----------------------------------------------------------------------
+      // 1. Sum BambooHR days from the already-fetched timeOffRows
+      const bambooTotalsByEmployee: Record<string, { days: number; name: string }> = {};
+      for (const row of timeOffRows) {
+        const empId = row.bamboo_employee_id;
+        if (!bambooTotalsByEmployee[empId]) {
+          bambooTotalsByEmployee[empId] = { days: 0, name: row.employee_name };
+        }
+        bambooTotalsByEmployee[empId].days += row.total_days;
+      }
+
+      // 2. Query Manifest's employee_time_off totals for the same date range
+      const { data: manifestTotals, error: manifestTotalsError } = await supabase
+        .from('employee_time_off')
+        .select('bamboo_employee_id, total_days')
+        .gte('start_date', rangeStartDate)
+        .lte('end_date', rangeEndDate);
+
+      if (manifestTotalsError) {
+        throw new Error(`Manifest totals query error: ${manifestTotalsError.message}`);
+      }
+
+      const manifestTotalsByEmployee: Record<string, number> = {};
+      for (const row of (manifestTotals || [])) {
+        const empId = row.bamboo_employee_id;
+        if (empId) {
+          manifestTotalsByEmployee[empId] = (manifestTotalsByEmployee[empId] || 0) + (row.total_days || 0);
+        }
+      }
+
+      // 3. Compare and generate mismatch alerts
+      const allEmpIds = new Set([
+        ...Object.keys(bambooTotalsByEmployee),
+        ...Object.keys(manifestTotalsByEmployee),
+      ]);
+
+      const mismatchedEmpIds: string[] = [];
+
+      for (const empId of allEmpIds) {
+        const bambooDays = bambooTotalsByEmployee[empId]?.days || 0;
+        const manifestDays = manifestTotalsByEmployee[empId] || 0;
+
+        // Round to 1 decimal to avoid floating-point noise
+        const bambooRounded = Math.round(bambooDays * 10) / 10;
+        const manifestRounded = Math.round(manifestDays * 10) / 10;
+
+        if (bambooRounded !== manifestRounded) {
+          mismatchedEmpIds.push(empId);
+          const empName = bambooTotalsByEmployee[empId]?.name
+            || employeeLookup[empId]?.name
+            || 'Unknown Employee';
+
+          const newMetadata = {
+            bamboo_days: bambooRounded,
+            manifest_days: manifestRounded,
+            range_start: rangeStartDate,
+            range_end: rangeEndDate,
+          };
+
+          // Check if an active alert already exists for this employee
+          const { data: existingAlert } = await supabase
+            .from('sync_alerts')
+            .select('id, metadata, dismissed_at')
+            .eq('alert_type', 'timeoff_days_mismatch')
+            .eq('entity_id', empId)
+            .is('resolved_at', null)
+            .maybeSingle();
+
+          if (existingAlert) {
+            // Alert exists — check if values changed
+            const oldMeta = existingAlert.metadata as Record<string, unknown> || {};
+            const valuesChanged = oldMeta.bamboo_days !== bambooRounded
+              || oldMeta.manifest_days !== manifestRounded;
+
+            if (valuesChanged) {
+              // Values changed — update and clear dismissed_at so it reappears
+              await supabase
+                .from('sync_alerts')
+                .update({
+                  title: `Time-off mismatch: ${empName} has ${bambooRounded} days in BambooHR but ${manifestRounded} days in Manifest`,
+                  metadata: newMetadata,
+                  dismissed_at: null,
+                  dismissed_by: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingAlert.id);
+
+              reconciliationResult.mismatch_alerts_created++;
+            }
+            // If values are the same, leave it alone (keep dismissed state)
+          } else {
+            // No active alert — insert new one
+            await supabase
+              .from('sync_alerts')
+              .insert({
+                alert_type: 'timeoff_days_mismatch',
+                severity: 'warning',
+                title: `Time-off mismatch: ${empName} has ${bambooRounded} days in BambooHR but ${manifestRounded} days in Manifest`,
+                entity_type: 'employee',
+                entity_id: empId,
+                entity_name: empName,
+                metadata: newMetadata,
+              });
+
+            reconciliationResult.mismatch_alerts_created++;
+          }
+        }
+      }
+
+      // 4. Auto-resolve mismatch alerts for employees that now match
+      const { data: activeMismatchAlerts } = await supabase
+        .from('sync_alerts')
+        .select('id, entity_id')
+        .eq('alert_type', 'timeoff_days_mismatch')
+        .is('resolved_at', null);
+
+      for (const alert of (activeMismatchAlerts || [])) {
+        if (alert.entity_id && !mismatchedEmpIds.includes(alert.entity_id)) {
+          await supabase
+            .from('sync_alerts')
+            .update({
+              resolved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', alert.id);
+
+          reconciliationResult.mismatch_alerts_resolved++;
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Step B: Unmatched Resources Detection
+      // -----------------------------------------------------------------------
+      // 1. Query resources with no bamboo_employee_id
+      const { data: unmatchedResources, error: unmatchedError } = await supabase
+        .from('resources')
+        .select('id, first_name, last_name')
+        .is('bamboo_employee_id', null);
+
+      if (unmatchedError) {
+        throw new Error(`Unmatched resources query error: ${unmatchedError.message}`);
+      }
+
+      const unmatchedResourceIds: string[] = [];
+
+      for (const resource of (unmatchedResources || [])) {
+        unmatchedResourceIds.push(resource.id);
+        const resourceName = [resource.first_name, resource.last_name]
+          .filter(Boolean).join(' ') || 'Unknown Resource';
+
+        // Check if active alert already exists
+        const { data: existingAlert } = await supabase
+          .from('sync_alerts')
+          .select('id')
+          .eq('alert_type', 'unmatched_resource')
+          .eq('entity_id', resource.id)
+          .is('resolved_at', null)
+          .maybeSingle();
+
+        if (!existingAlert) {
+          await supabase
+            .from('sync_alerts')
+            .insert({
+              alert_type: 'unmatched_resource',
+              severity: 'error',
+              title: `${resourceName} is not linked to any BambooHR employee`,
+              entity_type: 'resource',
+              entity_id: resource.id,
+              entity_name: resourceName,
+            });
+
+          reconciliationResult.unmatched_alerts_created++;
+        }
+      }
+
+      // 2. Auto-resolve unmatched alerts for resources now linked
+      const { data: activeUnmatchedAlerts } = await supabase
+        .from('sync_alerts')
+        .select('id, entity_id')
+        .eq('alert_type', 'unmatched_resource')
+        .is('resolved_at', null);
+
+      for (const alert of (activeUnmatchedAlerts || [])) {
+        if (alert.entity_id && !unmatchedResourceIds.includes(alert.entity_id)) {
+          await supabase
+            .from('sync_alerts')
+            .update({
+              resolved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', alert.id);
+
+          reconciliationResult.unmatched_alerts_resolved++;
+        }
+      }
+
+      console.log('[sync-bamboohr-timeoff] Reconciliation complete:', JSON.stringify(reconciliationResult));
+    } catch (reconciliationError) {
+      reconciliationResult.reconciliation_error =
+        reconciliationError instanceof Error
+          ? reconciliationError.message
+          : String(reconciliationError);
+      console.error(
+        '[sync-bamboohr-timeoff] Reconciliation error (non-blocking):',
+        reconciliationResult.reconciliation_error,
+      );
+    }
+
+    // =========================================================================
     // Response summary
     // =========================================================================
     const result = {
@@ -377,6 +613,7 @@ serve(async (req) => {
       time_off_upserted: timeOffUpserted,
       time_off_deleted: timeOffDeleted,
       time_off_error: timeOffError,
+      reconciliation: reconciliationResult,
     };
 
     console.log(`[sync-bamboohr-timeoff] Complete:`, JSON.stringify(result));

@@ -30,9 +30,11 @@ interface MainHeaderProps {
   activeRoute: NavRoute;
   onRouteChange: (route: NavRoute) => void;
   onOpenDocs?: (section: DocsSection) => void;
+  /** Number of active sync alerts to show as a badge on the Home nav item */
+  alertCount?: number;
 }
 
-export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeaderProps) {
+export function MainHeader({ activeRoute, onRouteChange, onOpenDocs, alertCount = 0 }: MainHeaderProps) {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -88,12 +90,18 @@ export function MainHeader({ activeRoute, onRouteChange, onOpenDocs }: MainHeade
         {/* Left: Navigation Items */}
         <nav className="flex items-center gap-1">
           {navItems.map((item) => (
-            <NavItem
-              key={item.id}
-              label={item.label}
-              isActive={activeRoute === item.id}
-              onClick={() => onRouteChange(item.id)}
-            />
+            <div key={item.id} className="relative flex items-center">
+              <NavItem
+                label={item.label}
+                isActive={activeRoute === item.id}
+                onClick={() => onRouteChange(item.id)}
+              />
+              {item.id === 'home' && alertCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-error text-white text-xs font-medium px-1 leading-none">
+                  {alertCount > 99 ? '99+' : alertCount}
+                </span>
+              )}
+            </div>
           ))}
         </nav>
 

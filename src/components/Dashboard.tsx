@@ -24,8 +24,11 @@ import { UnderHoursModal } from './UnderHoursModal';
 import { Spinner } from './Spinner';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Alert } from './Alert';
+import { Badge } from './Badge';
 import { DailyHoursChart } from './atoms/charts/DailyHoursChart';
 import type { MonthSelection } from '../types';
+import type { SyncAlert } from '../hooks/useSyncAlerts';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
 function getGreeting(): string {
@@ -35,7 +38,16 @@ function getGreeting(): string {
   return 'Good Evening';
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  /** Active sync alerts to display at the top */
+  syncAlerts?: SyncAlert[];
+  /** Whether sync alerts are still loading */
+  syncAlertsLoading?: boolean;
+  /** Callback to dismiss an alert */
+  onDismissAlert?: (alertId: string) => Promise<void>;
+}
+
+export function Dashboard({ syncAlerts = [], syncAlertsLoading = false, onDismissAlert }: DashboardProps) {
   const { user } = useAuth();
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
@@ -240,8 +252,65 @@ export function Dashboard() {
     projectsWithRates,
   });
 
+  // Separate alerts by severity for display ordering
+  const errorAlerts = syncAlerts.filter(a => a.severity === 'error');
+  const warningAlerts = syncAlerts.filter(a => a.severity === 'warning');
+
   return (
     <>
+      {/* Sync Alerts Banner — Full width, above all content, impossible to miss */}
+      {syncAlerts.length > 0 && (
+        <div className="bg-error-light border-b-2 border-error">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center gap-3 mb-3">
+              <svg className="w-6 h-6 text-error flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-lg font-bold text-error-text">
+                BambooHR Sync Alerts
+              </h2>
+              <Badge variant="error" size="md">
+                {syncAlerts.length} {syncAlerts.length === 1 ? 'issue' : 'issues'}
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              {/* Error-severity alerts first */}
+              {errorAlerts.map((alert) => (
+                <Alert
+                  key={alert.id}
+                  message={alert.title}
+                  icon="error"
+                  variant="error"
+                  onClose={onDismissAlert ? () => onDismissAlert(alert.id) : undefined}
+                >
+                  {alert.detail && (
+                    <p className="text-xs mt-1">{alert.detail}</p>
+                  )}
+                </Alert>
+              ))}
+
+              {/* Warning-severity alerts */}
+              {warningAlerts.map((alert) => (
+                <Alert
+                  key={alert.id}
+                  message={alert.title}
+                  icon="warning"
+                  variant="warning"
+                  onClose={onDismissAlert ? () => onDismissAlert(alert.id) : undefined}
+                >
+                  {alert.metadata && typeof alert.metadata === 'object' && 'bamboo_days' in alert.metadata && (
+                    <p className="text-xs mt-1">
+                      BambooHR: {String(alert.metadata.bamboo_days)} days | Manifest: {String(alert.metadata.manifest_days)} days
+                    </p>
+                  )}
+                </Alert>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Greeting Section */}
         <section>

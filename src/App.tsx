@@ -5,6 +5,7 @@ import { MainHeader, type NavRoute } from './components/MainHeader';
 import { Footer } from './components/Footer';
 import { Dashboard } from './components/Dashboard';
 import { Spinner } from './components/Spinner';
+import { useSyncAlerts } from './hooks/useSyncAlerts';
 import { HolidaysPage } from './components/pages/HolidaysPage';
 import { EmployeesPage } from './components/pages/EmployeesPage';
 import { EmployeeManagementPage } from './components/pages/EmployeeManagementPage';
@@ -48,6 +49,7 @@ function getInitialStyleReviewState(): { show: boolean; section: DocsSection } {
 function AuthenticatedApp() {
   const [activeRoute, setActiveRoute] = useState<NavRoute>('home');
   const [styleReviewState, setStyleReviewState] = useState(getInitialStyleReviewState);
+  const { alerts: syncAlerts, activeCount: syncAlertCount, dismissAlert: dismissSyncAlert, loading: syncAlertsLoading } = useSyncAlerts();
 
   const handleOpenDocs = (section: DocsSection) => {
     setStyleReviewState({ show: true, section });
@@ -69,7 +71,7 @@ function AuthenticatedApp() {
   const renderPage = () => {
     switch (activeRoute) {
       case 'home':
-        return <Dashboard />;
+        return <Dashboard syncAlerts={syncAlerts} syncAlertsLoading={syncAlertsLoading} onDismissAlert={dismissSyncAlert} />;
       case 'holidays':
         return <HolidaysPage />;
       case 'employees':
@@ -105,7 +107,7 @@ function AuthenticatedApp() {
       case 'release-notes':
         return <ReleaseNotesPage />;
       default:
-        return <Dashboard />;
+        return <Dashboard syncAlerts={syncAlerts} syncAlertsLoading={syncAlertsLoading} onDismissAlert={dismissSyncAlert} />;
     }
   };
 
@@ -116,6 +118,7 @@ function AuthenticatedApp() {
           activeRoute={activeRoute}
           onRouteChange={setActiveRoute}
           onOpenDocs={handleOpenDocs}
+          alertCount={syncAlertCount}
         />
         <main className="flex-1">
           {renderPage()}
