@@ -154,14 +154,19 @@ export function transformToLineChartData(
     const showRevenue = hasAnyData && index >= 0;
 
     // Calculate projections for future months (after last month with data)
-    // Uses CAGR-based projectedAnnualRevenue with +/- 15% for best/worst case
+    // Uses CAGR-based projectedAnnualRevenue with +/- 15% for best/worst case.
+    // Lines fan out from the last actual cumulative revenue to the year-end values.
     let bestCase: number | null = null;
     let worstCase: number | null = null;
 
     if (hasAnyData && index > lastMonthWithData && projectedAnnualRevenue != null && projectedAnnualRevenue > 0) {
-      // Interpolate cumulative year-end values proportionally across months
-      bestCase = Math.round(projectedAnnualRevenue * 1.15 * (index + 1) / 12);
-      worstCase = Math.round(projectedAnnualRevenue * 0.85 * (index + 1) / 12);
+      const yearEndBest = projectedAnnualRevenue * 1.15;
+      const yearEndWorst = projectedAnnualRevenue * 0.85;
+      const remainingMonths = 11 - lastMonthWithData; // months from last data to December
+      const monthsAhead = index - lastMonthWithData;  // how far past last data point
+      const t = remainingMonths > 0 ? monthsAhead / remainingMonths : 1; // 0→1 interpolation factor
+      bestCase = Math.round(cumulativeRevenue + t * (yearEndBest - cumulativeRevenue));
+      worstCase = Math.round(cumulativeRevenue + t * (yearEndWorst - cumulativeRevenue));
     }
 
     // Prior year cumulative: calculated from HISTORICAL_ANNUAL_REVENUE, not DB data
