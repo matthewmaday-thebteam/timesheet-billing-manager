@@ -520,21 +520,84 @@ serve(async (req) => {
       }
 
       // -----------------------------------------------------------------------
-      // Step B: Unmatched Resources Detection
+      // Step B: Unmatched Resources Detection (group-aware, employment-type-aware)
       // -----------------------------------------------------------------------
-      // 1. Query resources with no bamboo_employee_id
-      const { data: unmatchedResources, error: unmatchedError } = await supabase
-        .from('resources')
-        .select('id, first_name, last_name')
-        .is('bamboo_employee_id', null);
+      // Employment types that do NOT use BambooHR — exclude from unmatched check
+      const EXCLUDED_EMPLOYMENT_TYPE_IDS = [
+        '9fec7939-d890-42d4-a59b-a0f24910e0a4', // Contractor
+        'bc05fc11-2df8-45af-b425-45ccd0caa4a8', // Vendor
+      ];
 
-      if (unmatchedError) {
-        throw new Error(`Unmatched resources query error: ${unmatchedError.message}`);
+      // 1. Query VISIBLE resources only (primary + unassociated, not members)
+      //    excluding contractors and vendors
+      const { data: visibleResources, error: visibleError } = await supabase
+        .from('v_employee_table_entities')
+        .select('id, first_name, last_name, bamboo_employee_id, employment_type_id, grouping_role, group_id');
+
+      if (visibleError) {
+        throw new Error(`Visible resources query error: ${visibleError.message}`);
       }
 
+      // 2. For grouped resources (primaries), check if ANY resource in the group
+      //    has a bamboo_employee_id set — if so, the group is matched
+      const groupIdsToCheck = (visibleResources || [])
+        .filter((r) => r.group_id && !r.bamboo_employee_id)
+        .map((r) => r.group_id as string);
+
+      // Build a set of group_ids that have at least one bamboo-linked resource
+      const matchedGroupIds = new Set<string>();
+
+      if (groupIdsToCheck.length > 0) {
+        // Query all group members + primaries to check for bamboo links
+        const uniqueGroupIds = [...new Set(groupIdsToCheck)];
+
+        for (const groupId of uniqueGroupIds) {
+          // Check if the primary has a bamboo link (already in visibleResources)
+          const primary = (visibleResources || []).find(
+            (r) => r.group_id === groupId && r.grouping_role === 'primary',
+          );
+          if (primary?.bamboo_employee_id) {
+            matchedGroupIds.add(groupId);
+            continue;
+          }
+
+          // Check if any member in this group has a bamboo link
+          const { data: members } = await supabase
+            .from('physical_person_group_members')
+            .select('member_resource_id, resources:member_resource_id(bamboo_employee_id)')
+            .eq('group_id', groupId);
+
+          const hasLinkedMember = (members || []).some((m) => {
+            const res = m.resources as unknown as { bamboo_employee_id: string | null } | null;
+            return res?.bamboo_employee_id != null;
+          });
+
+          if (hasLinkedMember) {
+            matchedGroupIds.add(groupId);
+          }
+        }
+      }
+
+      // 3. Determine truly unmatched resources
       const unmatchedResourceIds: string[] = [];
 
-      for (const resource of (unmatchedResources || [])) {
+      for (const resource of (visibleResources || [])) {
+        // Skip contractors and vendors — they don't use BambooHR
+        if (resource.employment_type_id && EXCLUDED_EMPLOYMENT_TYPE_IDS.includes(resource.employment_type_id)) {
+          continue;
+        }
+
+        // Skip if the resource itself has a bamboo link
+        if (resource.bamboo_employee_id) {
+          continue;
+        }
+
+        // Skip if the resource is in a group where ANY member has a bamboo link
+        if (resource.group_id && matchedGroupIds.has(resource.group_id)) {
+          continue;
+        }
+
+        // This resource is genuinely unmatched
         unmatchedResourceIds.push(resource.id);
         const resourceName = [resource.first_name, resource.last_name]
           .filter(Boolean).join(' ') || 'Unknown Resource';
@@ -564,7 +627,7 @@ serve(async (req) => {
         }
       }
 
-      // 2. Auto-resolve unmatched alerts for resources now linked
+      // 4. Auto-resolve unmatched alerts for resources now linked, grouped, or excluded
       const { data: activeUnmatchedAlerts } = await supabase
         .from('sync_alerts')
         .select('id, entity_id')
