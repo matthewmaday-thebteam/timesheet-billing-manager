@@ -29,6 +29,7 @@ import { Badge } from './Badge';
 import { DailyHoursChart } from './atoms/charts/DailyHoursChart';
 import type { MonthSelection } from '../types';
 import type { SyncAlert } from '../hooks/useSyncAlerts';
+import { useProjectedAnnualRevenue } from '../hooks/useProjectedAnnualRevenue';
 import { HISTORICAL_MONTHS } from '../config/chartConfig';
 
 function getGreeting(): string {
@@ -239,6 +240,9 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   // This matches the exact calculation in RevenuePage
   const combinedTotalRevenue = totalRevenue + (filteredBillingCents / 100) + milestoneAdjustment;
 
+  // Projected annual revenue from DB (single source of truth for chart bands)
+  const { projectedAnnualRevenue } = useProjectedAnnualRevenue();
+
   // Loading state for utilization inputs (employees, timeOff, holidays, rates)
   const utilizationLoading = employeesLoading || timeOffLoading || ratesLoading;
 
@@ -377,6 +381,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
             combinedRevenueByMonth={combinedRevenueByMonth}
             loading={loading || billingsLoading || combinedRevenueLoading}
             section="resources"
+            projectedAnnualRevenue={projectedAnnualRevenue}
           />
 
           {/* Daily Hours Chart */}
@@ -405,6 +410,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
             combinedRevenueByMonth={combinedRevenueByMonth}
             loading={loading || billingsLoading || combinedRevenueLoading}
             section="trends"
+            projectedAnnualRevenue={projectedAnnualRevenue}
           />
 
           {error && (

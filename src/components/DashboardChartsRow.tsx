@@ -68,6 +68,8 @@ export interface DashboardChartsRowProps {
   loading?: boolean;
   /** Which section to display: 'resources' (pie + top 5), 'trends' (revenue + MoM + CAGR), or 'all' */
   section?: 'resources' | 'trends' | 'all';
+  /** Override projected annual revenue (from DB RPC) for chart band calculation */
+  projectedAnnualRevenue?: number | null;
 }
 
 /**
@@ -207,6 +209,7 @@ export function DashboardChartsRow({
   combinedRevenueByMonth,
   loading = false,
   section = 'all',
+  projectedAnnualRevenue: projectedAnnualRevenueOverride,
 }: DashboardChartsRowProps) {
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
@@ -236,10 +239,11 @@ export function DashboardChartsRow({
   );
 
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  // Pass CAGR-based projectedAnnualRevenue for best/worst case bands (+/- 15%)
+  // Use DB-computed projectedAnnualRevenue when available, otherwise fall back to CAGR-based
+  const effectiveProjectedRevenue = projectedAnnualRevenueOverride ?? growthStats.projectedAnnualRevenue;
   const lineData = useMemo(
-    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, growthStats.projectedAnnualRevenue),
-    [combinedRevenueByMonth, growthStats.projectedAnnualRevenue]
+    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, effectiveProjectedRevenue),
+    [combinedRevenueByMonth, effectiveProjectedRevenue]
   );
 
   // Quarterly chart data — slice of the 12-month data for the selected quarter

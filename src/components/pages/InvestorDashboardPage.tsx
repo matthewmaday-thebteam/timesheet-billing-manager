@@ -8,6 +8,7 @@ import { useCombinedRevenue } from '../../hooks/useCombinedRevenue';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { useInvestorMetrics } from '../../hooks/useInvestorMetrics';
+import { useProjectedAnnualRevenue } from '../../hooks/useProjectedAnnualRevenue';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/billing';
 import {
@@ -90,6 +91,9 @@ export function InvestorDashboardPage() {
 
   // Fetch pre-calculated investor metrics from DB
   const { data: investorMetrics, loading: investorMetricsLoading } = useInvestorMetrics(selectedMonth);
+
+  // Projected annual revenue from DB (single source of truth for chart bands and metric card)
+  const { projectedAnnualRevenue: dbProjectedAnnualRevenue } = useProjectedAnnualRevenue();
 
   // Revenue metrics from DB (investor metrics RPC)
   const combinedTotalRevenue = (investorMetrics?.combined_total_revenue_cents ?? 0) / 100;
@@ -293,11 +297,12 @@ export function InvestorDashboardPage() {
   );
 
   // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  // Pass CAGR-based projectedAnnualRevenue for best/worst case bands (+/- 15%)
-  // NOTE: Uses growthStats.projectedAnnualRevenue (CAGR-based), NOT the page's own refined projection
+  // Use DB-computed projectedAnnualRevenue for best/worst case bands (+/- 15%)
+  // Falls back to CAGR-based value if DB value not yet available
+  const effectiveProjectedRevenue = dbProjectedAnnualRevenue ?? growthStats.projectedAnnualRevenue;
   const lineData = useMemo(
-    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, growthStats.projectedAnnualRevenue),
-    [combinedRevenueByMonth, growthStats.projectedAnnualRevenue]
+    () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, effectiveProjectedRevenue),
+    [combinedRevenueByMonth, effectiveProjectedRevenue]
   );
 
   // Quarter selector state — defaults to current quarter
@@ -535,7 +540,7 @@ export function InvestorDashboardPage() {
               title="Total Revenue (YTD)"
               value={formatCurrency(ytdRevenue)}
               secondaryLabel="Projected"
-              secondaryValue={formatCurrency(projectedAnnualRevenue)}
+              secondaryValue={formatCurrency(dbProjectedAnnualRevenue ?? projectedAnnualRevenue)}
             />
             <MetricCard
               title={`Q${currentQuarter} Revenue`}
