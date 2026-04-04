@@ -15,6 +15,25 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// --- Paginated fetch — guarantees all rows regardless of Supabase default limits ---
+
+async function fetchAllRows<T>(
+  queryBuilder: ReturnType<ReturnType<typeof createClient>['from']>,
+  pageSize = 1000,
+): Promise<{ data: T[]; error: null } | { data: null; error: { message: string } }> {
+  const allData: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    allData.push(...(data as T[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { data: allData, error: null };
+}
+
 // --- Utility functions (replicated from src/utils/billing.ts) ---
 
 function applyRounding(minutes: number, increment: number): number {
@@ -178,11 +197,14 @@ serve(async (req) => {
           .eq('company_id', companyUUID),
 
         // 2a. Timesheet entries for the month (all companies — filtered after resolution)
-        supabase
-          .from('v_timesheet_entries')
-          .select('project_id, task_name, total_minutes')
-          .gte('work_date', rangeStart)
-          .lt('work_date', rangeEnd),
+        // Uses paginated fetch to guarantee all rows are returned.
+        fetchAllRows<{ project_id: string; task_name: string; total_minutes: number }>(
+          supabase
+            .from('v_timesheet_entries')
+            .select('project_id, task_name, total_minutes')
+            .gte('work_date', rangeStart)
+            .lt('work_date', rangeEnd),
+        ),
 
         // 2b. All projects (for external ↔ internal ID mapping)
         supabase

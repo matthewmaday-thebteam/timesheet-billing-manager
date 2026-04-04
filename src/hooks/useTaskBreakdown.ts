@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchAllRows } from '../lib/fetchAllRows';
 import type { MonthSelection } from '../types';
 
 export interface TaskBreakdownEntry {
@@ -85,9 +86,9 @@ export function useTaskBreakdown({
         entriesQuery = entriesQuery.lte('work_date', rangeEnd);
       }
 
-      // Fetch entries and project group mapping in parallel
+      // Fetch entries (paginated to guarantee all rows) and project group mapping in parallel
       const [entriesResult, projectsResult, groupMembersResult] = await Promise.all([
-        entriesQuery,
+        fetchAllRows<{ project_id: string; task_name: string; total_minutes: number }>(entriesQuery),
 
         // All projects (for external → internal ID mapping)
         supabase

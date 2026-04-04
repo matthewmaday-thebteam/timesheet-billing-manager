@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchAllRows } from '../lib/fetchAllRows';
 import type { ResourceUserAssociation, AssociationSource } from '../types';
 
 interface UnassociatedUser {
@@ -44,10 +45,16 @@ export function useUserAssociations(): UseUserAssociationsResult {
 
     try {
       // Get all user_ids currently in timesheet data (use view for RLS compatibility)
-      const { data: timesheetUsers, error: timesheetError } = await supabase
-        .from('v_timesheet_entries')
-        .select('user_id, user_name, clockify_workspace_id')
-        .not('user_id', 'is', null);
+      const { data: timesheetUsers, error: timesheetError } = await fetchAllRows<{
+        user_id: string;
+        user_name: string;
+        clockify_workspace_id: string;
+      }>(
+        supabase
+          .from('v_timesheet_entries')
+          .select('user_id, user_name, clockify_workspace_id')
+          .not('user_id', 'is', null),
+      );
 
       if (timesheetError) {
         throw new Error(timesheetError.message);

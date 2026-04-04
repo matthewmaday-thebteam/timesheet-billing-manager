@@ -34,6 +34,27 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 // =============================================================================
+// Paginated fetch — guarantees all rows regardless of Supabase default limits
+// =============================================================================
+
+async function fetchAllRows<T>(
+  queryBuilder: ReturnType<ReturnType<typeof createClient>['from']>,
+  pageSize = 1000,
+): Promise<{ data: T[]; error: null } | { data: null; error: { message: string } }> {
+  const allData: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    allData.push(...(data as T[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { data: allData, error: null };
+}
+
+// =============================================================================
 // Utility functions (replicated from src/utils/billing.ts)
 // =============================================================================
 
@@ -310,11 +331,14 @@ serve(async (req) => {
         .in('project_id', allProjectInternalIds),
 
       // 2b. Timesheet entries for the week (all projects — filtered after resolution)
-      supabase
-        .from('v_timesheet_entries')
-        .select('project_id, task_name, total_minutes')
-        .gte('work_date', weekStart)
-        .lte('work_date', weekEnd),
+      // Uses paginated fetch to guarantee all rows are returned.
+      fetchAllRows<{ project_id: string; task_name: string; total_minutes: number }>(
+        supabase
+          .from('v_timesheet_entries')
+          .select('project_id, task_name, total_minutes')
+          .gte('work_date', weekStart)
+          .lte('work_date', weekEnd),
+      ),
 
       // 2c. All projects (for external <-> internal ID mapping)
       supabase

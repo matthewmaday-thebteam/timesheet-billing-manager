@@ -1,13 +1,14 @@
 /**
- * EmployeePerformance - Dashboard component showing employee hours and revenue
+ * EmployeePerformance - Dashboard component showing employee hours, profit, and revenue
  *
  * 4-tier expandable table:
- * - Tier 1: Employee (Name, PTO, Hours, Revenue)
- * - Tier 2: Company (Hours, Revenue)
- * - Tier 3: Project (Hours, Revenue)
- * - Tier 4: Task (Hours, Revenue)
+ * - Tier 1: Employee (Name, PTO, Hours, Profit, Revenue)
+ * - Tier 2: Company (Hours, Profit, Revenue)
+ * - Tier 3: Project (Hours, Profit, Revenue)
+ * - Tier 4: Task (Hours, Profit, Revenue)
  *
  * Revenue calculation uses the same rounding logic as unified billing.
+ * Profit is sourced from the v_employee_project_profit database view via useEmployeeProfit hook.
  *
  * @category Component
  */
@@ -35,6 +36,8 @@ interface EmployeePerformanceProps {
   userIdToDisplayNameLookup: Map<string, string>;
   /** Lookup from external project_id to CANONICAL project_id (for billing config lookups) */
   projectCanonicalIdLookup?: Map<string, string>;
+  /** Map from canonical display name to Map of canonical external project_id to profit data */
+  profitByEmployeeProject?: Map<string, Map<string, { revenue: number; cost: number | null; profit: number | null }>> | null;
 }
 
 interface TaskData {
@@ -42,6 +45,7 @@ interface TaskData {
   minutes: number;
   roundedMinutes: number;
   revenue: number;
+  profit: number | null;
 }
 
 interface ProjectData {
@@ -50,6 +54,7 @@ interface ProjectData {
   minutes: number;
   roundedMinutes: number;
   revenue: number;
+  profit: number | null;
   tasks: TaskData[];
 }
 
@@ -59,6 +64,7 @@ interface CompanyData {
   minutes: number;
   roundedMinutes: number;
   revenue: number;
+  profit: number | null;
   projects: ProjectData[];
 }
 
@@ -68,6 +74,7 @@ interface EmployeeData {
   minutes: number;
   roundedMinutes: number;
   revenue: number;
+  profit: number | null;
   companies: CompanyData[];
 }
 
@@ -87,6 +94,7 @@ export function EmployeePerformance({
   getCanonicalCompanyName,
   userIdToDisplayNameLookup,
   projectCanonicalIdLookup,
+  profitByEmployeeProject,
 }: EmployeePerformanceProps) {
   // Helper to get canonical project ID (for member project -> primary project mapping)
   const getCanonicalProjectId = (projectId: string): string => {
@@ -200,12 +208,14 @@ export function EmployeePerformance({
       let employeeTotalMinutes = 0;
       let employeeTotalRoundedMinutes = 0;
       let employeeTotalRevenue = 0;
+      let employeeTotalProfit: number | null = null;
 
       for (const [companyId, projectMap] of companyMap) {
         const projects: ProjectData[] = [];
         let companyTotalMinutes = 0;
         let companyTotalRoundedMinutes = 0;
         let companyTotalRevenue = 0;
+        let companyTotalProfit: number | null = null;
 
         // Get company name from stored mapping
         const companyName = companyNameMap.get(companyId) || companyId;
@@ -229,6 +239,7 @@ export function EmployeePerformance({
               minutes: taskMinutes,
               roundedMinutes: roundedTaskMinutes,
               revenue: 0, // Will be calculated proportionally below
+              profit: null, // Will be calculated proportionally below
             });
 
             projectTotalMinutes += taskMinutes;
@@ -250,6 +261,21 @@ export function EmployeePerformance({
               : 0;
           }
 
+          // Look up profit from profitByEmployeeProject using canonical IDs
+          // The map is keyed by display name and canonical external project ID
+          const employeeProfitMap = profitByEmployeeProject?.get(userName);
+          const projectProfitData = employeeProfitMap?.get(canonicalProjectId);
+          const projectProfit = projectProfitData?.profit ?? null;
+
+          // Distribute project profit proportionally across tasks by task minutes
+          if (projectProfit !== null) {
+            for (const task of tasks) {
+              task.profit = projectTotalMinutes > 0
+                ? projectProfit * (task.minutes / projectTotalMinutes)
+                : null;
+            }
+          }
+
           // Sort tasks alphabetically
           tasks.sort((a, b) => a.taskName.localeCompare(b.taskName));
 
@@ -259,12 +285,16 @@ export function EmployeePerformance({
             minutes: projectTotalMinutes,
             roundedMinutes: projectTotalRoundedMinutes,
             revenue: employeeProjectRevenue,
+            profit: projectProfit,
             tasks,
           });
 
           companyTotalMinutes += projectTotalMinutes;
           companyTotalRoundedMinutes += projectTotalRoundedMinutes;
           companyTotalRevenue += employeeProjectRevenue;
+          if (projectProfit !== null) {
+            companyTotalProfit = (companyTotalProfit ?? 0) + projectProfit;
+          }
         }
 
         // Sort projects alphabetically
@@ -276,12 +306,16 @@ export function EmployeePerformance({
           minutes: companyTotalMinutes,
           roundedMinutes: companyTotalRoundedMinutes,
           revenue: companyTotalRevenue,
+          profit: companyTotalProfit,
           projects,
         });
 
         employeeTotalMinutes += companyTotalMinutes;
         employeeTotalRoundedMinutes += companyTotalRoundedMinutes;
         employeeTotalRevenue += companyTotalRevenue;
+        if (companyTotalProfit !== null) {
+          employeeTotalProfit = (employeeTotalProfit ?? 0) + companyTotalProfit;
+        }
       }
 
       // Sort companies alphabetically
@@ -293,18 +327,21 @@ export function EmployeePerformance({
         minutes: employeeTotalMinutes,
         roundedMinutes: employeeTotalRoundedMinutes,
         revenue: employeeTotalRevenue,
+        profit: employeeTotalProfit,
         companies,
       });
     }
 
     // Sort employees by hours worked (highest first)
     return employees.sort((a, b) => b.minutes - a.minutes);
-  }, [entries, projectConfigMap, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectBilledRevenueLookup, projectTotalMinutesLookup]);
+  }, [entries, projectConfigMap, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectBilledRevenueLookup, projectTotalMinutesLookup, profitByEmployeeProject]);
 
   // Calculate totals - use billingResult for consistency with Projects/Revenue pages
   const totalBilledHours = billingResult.billedHours;
   const totalBilledRevenue = billingResult.billedRevenue;
   const totalPtoDays = employeeData.reduce((sum, emp) => sum + emp.ptoDays, 0);
+  const totalProfit = employeeData.reduce((sum, emp) => emp.profit !== null ? sum + emp.profit : sum, 0);
+  const hasAnyProfit = employeeData.some(emp => emp.profit !== null);
 
   // Expanded state for each level
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(() => new Set());
@@ -394,6 +431,9 @@ export function EmployeePerformance({
                 Hours
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                Profit
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                 Revenue
               </th>
             </tr>
@@ -426,6 +466,11 @@ export function EmployeePerformance({
                       <span className="text-sm text-vercel-gray-600">{minutesToHours(employee.roundedMinutes)}</span>
                     </td>
                     <td className="px-6 py-3 text-right">
+                      <span className={`text-sm font-medium ${employee.profit !== null && employee.profit < 0 ? 'text-error-text' : 'text-vercel-gray-600'}`}>
+                        {formatCurrency(employee.profit)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
                       <span className="text-sm font-medium text-vercel-gray-600">{formatCurrency(employee.revenue)}</span>
                     </td>
                   </tr>
@@ -452,6 +497,11 @@ export function EmployeePerformance({
                           </td>
                           <td className="px-6 py-3 text-right">
                             <span className="text-sm text-vercel-gray-200">{minutesToHours(company.roundedMinutes)}</span>
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className={`text-sm ${company.profit !== null && company.profit < 0 ? 'text-error-text' : 'text-vercel-gray-200'}`}>
+                              {formatCurrency(company.profit)}
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-right">
                             <span className="text-sm text-vercel-gray-200">{formatCurrency(company.revenue)}</span>
@@ -482,6 +532,11 @@ export function EmployeePerformance({
                                   <span className="text-sm text-vercel-gray-300">{minutesToHours(project.roundedMinutes)}</span>
                                 </td>
                                 <td className="px-6 py-2 text-right">
+                                  <span className={`text-sm ${project.profit !== null && project.profit < 0 ? 'text-error-text' : 'text-vercel-gray-300'}`}>
+                                    {formatCurrency(project.profit)}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-2 text-right">
                                   <span className="text-sm text-vercel-gray-300">{formatCurrency(project.revenue)}</span>
                                 </td>
                               </tr>
@@ -497,6 +552,11 @@ export function EmployeePerformance({
                                   </td>
                                   <td className="px-6 py-2 text-right">
                                     <span className="text-sm text-vercel-gray-400">{minutesToHours(task.roundedMinutes)}</span>
+                                  </td>
+                                  <td className="px-6 py-2 text-right">
+                                    <span className={`text-sm ${task.profit !== null && task.profit < 0 ? 'text-error-text' : 'text-vercel-gray-400'}`}>
+                                      {formatCurrency(task.profit)}
+                                    </span>
                                   </td>
                                   <td className="px-6 py-2 text-right">
                                     <span className="text-sm text-vercel-gray-400">{formatCurrency(task.revenue)}</span>
@@ -527,6 +587,11 @@ export function EmployeePerformance({
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
                 {formatHours(totalBilledHours)}
+              </td>
+              <td className="px-6 py-4 text-right">
+                <span className={`text-sm font-semibold ${hasAnyProfit && totalProfit < 0 ? 'text-error-text' : 'text-vercel-gray-600'}`}>
+                  {formatCurrency(hasAnyProfit ? totalProfit : null)}
+                </span>
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
                 {formatCurrency(totalBilledRevenue)}

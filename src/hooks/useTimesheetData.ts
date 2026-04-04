@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '../lib/supabase';
+import { fetchAllRows } from '../lib/fetchAllRows';
 import { aggregateByProject, aggregateByResource } from '../utils/calculations';
 import { aggregateEntriesByMonth, aggregateProjectRevenueByMonth } from '../utils/chartTransforms';
 import type { TimesheetEntry, ProjectSummary, ResourceSummary, DateRange } from '../types';
@@ -120,12 +121,14 @@ export function useTimesheetData(
 
     try {
       // Fetch timesheet entries, resources, and project rates in parallel
-      const entriesPromise = supabase
-        .from('v_timesheet_entries')
-        .select('*')
-        .gte('work_date', startDateStr)
-        .lte('work_date', endDateStr)
-        .order('work_date', { ascending: false });
+      const entriesPromise = fetchAllRows<TimesheetEntry>(
+        supabase
+          .from('v_timesheet_entries')
+          .select('*')
+          .gte('work_date', startDateStr)
+          .lte('work_date', endDateStr)
+          .order('work_date', { ascending: false }),
+      );
 
       const resourcesPromise = supabase
         .from('resources')
@@ -168,12 +171,14 @@ export function useTimesheetData(
       // If extended months requested, fetch historical entries too
       // Always extends to the current month so the chart shows MTD data
       const extendedPromise = extendedMonths > 0
-        ? supabase
-            .from('v_timesheet_entries')
-            .select('*')
-            .gte('work_date', extendedStartDate)
-            .lte('work_date', extendedEndDate)
-            .order('work_date', { ascending: false })
+        ? fetchAllRows<TimesheetEntry>(
+            supabase
+              .from('v_timesheet_entries')
+              .select('*')
+              .gte('work_date', extendedStartDate)
+              .lte('work_date', extendedEndDate)
+              .order('work_date', { ascending: false }),
+          )
         : null;
 
       const [entriesResult, resourcesResult, projectsResult, associationsResult, canonicalResult, companyCanonicalResult, companiesResult, projectCanonicalResult, extendedResult] = await Promise.all([

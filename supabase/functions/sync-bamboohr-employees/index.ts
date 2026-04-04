@@ -50,9 +50,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const token = authHeader.replace('Bearer ', '');
 
-    // If the token IS the service role key, it's a cron/server call — trusted.
-    // Otherwise, validate as a user session via getUser().
-    if (token !== supabaseServiceKey) {
+    // Check if the JWT has service_role — handles both JWT and sb_secret_ env var formats
+    let isServiceRole = false;
+    try {
+      const payloadB64 = token.split('.')[1];
+      if (payloadB64) {
+        const payload = JSON.parse(atob(payloadB64));
+        isServiceRole = payload.role === 'service_role';
+      }
+    } catch {
+      // Not a valid JWT — fall through to user session check
+    }
+
+    if (!isServiceRole) {
       const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: `Bearer ${token}` } },
       });
@@ -99,7 +109,8 @@ serve(async (req) => {
     // =========================================================================
     // Upsert employees to bamboo_employees
     // =========================================================================
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Use the JWT token for the Supabase client (env var may be sb_secret_ format)
+    const supabase = createClient(supabaseUrl, isServiceRole ? token : supabaseServiceKey);
 
     const employeeRows = employees
       .filter((emp) => emp.id)

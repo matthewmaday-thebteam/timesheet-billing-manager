@@ -124,6 +124,9 @@ export function EmployeeEditorModal({
     return emailRegex.test(email);
   };
 
+  // Extended Leave employment type allows 0 expected hours
+  const EXTENDED_LEAVE_TYPE_ID = 'e03378c7-c13f-481a-976d-267a1970cf94';
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -132,9 +135,13 @@ export function EmployeeEditorModal({
       newErrors.email = 'Please enter a valid email address';
     }
 
+    const isExtendedLeave = formData.employment_type_id === EXTENDED_LEAVE_TYPE_ID;
+
     // Billing mode specific validation
     if (formData.billing_mode === 'monthly') {
-      if (formData.expected_hours !== null && formData.expected_hours <= 0) {
+      if (formData.expected_hours !== null && formData.expected_hours < 0) {
+        newErrors.expected_hours = 'Expected hours cannot be negative';
+      } else if (!isExtendedLeave && formData.expected_hours !== null && formData.expected_hours === 0) {
         newErrors.expected_hours = 'Expected hours must be greater than 0';
       }
     } else {

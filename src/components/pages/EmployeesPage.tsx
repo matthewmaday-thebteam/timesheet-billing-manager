@@ -15,6 +15,7 @@ import { Spinner } from '../Spinner';
 import { DEFAULT_ROUNDING_INCREMENT, formatCurrency } from '../../utils/billing';
 import { minutesToHours } from '../../utils/calculations';
 import { useUtilizationMetrics } from '../../hooks/useUtilizationMetrics';
+import { useEmployeeProfit } from '../../hooks/useEmployeeProfit';
 import type { MonthSelection, RoundingIncrement, BulgarianHoliday } from '../../types';
 
 /**
@@ -77,6 +78,9 @@ export function EmployeesPage() {
     selectedMonth,
   });
 
+  // Fetch employee profit data for the selected month
+  const { profitData } = useEmployeeProfit(selectedMonth);
+
   // Build project config map for rounding lookup (keyed by external project ID)
   const projectConfigMap = useMemo(() => {
     const map = new Map<string, { rounding: RoundingIncrement }>();
@@ -137,7 +141,7 @@ export function EmployeesPage() {
     csvRows.push([`Employee Performance - ${format(dateRange.start, 'MMMM yyyy')}`]);
 
     // Header row
-    csvRows.push(['Employee', 'Company', 'Project', 'Task', 'Hours', 'Revenue']);
+    csvRows.push(['Employee', 'Company', 'Project', 'Task', 'Hours', 'Profit', 'Revenue']);
 
     // Build employee data (similar to EmployeePerformance logic)
     const userMap = new Map<string, Map<string, Map<string, Map<string, number>>>>();
@@ -209,11 +213,21 @@ export function EmployeesPage() {
             projectRoundedMinutes += roundMinutes(taskMinutes, rounding);
           }
 
+          // Look up profit from profitData using display name and canonical project ID
+          const employeeProfitMap = profitData?.get(userName);
+          const projectProfitData = employeeProfitMap?.get(canonicalProjectId);
+          const projectProfit = projectProfitData?.profit ?? null;
+
           for (const [taskName, taskMinutes] of taskMap) {
             const roundedTaskMinutes = roundMinutes(taskMinutes, rounding);
             const taskRevenue = projectRoundedMinutes > 0
               ? employeeProjectRevenue * (roundedTaskMinutes / projectRoundedMinutes)
               : 0;
+
+            // Distribute project profit proportionally by task minutes
+            const taskProfit = projectProfit !== null && employeeProjectMinutes > 0
+              ? projectProfit * (taskMinutes / employeeProjectMinutes)
+              : null;
 
             csvRows.push([
               userName,
@@ -221,6 +235,7 @@ export function EmployeesPage() {
               projectName,
               taskName,
               minutesToHours(roundedTaskMinutes),
+              taskProfit !== null ? taskProfit.toFixed(2) : '',
               taskRevenue.toFixed(2),
             ]);
           }
@@ -243,7 +258,7 @@ export function EmployeesPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectConfigMap, projectBilledRevenueLookup, projectTotalMinutesLookup, projectCanonicalIdLookup]);
+  }, [entries, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectConfigMap, projectBilledRevenueLookup, projectTotalMinutesLookup, projectCanonicalIdLookup, profitData]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -319,6 +334,7 @@ export function EmployeesPage() {
           getCanonicalCompanyName={getCanonicalCompanyName}
           userIdToDisplayNameLookup={userIdToDisplayNameLookup}
           projectCanonicalIdLookup={projectCanonicalIdLookup}
+          profitByEmployeeProject={profitData}
         />
       )}
     </div>
