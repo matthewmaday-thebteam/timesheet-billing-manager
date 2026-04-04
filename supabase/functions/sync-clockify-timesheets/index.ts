@@ -905,7 +905,7 @@ serve(async (req) => {
         sync_run_id: syncRunId,
         started_at: syncRunAt,
         success: fetchComplete && !upsertError,
-        source_total: allTimeEntries.length,
+        source_total: rows.length,
         manifest_total: totalUpserted,
         deleted_count: deletedCount,
         error_message: upsertError || (fetchErrors.length > 0 ? fetchErrors[0].message : null),
