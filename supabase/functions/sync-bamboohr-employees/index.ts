@@ -154,6 +154,25 @@ serve(async (req) => {
 
     console.log(`[sync-bamboohr-employees] Complete:`, JSON.stringify(result));
 
+    // =========================================================================
+    // Persist sync run to sync_runs table (diagnostics)
+    // =========================================================================
+    try {
+      await supabase.from('sync_runs').insert({
+        sync_type: 'bamboohr_employees',
+        sync_run_id: crypto.randomUUID(),
+        started_at: syncRunAt,
+        success: !employeesUpsertError,
+        source_total: employees.length,
+        manifest_total: employeesUpserted,
+        deleted_count: 0,
+        error_message: employeesUpsertError,
+        summary: result,
+      });
+    } catch (syncRunErr) {
+      console.error('[sync-bamboohr-employees] Failed to persist sync run (non-blocking):', syncRunErr);
+    }
+
     return jsonResponse(result);
   } catch (error) {
     console.error('[sync-bamboohr-employees] Unhandled error:', error);

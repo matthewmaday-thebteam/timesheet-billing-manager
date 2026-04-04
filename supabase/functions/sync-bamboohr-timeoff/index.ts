@@ -682,6 +682,25 @@ serve(async (req) => {
 
     console.log(`[sync-bamboohr-timeoff] Complete:`, JSON.stringify(result));
 
+    // =========================================================================
+    // Persist sync run to sync_runs table (diagnostics)
+    // =========================================================================
+    try {
+      await supabase.from('sync_runs').insert({
+        sync_type: 'bamboohr_timeoff',
+        sync_run_id: crypto.randomUUID(),
+        started_at: syncRunAt,
+        success: !timeOffError,
+        source_total: timeOffRequests.length,
+        manifest_total: timeOffUpserted,
+        deleted_count: timeOffDeleted,
+        error_message: timeOffError,
+        summary: result,
+      });
+    } catch (syncRunErr) {
+      console.error('[sync-bamboohr-timeoff] Failed to persist sync run (non-blocking):', syncRunErr);
+    }
+
     return jsonResponse(result);
   } catch (error) {
     console.error('[sync-bamboohr-timeoff] Unhandled error:', error);

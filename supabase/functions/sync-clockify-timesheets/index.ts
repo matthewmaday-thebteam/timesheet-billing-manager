@@ -896,6 +896,25 @@ serve(async (req) => {
 
     console.log(`[sync-clockify] Complete:`, JSON.stringify(result));
 
+    // =========================================================================
+    // STEP 9: Persist sync run to sync_runs table (diagnostics)
+    // =========================================================================
+    try {
+      await supabase.from('sync_runs').insert({
+        sync_type: 'clockify_timesheets',
+        sync_run_id: syncRunId,
+        started_at: syncRunAt,
+        success: fetchComplete && !upsertError,
+        source_total: allTimeEntries.length,
+        manifest_total: totalUpserted,
+        deleted_count: deletedCount,
+        error_message: upsertError || (fetchErrors.length > 0 ? fetchErrors[0].message : null),
+        summary: result,
+      });
+    } catch (syncRunErr) {
+      console.error('[sync-clockify] Failed to persist sync run (non-blocking):', syncRunErr);
+    }
+
     return jsonResponse(result);
   } catch (error) {
     console.error('[sync-clockify] Unhandled error:', error);
