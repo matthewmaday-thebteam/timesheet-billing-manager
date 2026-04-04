@@ -12,6 +12,19 @@ export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
     date: '2026-04-04',
+    title: 'Clockify Sync Migration & Sync Diagnostics',
+    highlights: [
+      'Migrated Clockify sync from n8n to Supabase Edge Function: paginated fetch, single-pass transform, batch upsert, stale entry cleanup, and billing recalculation — all in one function running hourly via pg_cron',
+      'Clockify hours reconciliation: compares per-user minutes from Clockify API against Manifest after every sync, with mismatch alerts on the dashboard',
+      'New Diagnostics page: shows last 60 sync runs across all integrations (Clockify, BambooHR) with entry counts, source/manifest hours, deleted count, and error details',
+      'Hours comparison uses actual DB values vs source data — mismatches are highlighted in warning on the Diagnostics table',
+      'Sync alerts banner renamed from "BambooHR Sync Alerts" to generic "Sync Alerts" covering all integrations',
+      'All sync functions now persist run results to sync_runs table for full audit trail',
+    ],
+  },
+  {
+    version: '',  // computed below
+    date: '2026-04-04',
     title: 'BambooHR Sync Migration & Reconciliation Alerts',
     highlights: [
       'Migrated BambooHR sync from n8n to Supabase Edge Functions: employee directory syncs daily, time-off syncs every 2 hours via pg_cron',
