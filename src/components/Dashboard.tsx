@@ -47,7 +47,7 @@ interface DashboardProps {
   onDismissAlert?: (alertId: string) => Promise<void>;
 }
 
-export function Dashboard({ syncAlerts = [], syncAlertsLoading = false, onDismissAlert }: DashboardProps) {
+export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   const { user } = useAuth();
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
