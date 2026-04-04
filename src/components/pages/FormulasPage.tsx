@@ -160,7 +160,7 @@ export function FormulasPage() {
         formula="employee = resources WHERE grouping_role != 'member'"
         unit="Entity record"
         notes={[
-          'Employment types: Full-time, Part-time, Contractor, Vendor',
+          'Employment types: Full-time, Part-time, Contractor, Vendor, Extended Leave',
           'Grouping roles: unassociated (standalone), primary (has members), member (excluded)',
           'Members are grouped under a primary to represent one physical person with multiple system IDs',
           'The view filters out members so grouped employees only count once',

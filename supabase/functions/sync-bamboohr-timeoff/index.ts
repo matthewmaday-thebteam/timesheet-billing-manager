@@ -526,10 +526,11 @@ serve(async (req) => {
       const EXCLUDED_EMPLOYMENT_TYPE_IDS = [
         '9fec7939-d890-42d4-a59b-a0f24910e0a4', // Contractor
         'bc05fc11-2df8-45af-b425-45ccd0caa4a8', // Vendor
+        'e03378c7-c13f-481a-976d-267a1970cf94', // Extended Leave
       ];
 
       // 1. Query VISIBLE resources only (primary + unassociated, not members)
-      //    excluding contractors and vendors
+      //    excluding contractors, vendors, and extended leave
       const { data: visibleResources, error: visibleError } = await supabase
         .from('v_employee_table_entities')
         .select('id, first_name, last_name, bamboo_employee_id, employment_type_id, grouping_role, group_id');
@@ -582,7 +583,7 @@ serve(async (req) => {
       const unmatchedResourceIds: string[] = [];
 
       for (const resource of (visibleResources || [])) {
-        // Skip contractors and vendors — they don't use BambooHR
+        // Skip contractors, vendors, and extended leave — they don't use BambooHR
         if (resource.employment_type_id && EXCLUDED_EMPLOYMENT_TYPE_IDS.includes(resource.employment_type_id)) {
           continue;
         }

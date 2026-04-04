@@ -7,7 +7,7 @@
  * Expected hours calculation:
  * - Full-time employees: 8 hours per working day
  * - Part-time employees: 4 hours per working day
- * - Contractors/Vendors: excluded (0 hours)
+ * - Contractors/Vendors/Extended Leave: excluded (0 hours)
  * - Weekends: 0 hours
  * - Holidays: 0 hours
  *
@@ -101,7 +101,7 @@ function isHoliday(dateStr: string, holidayDates: Set<string>): boolean {
  * Calculate expected hours per working day based on employee headcount.
  * - Full-time: 8 hours
  * - Part-time: 4 hours
- * - Contractors/Vendors: excluded
+ * - Contractors/Vendors/Extended Leave: excluded
  */
 function calculateExpectedHoursPerDay(resources: Resource[]): number {
   let totalExpected = 0;
@@ -109,8 +109,8 @@ function calculateExpectedHoursPerDay(resources: Resource[]): number {
   for (const resource of resources) {
     const typeName = resource.employment_type?.name?.toLowerCase() || '';
 
-    // Exclude contractors and vendors
-    if (typeName === 'contractor' || typeName === 'vendor') {
+    // Exclude contractors, vendors, and extended leave
+    if (typeName === 'contractor' || typeName === 'vendor' || typeName === 'extended leave') {
       continue;
     }
 
@@ -145,7 +145,7 @@ export function DailyHoursChart({
     const map = new Map<string, number>();
     for (const resource of resources) {
       const typeName = resource.employment_type?.name?.toLowerCase() || '';
-      if (typeName === 'contractor' || typeName === 'vendor') continue;
+      if (typeName === 'contractor' || typeName === 'vendor' || typeName === 'extended leave') continue;
       if (typeName === 'part-time') {
         map.set(resource.id, PART_TIME_HOURS);
       } else if (typeName === 'full-time') {

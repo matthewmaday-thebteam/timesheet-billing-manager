@@ -60,7 +60,7 @@ export function EmployeeManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <MetricCard title="Total" value={sortedEntities.length} loading={loading} />
         <MetricCard
           title="Full-time"
@@ -80,6 +80,11 @@ export function EmployeeManagementPage() {
         <MetricCard
           title="Vendor"
           value={sortedEntities.filter(r => r.employment_type?.name === 'Vendor').length}
+          loading={loading}
+        />
+        <MetricCard
+          title="Extended Leave"
+          value={sortedEntities.filter(r => r.employment_type?.name === 'Extended Leave').length}
           loading={loading}
         />
         <MetricCard

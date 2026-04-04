@@ -43,7 +43,7 @@ Main view for querying timesheet data. Filters entries with total_minutes > 0.
 
 ### employment_types
 - id UUID
-- name TEXT ('Full-time', 'Part-time', 'Contractor')
+- name TEXT ('Full-time', 'Part-time', 'Contractor', 'Vendor', 'Extended Leave')
 
 ### projects
 - id UUID
