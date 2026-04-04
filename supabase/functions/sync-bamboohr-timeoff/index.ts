@@ -334,8 +334,8 @@ serve(async (req) => {
           .from('employee_time_off')
           .delete()
           .not('bamboo_request_id', 'in', `(${approvedIds.join(',')})`)
-          .gte('start_date', rangeStartDate)
-          .lte('end_date', rangeEndDate)
+          .lte('start_date', rangeEndDate)
+          .gte('end_date', rangeStartDate)
           .select('id');
 
         if (deleteError) {
@@ -353,8 +353,8 @@ serve(async (req) => {
         const { data: deletedRows, error: deleteError } = await supabase
           .from('employee_time_off')
           .delete()
-          .gte('start_date', rangeStartDate)
-          .lte('end_date', rangeEndDate)
+          .lte('start_date', rangeEndDate)
+          .gte('end_date', rangeStartDate)
           .select('id');
 
         if (deleteError) {
@@ -404,8 +404,8 @@ serve(async (req) => {
       const { data: manifestTotals, error: manifestTotalsError } = await supabase
         .from('employee_time_off')
         .select('bamboo_employee_id, total_days')
-        .gte('start_date', rangeStartDate)
-        .lte('end_date', rangeEndDate);
+        .lte('start_date', rangeEndDate)
+        .gte('end_date', rangeStartDate);
 
       if (manifestTotalsError) {
         throw new Error(`Manifest totals query error: ${manifestTotalsError.message}`);
