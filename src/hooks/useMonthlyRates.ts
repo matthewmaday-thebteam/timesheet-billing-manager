@@ -7,6 +7,7 @@ import type {
   ProjectBillingLimits,
   RateSource,
   RoundingIncrement,
+  RoundingMode,
 } from '../types';
 
 /** Extract message from Error instances or Supabase PostgrestError objects */
@@ -98,7 +99,7 @@ interface UseMonthlyRatesReturn {
   isLoading: boolean;
   error: string | null;
   updateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
-  updateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  updateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement, roundingMode?: RoundingMode) => Promise<boolean>;
   updateBillingLimits: (
     projectId: string,
     month: MonthSelection,
@@ -179,6 +180,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
         hasExplicitRateThisMonth: row.source === 'explicit',
         // Rounding fields - use validated effectiveRounding
         effectiveRounding,
+        effectiveRoundingMode: (row.effective_rounding_mode ?? 'task') as RoundingMode,
         roundingSource: (row.rounding_source ?? 'default') as RateSource,
         roundingSourceMonth: row.rounding_source_month,
         hasExplicitRoundingThisMonth: row.rounding_source === 'explicit',
@@ -241,7 +243,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
 
   // Update rounding for a project in a specific month
   const updateRounding = useCallback(
-    async (projectId: string, month: MonthSelection, increment: RoundingIncrement): Promise<boolean> => {
+    async (projectId: string, month: MonthSelection, increment: RoundingIncrement, roundingMode: RoundingMode = 'task'): Promise<boolean> => {
       try {
         const monthStr = formatMonthAsISO(month);
 
@@ -251,6 +253,7 @@ export function useMonthlyRates({ selectedMonth }: UseMonthlyRatesOptions): UseM
             p_project_id: projectId,
             p_month: monthStr,
             p_increment: increment,
+            p_rounding_mode: roundingMode,
           }
         );
 

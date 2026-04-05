@@ -4,13 +4,13 @@ import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
-import type { ProjectRateDisplayWithBilling, MonthSelection, RoundingIncrement, ProjectBillingLimits } from '../types';
+import type { ProjectRateDisplayWithBilling, MonthSelection, RoundingIncrement, RoundingMode, ProjectBillingLimits } from '../types';
 
 interface BillingRatesTableProps {
   projectsWithRates: ProjectRateDisplayWithBilling[];
   selectedMonth: MonthSelection;
   onUpdateRate: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
-  onUpdateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  onUpdateRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement, roundingMode?: RoundingMode) => Promise<boolean>;
   onUpdateBillingLimits: (projectId: string, month: MonthSelection, limits: Partial<ProjectBillingLimits>) => Promise<boolean>;
   onUpdateActiveStatus: (projectId: string, month: MonthSelection, isActive: boolean) => Promise<boolean>;
   onRatesChange: () => void;
@@ -56,10 +56,10 @@ export function BillingRatesTable({
     }
   };
 
-  const handleSaveRounding = async (projectId: string, month: MonthSelection, increment: RoundingIncrement) => {
+  const handleSaveRounding = async (projectId: string, month: MonthSelection, increment: RoundingIncrement, roundingMode?: RoundingMode) => {
     setIsSaving(true);
     try {
-      const success = await onUpdateRounding(projectId, month, increment);
+      const success = await onUpdateRounding(projectId, month, increment, roundingMode);
       if (success) {
         onRatesChange();
       }

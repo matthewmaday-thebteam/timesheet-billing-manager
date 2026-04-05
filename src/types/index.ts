@@ -166,6 +166,13 @@ export interface ProjectMonthlyRate {
 export type RoundingIncrement = 0 | 5 | 15 | 30;
 
 /**
+ * Rounding mode for billing:
+ * - 'task': Round per-task monthly total (legacy behavior)
+ * - 'entry': Round each individual time entry
+ */
+export type RoundingMode = 'task' | 'entry';
+
+/**
  * A monthly rounding record from the project_monthly_rounding table.
  */
 export interface ProjectMonthlyRounding {
@@ -173,6 +180,7 @@ export interface ProjectMonthlyRounding {
   project_id: string;
   rounding_month: string;  // ISO date string, always 1st of month (YYYY-MM-DD)
   rounding_increment: RoundingIncrement;
+  rounding_mode: RoundingMode;
   created_at: string;
   updated_at: string;
 }
@@ -234,6 +242,7 @@ export interface ProjectRateDisplay {
 
   // Rounding fields
   effectiveRounding: RoundingIncrement;
+  effectiveRoundingMode: RoundingMode;
   roundingSource: RateSource;
   roundingSourceMonth: string | null;
   hasExplicitRoundingThisMonth: boolean;
@@ -268,6 +277,7 @@ export interface ProjectRatesForMonthResult {
   existed_in_month: boolean;
   // Rounding fields
   effective_rounding: RoundingIncrement;
+  effective_rounding_mode: RoundingMode;
   rounding_source: RateSource;
   rounding_source_month: string | null;
 }

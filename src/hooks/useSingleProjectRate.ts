@@ -6,6 +6,7 @@ import type {
   ProjectRatesForMonthResultWithBilling,
   RateSource,
   RoundingIncrement,
+  RoundingMode,
 } from '../types';
 
 /**
@@ -105,6 +106,7 @@ export function useSingleProjectRate({
           existedInSelectedMonth: matchingRow.existed_in_month,
           hasExplicitRateThisMonth: matchingRow.source === 'explicit',
           effectiveRounding,
+          effectiveRoundingMode: (matchingRow.effective_rounding_mode ?? 'task') as RoundingMode,
           roundingSource: (matchingRow.rounding_source ?? 'default') as RateSource,
           roundingSourceMonth: matchingRow.rounding_source_month,
           hasExplicitRoundingThisMonth: matchingRow.rounding_source === 'explicit',

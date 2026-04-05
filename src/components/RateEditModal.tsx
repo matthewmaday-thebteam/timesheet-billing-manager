@@ -21,7 +21,7 @@ import { Select } from './Select';
 import { Input } from './Input';
 import { DateCycle } from './molecules/DateCycle';
 import { useSingleProjectRate } from '../hooks/useSingleProjectRate';
-import type { MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement, ProjectBillingLimits } from '../types';
+import type { MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement, RoundingMode, ProjectBillingLimits } from '../types';
 
 interface RateEditModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ interface RateEditModalProps {
   /** Initial month from the Rates page selection */
   initialMonth: MonthSelection;
   onSave: (projectId: string, month: MonthSelection, rate: number) => Promise<boolean>;
-  onSaveRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement) => Promise<boolean>;
+  onSaveRounding: (projectId: string, month: MonthSelection, increment: RoundingIncrement, roundingMode?: RoundingMode) => Promise<boolean>;
   onSaveBillingLimits: (projectId: string, month: MonthSelection, limits: Partial<ProjectBillingLimits>) => Promise<boolean>;
   onSaveActiveStatus: (projectId: string, month: MonthSelection, isActive: boolean) => Promise<boolean>;
   isSaving: boolean;
@@ -42,6 +42,11 @@ const ROUNDING_OPTIONS = [
   { value: '5', label: '5 minutes' },
   { value: '15', label: '15 minutes' },
   { value: '30', label: '30 minutes' },
+];
+
+const ROUNDING_MODE_OPTIONS = [
+  { value: 'task', label: 'Per task (legacy)' },
+  { value: 'entry', label: 'Per entry' },
 ];
 
 /**
@@ -94,6 +99,7 @@ export function RateEditModal({
   // Rate and rounding state
   const [rateValue, setRateValue] = useState<string>('');
   const [roundingValue, setRoundingValue] = useState<RoundingIncrement>(15);
+  const [roundingModeValue, setRoundingModeValue] = useState<RoundingMode>('task');
 
   // Billing limits state
   const [minHoursValue, setMinHoursValue] = useState<string>('');
@@ -121,6 +127,7 @@ export function RateEditModal({
       // Rate and rounding
       setRateValue(displayProject?.effectiveRate?.toString() || '');
       setRoundingValue(displayProject?.effectiveRounding ?? 15);
+      setRoundingModeValue(displayProject?.effectiveRoundingMode ?? 'task');
       // Billing limits
       setMinHoursValue(displayProject?.minimumHours?.toString() || '');
       setMaxHoursValue(displayProject?.maximumHours?.toString() || '');
@@ -156,7 +163,9 @@ export function RateEditModal({
 
     // Compare against displayProject (the data for currentMonth)
     const rateChanged = displayProject ? rate !== displayProject.effectiveRate : true;
-    const roundingChanged = displayProject ? roundingValue !== displayProject.effectiveRounding : true;
+    const roundingChanged = displayProject
+      ? roundingValue !== displayProject.effectiveRounding || roundingModeValue !== displayProject.effectiveRoundingMode
+      : true;
     const limitsChanged = displayProject
       ? minHours !== displayProject.minimumHours ||
         maxHours !== displayProject.maximumHours ||
@@ -173,7 +182,7 @@ export function RateEditModal({
 
     // Save rounding if changed
     if (success && roundingChanged) {
-      success = await onSaveRounding(project.projectId, currentMonth, roundingValue);
+      success = await onSaveRounding(project.projectId, currentMonth, roundingValue, roundingModeValue);
     }
 
     // Save billing limits if changed
@@ -320,6 +329,23 @@ export function RateEditModal({
                 className="w-full"
                 disabled={isLoadingRate}
               />
+            </div>
+
+            {/* Rounding Mode Select */}
+            <div>
+              <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                Rounding Mode
+              </label>
+              <Select
+                value={roundingModeValue}
+                onChange={(value) => setRoundingModeValue(value as RoundingMode)}
+                options={ROUNDING_MODE_OPTIONS}
+                className="w-full"
+                disabled={isLoadingRate}
+              />
+              <p className="text-xs text-vercel-gray-400 mt-1">
+                Per task rounds the monthly total per task. Per entry rounds each time entry individually.
+              </p>
             </div>
 
             {/* Divider */}

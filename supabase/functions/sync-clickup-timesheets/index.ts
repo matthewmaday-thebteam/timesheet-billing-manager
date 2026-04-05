@@ -706,6 +706,46 @@ serve(async (req) => {
     }
 
     // =========================================================================
+    // STEP 5.7: Populate task_monthly_totals
+    // =========================================================================
+    // Non-blocking: failures are logged but never stop the sync.
+    // Only runs if rounding completed successfully.
+    // =========================================================================
+    let taskMonthlyResult: Record<string, unknown> = { action: 'task_monthly_not_attempted' };
+
+    if (roundingResult.action !== 'rounding_executed') {
+        taskMonthlyResult = {
+            action: 'task_monthly_skipped',
+            reason: 'rounding_not_complete',
+            sync_run_id: syncRunId,
+        };
+        console.log(`[sync-clickup] Task monthly totals skipped: rounding did not complete`);
+    } else {
+        try {
+            const tmStartDate = rangeStartISO.split('T')[0];
+            const tmEndDate = rangeEndISO.split('T')[0];
+
+            const { data: tmData, error: tmError } = await supabase
+                .rpc('populate_task_monthly_totals', {
+                    p_workspace_id: clickupTeamId,
+                    p_range_start: tmStartDate,
+                    p_range_end: tmEndDate,
+                });
+
+            if (tmError) {
+                console.error('[sync-clickup] Task monthly totals error:', tmError.message);
+                taskMonthlyResult = { action: 'task_monthly_failed', reason: 'rpc_error', error: tmError.message };
+            } else {
+                taskMonthlyResult = { action: 'task_monthly_executed', result: tmData };
+                console.log('[sync-clickup] Task monthly totals populated:', JSON.stringify(tmData));
+            }
+        } catch (err) {
+            taskMonthlyResult = { action: 'task_monthly_failed', reason: 'exception', error: (err as Error).message };
+            console.error('[sync-clickup] Task monthly totals failed:', (err as Error).message);
+        }
+    }
+
+    // =========================================================================
     // STEP 6: Drain recalculation queue
     // =========================================================================
     // Only runs if fetch was complete.
@@ -1141,6 +1181,7 @@ serve(async (req) => {
       cleanup: cleanupResult,
       rounding: roundingResult,
       layer2: layer2Result,
+      taskMonthly: taskMonthlyResult,
       recalculation: recalcResult,
       reconciliation: reconciliationResult,
     };
