@@ -12,6 +12,22 @@ export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
     date: '2026-04-04',
+    title: 'ClickUp Sync Migration & Revenue Trend Fix',
+    highlights: [
+      'Migrated ClickUp sync from n8n to Supabase Edge Function: multi-step API fetch (team → spaces → folders → per-member time entries), single-pass transform, batch upsert, hourly cron at :30',
+      'ClickUp sync includes all Clockify guardrails: fetchComplete tracking, conditional cleanup, 4 reconciliation alert types (sync_incomplete, zero_entries, high_deletion_count, hours_mismatch), and sync_runs diagnostics',
+      'Diagnostics page now shows ClickUp sync runs alongside BambooHR and Clockify',
+      'Dropped legacy clickup_time_entries table (deny-all RLS, unused since migration to timesheet_daily_rollups)',
+      'Removed old sync-bamboohr Edge Function directory (superseded by sync-bamboohr-timeoff)',
+      'All 3 n8n workflows now replaced by Supabase Edge Functions — n8n decommission ready',
+      'Investor Dashboard: replaced custom MonthPicker with standard RangeSelector molecule used by all other pages',
+      '12-Month Revenue Trend chart: optimistic/pessimistic bands now use +/- 15% of projected Total Revenue YTD (workday-based formula with vacation deductions), shared across Dashboard and Investor page',
+      'Revenue trend bands fan from last actual cumulative revenue to year-end projected values instead of evenly proportioning',
+    ],
+  },
+  {
+    version: '',  // computed below
+    date: '2026-04-04',
     title: 'Clockify Sync Migration & Sync Diagnostics',
     highlights: [
       'Migrated Clockify sync from n8n to Supabase Edge Function: paginated fetch, single-pass transform, batch upsert, stale entry cleanup, and billing recalculation — all in one function running hourly via pg_cron',
