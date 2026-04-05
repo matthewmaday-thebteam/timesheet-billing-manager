@@ -270,7 +270,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
     const top5 = pieData.slice(0, 5);
     const otherValue = pieData.slice(5).reduce((sum, d) => sum + d.value, 0);
     if (otherValue > 0) {
-      top5.push({ name: 'Other', value: otherValue });
+      top5.push({ name: 'Other', value: otherValue, color: 'other' });
     }
     return top5;
   }, [layer2Rows, userIdToDisplayNameLookup]);
