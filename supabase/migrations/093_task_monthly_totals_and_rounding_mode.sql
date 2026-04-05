@@ -468,7 +468,7 @@ BEGIN
             COALESCE(pg.primary_project_id, p.id) AS canonical_project_id,
             COALESCE(tdr.task_name, 'No Task') AS task_name,
             COALESCE(NULLIF(tdr.client_id, ''), '__UNASSIGNED__') AS client_id,
-            MAX(COALESCE(NULLIF(tdr.client_name, ''), 'Unassigned')) AS client_name,
+            COALESCE(NULLIF(tdr.client_name, ''), 'Unassigned') AS client_name,
             DATE_TRUNC('month', tdr.work_date)::DATE AS summary_month,
             tdr.total_minutes,
             COALESCE(tdr.rounded_minutes, tdr.total_minutes) AS entry_rounded_minutes

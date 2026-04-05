@@ -1,0 +1,75 @@
+Yes — BambooHR exposes approved time off via its API, and n8n can pull it with a simple HTTP Request node.
+
+You have two good options:
+
+Option A (most direct): “Get Time Off Requests” filtered to approved
+
+BambooHR endpoint:
+GET https://{companyDomain}.bamboohr.com/api/v1/time_off/requests
+
+The API supports filtering by date range (start/end) and status (plus employee/type filters).
+Also, Bamboo made start and end mandatory for this endpoint years ago.
+
+n8n setup
+
+Create BambooHR API credentials
+
+Use BambooHR API auth (Bamboo’s API is under https://{companyDomain}.bamboohr.com/api/ and supports Basic auth).
+(Bamboo also supports OAuth2 now, but Basic with an API key is usually fastest to wire up in n8n.)
+
+n8n → HTTP Request node
+
+Method: GET
+
+URL: https://YOURCOMPANY.bamboohr.com/api/v1/time_off/requests
+
+Auth: Basic Auth
+
+Username: your BambooHR API key
+
+Password: anything (often x)
+
+Query params (example):
+
+start=2026-01-01
+
+end=2026-01-31
+
+status=approved
+
+Filter / normalize
+
+Add a Code node to map the response into your preferred schema (employeeId, start, end, type, amount, etc.). The response commonly includes request status + dates.
+
+Option B (simplest for “approved PTO calendar”): “Who’s Out”
+
+If what you really want is: “show me who is out between dates” (and you’re fine excluding request metadata), use:
+
+GET https://{companyDomain}.bamboohr.com/api/v1/time_off/whos_out
+
+This endpoint returns employees out + holidays for a period.
+In n8n you’d:
+
+call it with the same start/end
+
+filter out type === 'holiday' if you only want employee PTO (the payload often includes type: "timeOff" vs holiday).
+
+Important gotchas
+
+Permissions matter: the API key owner only sees employees/time-off types they have permission to view.
+
+Status values: approved is valid; other statuses exist (requested/denied/canceled/etc.).
+
+Don’t poll too aggressively: Bamboo can throttle frequent requests; handle 503s gracefully.
+
+Quick “starter” n8n workflow outline
+
+Cron (daily, or every hour)
+
+HTTP Request → BambooHR time off endpoint (Option A or B)
+
+Code → filter approved, shape fields
+
+Upsert into your DB / notify Slack / block timesheet expectations
+
+If you tell me which you prefer—Requests (more detail) or Who’s Out (calendar-friendly)—and what date window you want (next 14 days vs current pay period), I’ll give you the exact n8n node settings + a copy/paste Code node transform.

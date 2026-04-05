@@ -1,0 +1,40 @@
+  Phase 1: OAuth Flow
+  - qbo_oauth_tokens table with RLS (migration 068)
+  - qbo-auth-start Edge Function — initiates OAuth with CSRF protection
+  - qbo-auth-callback Edge Function — handles Intuit redirect, stores tokens
+  - useQBOConnection hook — connection state, connect/disconnect
+  - EOM Reports page — "Connect to QuickBooks" / "QB Connected" / "Disconnect" UI
+
+  Phase 2: Customer Mapping
+  - qbo_customer_mappings table (migration 069)
+  - qbo-customers Edge Function — fetches active customers from QBO sandbox
+  - useQBOCustomerMappings hook — CRUD for mappings
+  - Company Edit Modal — "QuickBooks Customer" dropdown (moved here from EOM Reports)
+
+  Phase 3: Invoice Generation
+  - Assessed and planned but not yet implemented
+  - Waiting on your go-ahead (you said "yes, proceed" before we pivoted to testing)
+
+  Key Fixes Along the Way
+
+  - Inlined _shared/qbo-token.ts into Edge Functions (Supabase can't resolve _shared imports during remote
+  bundling)
+  - --no-verify-jwt for qbo-auth-callback, qbo-auth-start, qbo-customers
+  - RLS policies: added authenticated SELECT on qbo_oauth_tokens, full CRUD on qbo_customer_mappings
+  - APP_BASE_URL corrected to manifest.yourbteam.com
+  - QBO API URL defaults to sandbox (sandbox-quickbooks.api.intuit.com)
+  - Send to QB buttons only visible when QB connected + company mapped
+
+  Current State
+
+  - OAuth: Working — you connected successfully
+  - Customer Mapping: Working — via Company Management Edit Modal
+  - Send to QB buttons: Visible only when conditions met, but still disabled (Phase 3)
+  - Phase 3 (Invoice Generation): Ready to build when you are
+
+  To Go Live (Production)
+
+  1. Create production QBO app credentials in Intuit developer portal
+  2. Update secrets: QUICKBOOKS_PROD_CLIENTID, _SECRET, _REDIRECT
+  3. Set QBO_API_BASE=https://quickbooks.api.intuit.com/v3/company
+  4. Re-authorize with production QBO account
