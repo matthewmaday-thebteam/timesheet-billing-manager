@@ -235,9 +235,9 @@ export function OrganismsSection() {
             <p className="text-xs text-vercel-gray-400">Component: src/components/StatsOverview.tsx</p>
           </div>
           <StatsOverview
-            projects={mockProjectSummaries}
+            totalMinutes={24600}
             projectCount={2}
-            resources={mockResourceSummaries}
+            resourceCount={5}
             underHoursCount={2}
             totalRevenue={45230}
             utilizationPercent={82}
@@ -257,11 +257,10 @@ export function OrganismsSection() {
             <p className="text-xs text-vercel-gray-400">Component: src/components/DashboardChartsRow.tsx</p>
           </div>
           <DashboardChartsRow
-            resources={mockResourceSummaries}
-            entries={mockTimesheetEntries}
-            projectRates={new Map([['p-1', 60], ['p-2', 53]])}
+            pieData={[{ name: 'Alice', value: 80, color: '#3b82f6' }, { name: 'Bob', value: 60, color: '#10b981' }]}
+            topFiveByHours={[{ name: 'Alice', value: 80, formattedValue: '80.00 hrs' }, { name: 'Bob', value: 60, formattedValue: '60.00 hrs' }]}
+            topFiveByRevenue={[{ name: 'Alice', value: 4800, formattedValue: '$4,800' }, { name: 'Bob', value: 3180, formattedValue: '$3,180' }]}
             combinedRevenueByMonth={new Map()}
-            section="resources"
           />
           <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
             <p className="text-xs text-vercel-gray-400">
@@ -472,7 +471,7 @@ export function OrganismsSection() {
             isOpen={underHoursModalOpen}
             onClose={() => setUnderHoursModalOpen(false)}
             items={mockUnderHoursResources}
-            entries={mockTimesheetEntries}
+            layer2Rows={[]}
             expectedHours={35}
             workingDaysElapsed={10}
             workingDaysTotal={22}
