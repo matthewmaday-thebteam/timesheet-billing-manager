@@ -171,12 +171,12 @@ export function DiagnosticsPage() {
             onClick={() =>
               exportTableToCSV(
                 'task_totals',
-                'layer_2_tasks.csv',
+                'layer_3_tasks.csv',
                 setExportingTaskTotals,
               )
             }
           >
-            {exportingTaskTotals ? 'Exporting...' : 'Export Layer 2 - Tasks'}
+            {exportingTaskTotals ? 'Exporting...' : 'Export Layer 3 - Tasks'}
           </Button>
           <Button
             variant="secondary"
