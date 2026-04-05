@@ -57,6 +57,7 @@ export function DiagnosticsPage() {
   const [exportingBilling, setExportingBilling] = useState(false);
   const [exportingTaskTotals, setExportingTaskTotals] = useState(false);
   const [exportingEmployeeTotals, setExportingEmployeeTotals] = useState(false);
+  const [exportingDailyTotals, setExportingDailyTotals] = useState(false);
 
   async function exportTableToCSV(
     tableName: string,
@@ -191,6 +192,20 @@ export function DiagnosticsPage() {
             }
           >
             {exportingEmployeeTotals ? 'Exporting...' : 'Export Layer 2 - Employees'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exportingDailyTotals}
+            onClick={() =>
+              exportTableToCSV(
+                'employee_daily_totals',
+                'layer_3_employee_daily_totals.csv',
+                setExportingDailyTotals,
+              )
+            }
+          >
+            {exportingDailyTotals ? 'Exporting...' : 'Export Layer 3 - Employee Daily Totals'}
           </Button>
         </div>
       </div>
