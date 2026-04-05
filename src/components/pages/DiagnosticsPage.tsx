@@ -157,12 +157,12 @@ export function DiagnosticsPage() {
             onClick={() =>
               exportTableToCSV(
                 'v_canonical_project_monthly_summary',
-                'billing_summary.csv',
+                'legacy_billing_summary.csv',
                 setExportingBilling,
               )
             }
           >
-            {exportingBilling ? 'Exporting...' : 'Export Billing Summary'}
+            {exportingBilling ? 'Exporting...' : 'Export Legacy Billing Summary'}
           </Button>
           <Button
             variant="secondary"
