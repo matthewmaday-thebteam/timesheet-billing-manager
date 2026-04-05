@@ -197,6 +197,19 @@ export function EmployeeEditorModal({
     validateForm();
   };
 
+  const isMonthlyBilling = formData.billing_mode === 'monthly';
+  const isHourlyBilling = formData.billing_mode === 'hourly';
+  const isAnySaving = isSaving || isSavingGroup;
+
+  // Live-calculate hourly_rate for monthly billing (FT/PT)
+  const calculatedHourlyRate = useMemo(() => {
+    if (!isMonthlyBilling) return null;
+    if (formData.monthly_cost == null || formData.expected_hours == null || formData.expected_hours <= 0) {
+      return null;
+    }
+    return Math.round((formData.monthly_cost / formData.expected_hours) * 100) / 100;
+  }, [isMonthlyBilling, formData.monthly_cost, formData.expected_hours]);
+
   // Check if there are pending group changes
   const hasGroupChanges = stagedGroupChanges.additions.length > 0 || stagedGroupChanges.removals.size > 0;
 
@@ -205,8 +218,13 @@ export function EmployeeEditorModal({
 
     if (!validateForm() || !resource) return;
 
+    // For monthly billing (FT/PT), persist the calculated hourly_rate
+    const dataToSave: ResourceFormData = isMonthlyBilling
+      ? { ...formData, hourly_rate: calculatedHourlyRate }
+      : formData;
+
     // 1. Save resource form data
-    const formSuccess = await onSave(resource.id, formData);
+    const formSuccess = await onSave(resource.id, dataToSave);
     if (!formSuccess) return;
 
     // 2. Save staged group changes (if any)
@@ -273,10 +291,6 @@ export function EmployeeEditorModal({
 
     return options;
   }, [availableEmployees, bambooEmployees, formData.bamboo_employee_id]);
-
-  const isMonthlyBilling = formData.billing_mode === 'monthly';
-  const isHourlyBilling = formData.billing_mode === 'hourly';
-  const isAnySaving = isSaving || isSavingGroup;
 
   if (!resource) return null;
 
@@ -537,6 +551,9 @@ export function EmployeeEditorModal({
         <div>
           <label className="block text-xs font-medium text-vercel-gray-400 uppercase tracking-wider mb-2">
             Hourly Rate
+            {isMonthlyBilling && (
+              <span className="ml-2 text-vercel-gray-300 normal-case tracking-normal font-normal">(auto-calculated)</span>
+            )}
           </label>
           <div className="relative">
             <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${
@@ -546,8 +563,9 @@ export function EmployeeEditorModal({
               type="number"
               step="0.01"
               min="0"
-              value={formData.hourly_rate ?? ''}
+              value={isMonthlyBilling ? (calculatedHourlyRate ?? '') : (formData.hourly_rate ?? '')}
               onChange={(e) => {
+                if (isMonthlyBilling) return; // Read-only for monthly billing
                 const value = e.target.value === '' ? null : parseFloat(e.target.value);
                 setFormData(prev => ({ ...prev, hourly_rate: value }));
                 if (errors.hourly_rate) {
@@ -556,6 +574,7 @@ export function EmployeeEditorModal({
               }}
               onBlur={() => handleBlur('hourly_rate')}
               disabled={isMonthlyBilling}
+              readOnly={isMonthlyBilling}
               className={`pl-7 pr-3 ${getNumberInputClasses(isMonthlyBilling, !!(errors.hourly_rate && touched.hourly_rate))}`}
               placeholder={isMonthlyBilling ? '—' : '0.00'}
             />
