@@ -55,6 +55,8 @@ export function DiagnosticsPage() {
   const { syncRuns, loading, error } = useSyncRuns();
   const [exportingTimesheets, setExportingTimesheets] = useState(false);
   const [exportingBilling, setExportingBilling] = useState(false);
+  const [exportingTaskTotals, setExportingTaskTotals] = useState(false);
+  const [exportingEmployeeTotals, setExportingEmployeeTotals] = useState(false);
 
   async function exportTableToCSV(
     tableName: string,
@@ -161,6 +163,34 @@ export function DiagnosticsPage() {
             }
           >
             {exportingBilling ? 'Exporting...' : 'Export Billing Summary'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exportingTaskTotals}
+            onClick={() =>
+              exportTableToCSV(
+                'task_totals',
+                'task_totals.csv',
+                setExportingTaskTotals,
+              )
+            }
+          >
+            {exportingTaskTotals ? 'Exporting...' : 'Export Task Totals'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exportingEmployeeTotals}
+            onClick={() =>
+              exportTableToCSV(
+                'employee_totals',
+                'employee_totals.csv',
+                setExportingEmployeeTotals,
+              )
+            }
+          >
+            {exportingEmployeeTotals ? 'Exporting...' : 'Export Employee Totals'}
           </Button>
         </div>
       </div>

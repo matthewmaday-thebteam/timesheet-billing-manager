@@ -553,6 +553,46 @@ serve(async (req) => {
     }
 
     // =========================================================================
+    // STEP 5.6: Populate Layer 2 totals (task_totals + employee_totals)
+    // =========================================================================
+    // Non-blocking: failures are logged but never stop the sync.
+    // Only runs if rounding completed successfully.
+    // =========================================================================
+    let layer2Result: Record<string, unknown> = { action: 'layer2_not_attempted' };
+
+    if (roundingResult.action !== 'rounding_executed') {
+        layer2Result = {
+            action: 'layer2_skipped',
+            reason: 'rounding_not_complete',
+            sync_run_id: syncRunId,
+        };
+        console.log(`[sync-clockify] Layer 2 skipped: rounding did not complete`);
+    } else {
+        try {
+            const l2StartDate = rangeStartISO.split('T')[0];
+            const l2EndDate = rangeEndISO.split('T')[0];
+
+            const { data: l2Data, error: l2Error } = await supabase
+                .rpc('populate_layer2_totals', {
+                    p_workspace_id: clockifyWorkspaceId,
+                    p_range_start: l2StartDate,
+                    p_range_end: l2EndDate,
+                });
+
+            if (l2Error) {
+                console.error('[sync-clockify] Layer 2 error:', l2Error.message);
+                layer2Result = { action: 'layer2_failed', reason: 'rpc_error', error: l2Error.message };
+            } else {
+                layer2Result = { action: 'layer2_executed', result: l2Data };
+                console.log('[sync-clockify] Layer 2 populated:', JSON.stringify(l2Data));
+            }
+        } catch (err) {
+            layer2Result = { action: 'layer2_failed', reason: 'exception', error: (err as Error).message };
+            console.error('[sync-clockify] Layer 2 failed:', (err as Error).message);
+        }
+    }
+
+    // =========================================================================
     // STEP 6: Drain recalculation queue (n8n Node 7)
     // =========================================================================
     // Only runs if fetch was complete.
@@ -988,6 +1028,7 @@ serve(async (req) => {
       },
       cleanup: cleanupResult,
       rounding: roundingResult,
+      layer2: layer2Result,
       recalculation: recalcResult,
       reconciliation: reconciliationResult,
     };
