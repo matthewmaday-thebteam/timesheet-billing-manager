@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
-import { useTimesheetData } from '../../hooks/useTimesheetData';
-import { useBilling } from '../../hooks/useBilling';
+import { useEmployeeTotals } from '../../hooks/useEmployeeTotals';
+import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useProjectHierarchy } from '../../hooks/useProjectHierarchy';
 import { useAllProjectManagers } from '../../hooks/useProjectManagers';
 import { useProjects } from '../../hooks/useProjects';
@@ -16,13 +16,14 @@ import type { MonthSelection, ProjectManagerLookup } from '../../types';
 export function ProjectsPage() {
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
+  // Fetch Layer 2 data (employee_totals) with canonical lookups
   const {
-    entries,
+    rows,
     projectCanonicalIdLookup,
     userIdToDisplayNameLookup,
     loading,
     error,
-  } = useTimesheetData(dateRange);
+  } = useEmployeeTotals(dateRange);
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -30,13 +31,13 @@ export function ProjectsPage() {
     month: dateRange.start.getMonth() + 1,
   }), [dateRange.start]);
 
-  // Fetch billing result from summary table
-  const { billingResult } = useBilling({ selectedMonth });
+  // Fetch monthly rates for revenue calculation
+  const { projectsWithRates, isLoading: ratesLoading } = useMonthlyRates({ selectedMonth });
 
-  // Build 5-tier hierarchy
+  // Build 5-tier hierarchy from Layer 2 data
   const hierarchyResult = useProjectHierarchy({
-    entries,
-    billingResult,
+    rows,
+    projectsWithRates,
     projectCanonicalIdLookup,
     userIdToDisplayNameLookup,
   });
@@ -44,10 +45,10 @@ export function ProjectsPage() {
   // Fetch project managers (keyed by internal UUID)
   const { managerLookup: rawManagerLookup } = useAllProjectManagers();
 
-  // Fetch projects list (for internal UUID → external project_id mapping)
+  // Fetch projects list (for internal UUID -> external project_id mapping)
   const { projects: allProjects } = useProjects();
 
-  // Remap manager lookup: internal UUID → canonical external project_id
+  // Remap manager lookup: internal UUID -> canonical external project_id
   // The hierarchy table uses canonical external project_id as its key
   const managerLookup = useMemo<ProjectManagerLookup>(() => {
     const result: ProjectManagerLookup = new Map();
@@ -72,6 +73,8 @@ export function ProjectsPage() {
 
     return result;
   }, [rawManagerLookup, allProjects, projectCanonicalIdLookup]);
+
+  const isLoading = loading || ratesLoading;
 
   // Export to CSV - Revenue By Project
   const handleExportCSV = useCallback(() => {
@@ -146,7 +149,7 @@ export function ProjectsPage() {
             Work breakdown for <span className="text-bteam-brand font-medium">{format(dateRange.start, 'MMMM yyyy')}</span>
           </p>
         </div>
-        {!loading && (
+        {!isLoading && (
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-sm text-vercel-gray-400">Total Hours</div>
@@ -171,7 +174,7 @@ export function ProjectsPage() {
         exportOptions={[
           { label: 'Revenue By Project', onClick: handleExportCSV },
         ]}
-        exportDisabled={loading || hierarchyResult.companies.length === 0}
+        exportDisabled={isLoading || hierarchyResult.companies.length === 0}
         controlledMode={mode}
         controlledSelectedMonth={filterSelectedMonth}
         onFilterChange={setFilter}
@@ -181,7 +184,7 @@ export function ProjectsPage() {
       {error && <Alert message={error} icon="error" variant="error" />}
 
       {/* Hierarchy Table */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner size="md" />
           <span className="ml-3 text-sm text-vercel-gray-400">Loading project data...</span>
