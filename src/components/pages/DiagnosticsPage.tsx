@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Card } from '../Card';
 import { Badge } from '../Badge';
+import { Button } from '../Button';
 import { Spinner } from '../Spinner';
 import { useSyncRuns } from '../../hooks/useSyncRuns';
+import { supabase } from '../../lib/supabase';
 
 /** Map sync_type DB values to human-readable labels */
 const SYNC_TYPE_LABELS: Record<string, string> = {
@@ -50,15 +53,116 @@ function formatShortDatetime(iso: string): string {
  */
 export function DiagnosticsPage() {
   const { syncRuns, loading, error } = useSyncRuns();
+  const [exportingTimesheets, setExportingTimesheets] = useState(false);
+  const [exportingBilling, setExportingBilling] = useState(false);
+
+  async function exportTableToCSV(
+    tableName: string,
+    fileName: string,
+    setLoading: (v: boolean) => void,
+  ) {
+    setLoading(true);
+    try {
+      const allRows: Record<string, unknown>[] = [];
+      const pageSize = 1000;
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      if (allRows.length === 0) {
+        alert('No data found');
+        return;
+      }
+
+      const headers = Object.keys(allRows[0]);
+      const csvLines = [
+        headers.join(','),
+        ...allRows.map((row) =>
+          headers
+            .map((h) => {
+              const val = row[h];
+              if (val === null || val === undefined) return '';
+              const str = String(val);
+              if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+              }
+              return str;
+            })
+            .join(','),
+        ),
+      ];
+
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csvLines.join('\r\n')], {
+        type: 'text/csv;charset=utf-8;',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-vercel-gray-600">Diagnostics</h1>
-        <p className="text-sm text-vercel-gray-400 mt-1">
-          Sync Run Log — last 60 runs
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-vercel-gray-600">Diagnostics</h1>
+          <p className="text-sm text-vercel-gray-400 mt-1">
+            Sync Run Log — last 60 runs
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exportingTimesheets}
+            onClick={() =>
+              exportTableToCSV(
+                'timesheet_daily_rollups',
+                'timesheet_daily_rollups.csv',
+                setExportingTimesheets,
+              )
+            }
+          >
+            {exportingTimesheets ? 'Exporting...' : 'Export Timesheet Entries'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exportingBilling}
+            onClick={() =>
+              exportTableToCSV(
+                'v_canonical_project_monthly_summary',
+                'billing_summary.csv',
+                setExportingBilling,
+              )
+            }
+          >
+            {exportingBilling ? 'Exporting...' : 'Export Billing Summary'}
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}
