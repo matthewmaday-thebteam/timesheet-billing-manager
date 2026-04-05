@@ -148,7 +148,7 @@ export function DiagnosticsPage() {
               )
             }
           >
-            {exportingTimesheets ? 'Exporting...' : 'Export Timesheet Entries'}
+            {exportingTimesheets ? 'Exporting...' : 'Export Layer 1'}
           </Button>
           <Button
             variant="secondary"
