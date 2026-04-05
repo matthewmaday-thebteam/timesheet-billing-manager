@@ -355,7 +355,7 @@ export function EmployeePerformance({
               <span className="w-2 h-2 rounded-full bg-success" />
               <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
             </div>
-            <div className="text-xs font-mono text-vercel-gray-400">total revenue</div>
+            <div className="text-xs font-mono text-vercel-gray-400">earned revenue</div>
           </div>
         </div>
       </div>

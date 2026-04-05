@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDateFilter } from '../contexts/DateFilterContext';
 import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
+import type { PieChartDataPoint } from '../types/charts';
 import { getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
 import type { UnderHoursResource } from '../utils/calculations';
 import { RangeSelector } from './RangeSelector';
@@ -261,7 +262,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
       employeeHours.set(name, current + row.rounded_hours);
     }
 
-    const pieData = Array.from(employeeHours.entries())
+    const pieData: PieChartDataPoint[] = Array.from(employeeHours.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
