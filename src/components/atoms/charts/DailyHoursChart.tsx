@@ -46,8 +46,10 @@ const FULL_TIME_HOURS = 8;
 const PART_TIME_HOURS = 4;
 
 export interface DailyHoursChartProps {
-  /** Timesheet entries to aggregate */
-  entries: TimesheetEntry[];
+  /** Timesheet entries to aggregate (legacy — used by Dashboard) */
+  entries?: TimesheetEntry[];
+  /** Pre-aggregated daily hours by date string (YYYY-MM-DD → total hours). When provided, used instead of entries. */
+  dailyHoursByDate?: Map<string, number>;
   /** Start date of the selected period */
   startDate: Date;
   /** End date of the selected period */
@@ -126,7 +128,8 @@ function calculateExpectedHoursPerDay(resources: Resource[]): number {
 }
 
 export function DailyHoursChart({
-  entries,
+  entries = [],
+  dailyHoursByDate,
   startDate,
   endDate,
   holidays = [],
@@ -182,15 +185,26 @@ export function DailyHoursChart({
     return map;
   }, [timeOff, resourceExpectedHours]);
 
-  // Transform entries into daily totals with expected hours
+  // Transform entries (or pre-aggregated dailyHoursByDate) into daily totals with expected hours
   const dailyData = useMemo(() => {
-    // Build a map of date -> total minutes
-    const dateMinutes = new Map<string, number>();
+    // Build a map of date -> total hours
+    // If dailyHoursByDate is provided, use it directly; otherwise aggregate from entries
+    let dateHoursMap: Map<string, number>;
 
-    for (const entry of entries) {
-      const dateStr = entry.work_date;
-      const current = dateMinutes.get(dateStr) || 0;
-      dateMinutes.set(dateStr, current + entry.total_minutes);
+    if (dailyHoursByDate) {
+      dateHoursMap = dailyHoursByDate;
+    } else {
+      const dateMinutes = new Map<string, number>();
+      for (const entry of entries) {
+        const dateStr = entry.work_date;
+        const current = dateMinutes.get(dateStr) || 0;
+        dateMinutes.set(dateStr, current + entry.total_minutes);
+      }
+      // Convert minutes to hours
+      dateHoursMap = new Map<string, number>();
+      for (const [dateStr, minutes] of dateMinutes) {
+        dateHoursMap.set(dateStr, minutes / 60);
+      }
     }
 
     // Build a set of holiday dates for fast lookup (normalize format)
@@ -210,7 +224,7 @@ export function DailyHoursChart({
     while (current <= end) {
       const dateStr = formatDateLocal(current);
       const dayNum = current.getDate();
-      const minutes = dateMinutes.get(dateStr) || 0;
+      const hours = dateHoursMap.get(dateStr) || 0;
 
       // Expected hours: 0 for weekends and holidays, calculated from headcount for working days
       const isWorkingDay = !isWeekend(current) && !isHoliday(dateStr, holidayDates);
@@ -225,7 +239,7 @@ export function DailyHoursChart({
       data.push({
         day: String(dayNum),
         dayNum,
-        hours: minutes / 60,
+        hours,
         expected,
       });
 
@@ -233,7 +247,7 @@ export function DailyHoursChart({
     }
 
     return data;
-  }, [entries, startDate, endDate, holidays, expectedPerDay, timeOffByDate]);
+  }, [entries, dailyHoursByDate, startDate, endDate, holidays, expectedPerDay, timeOffByDate]);
 
   // Custom tooltip formatter
   const tooltipFormatter = (value: number | undefined, name: string | undefined) => {

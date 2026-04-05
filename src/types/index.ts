@@ -1076,6 +1076,28 @@ export interface QBOInvoiceLogEntry {
 }
 
 // ============================================================================
+// Employee Daily Totals Types (Layer 3 — Burn page)
+// ============================================================================
+
+/**
+ * Row from the employee_daily_totals materialized view.
+ * Pre-aggregated daily totals per employee per client, with rounded hours.
+ */
+export interface EmployeeDailyTotal {
+  user_id: string;
+  user_name: string;
+  client_id: string;
+  client_name: string;
+  work_date: string;
+  actual_minutes: number;
+  rounded_minutes: number;
+  actual_hours: number;
+  rounded_hours: number;
+  task_count: number;
+  entry_count: number;
+}
+
+// ============================================================================
 // Employee Project Profit Types (Migration 065)
 // ============================================================================
 

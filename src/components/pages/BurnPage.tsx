@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useTimesheetData } from '../../hooks/useTimesheetData';
+import { useEmployeeDailyTotals } from '../../hooks/useEmployeeDailyTotals';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { supabase } from '../../lib/supabase';
@@ -14,7 +14,7 @@ import type { BulgarianHoliday } from '../../types';
 export function BurnPage() {
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
-  const { entries, userIdToDisplayNameLookup, loading, error } = useTimesheetData(dateRange);
+  const { rows, userIdToDisplayNameLookup, loading, error } = useEmployeeDailyTotals(dateRange);
 
   // Fetch time-off data for the selected period
   const { timeOff } = useTimeOff({
@@ -40,42 +40,35 @@ export function BurnPage() {
     fetchHolidays();
   }, [dateRange.start]);
 
-  // Aggregate entries by employee and date for the BurnGrid
+  // Aggregate employee_daily_totals by canonical employee and date for the BurnGrid
   const burnGridData = useMemo(() => {
-    // Map: employee name -> (date -> total hours)
+    // Map: canonical employee name -> (date -> total rounded hours)
     const employeeMap = new Map<string, Map<string, number>>();
 
-    for (const entry of entries) {
-      // Get display name from lookup, fallback to user_name
-      const userName = (entry.user_id && userIdToDisplayNameLookup.get(entry.user_id)) || entry.user_name;
+    for (const row of rows) {
+      // Resolve to canonical display name, fall back to row.user_name
+      const userName = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
 
       if (!employeeMap.has(userName)) {
         employeeMap.set(userName, new Map());
       }
 
+      // Sum rounded_hours across multiple client rows for the same (employee, date)
       const dateMap = employeeMap.get(userName)!;
-      const currentMinutes = dateMap.get(entry.work_date) || 0;
-      dateMap.set(entry.work_date, currentMinutes + entry.total_minutes);
+      const currentHours = dateMap.get(row.work_date) || 0;
+      dateMap.set(row.work_date, currentHours + row.rounded_hours);
     }
 
-    // Convert minutes to hours and sort employees alphabetically
+    // Sort employees alphabetically
     const result: Array<{ name: string; hoursByDate: Map<string, number> }> = [];
-
     const sortedNames = Array.from(employeeMap.keys()).sort((a, b) => a.localeCompare(b));
 
     for (const name of sortedNames) {
-      const dateMinutes = employeeMap.get(name)!;
-      const hoursByDate = new Map<string, number>();
-
-      for (const [date, minutes] of dateMinutes) {
-        hoursByDate.set(date, minutes / 60);
-      }
-
-      result.push({ name, hoursByDate });
+      result.push({ name, hoursByDate: employeeMap.get(name)! });
     }
 
     return result;
-  }, [entries, userIdToDisplayNameLookup]);
+  }, [rows, userIdToDisplayNameLookup]);
 
   // Compute under-hours cells for highlighting
   const underHoursCells = useMemo(() => {
@@ -161,6 +154,16 @@ export function BurnPage() {
     return cells;
   }, [burnGridData, employees, userIdToDisplayNameLookup, holidays, timeOff, dateRange]);
 
+  // Pre-aggregate daily rounded hours for DailyHoursChart
+  const dailyHoursByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      const current = map.get(row.work_date) || 0;
+      map.set(row.work_date, current + row.rounded_hours);
+    }
+    return map;
+  }, [rows]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -204,7 +207,7 @@ export function BurnPage() {
           <Card>
             <h2 className="text-base font-medium text-vercel-gray-600 mb-4">Resource Utilization</h2>
             <DailyHoursChart
-              entries={entries}
+              dailyHoursByDate={dailyHoursByDate}
               startDate={dateRange.start}
               endDate={dateRange.end}
               holidays={holidays}
