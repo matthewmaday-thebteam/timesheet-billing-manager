@@ -125,7 +125,7 @@ serve(async (req) => {
       rangeEndISO = body.rangeEndDate as string;
       console.log(`[sync-clickup] Manual date range: ${rangeStartISO} to ${rangeEndISO}`);
     } else {
-      // Automatic: 14 days before 1st of current month through end of month
+      // TEMPORARY: Sync starts at first of month (was 14 days before). Protects pre-April Layer 2 data. Revert in May 2026.
       const now = new Date();
 
       // 1st of the current month at 00:00:00.000Z
@@ -136,8 +136,7 @@ serve(async (req) => {
         0, 0, 0, 0,
       ));
 
-      // 14 days before the 1st
-      const rangeStart = new Date(firstOfMonth.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const rangeStart = firstOfMonth;
 
       // Last millisecond of the current month:
       // 1st of next month at 00:00:00.000Z minus 1 ms
