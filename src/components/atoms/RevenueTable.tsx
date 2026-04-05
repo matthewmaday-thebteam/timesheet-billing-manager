@@ -151,6 +151,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
             {hasBillingColumns && (
               <>
                 <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
+                  C/O
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
                   Adjusted
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
@@ -207,6 +210,16 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                   </td>
                   {hasBillingColumns && (
                     <>
+                      <td className="px-6 py-3 text-right">
+                        {(() => {
+                          const companyCarryover = company.projects.reduce((sum, p) => sum + (p.carryoverIn || 0), 0);
+                          return companyCarryover > 0 ? (
+                            <span className="text-sm text-bteam-brand">{formatHours(companyCarryover)}</span>
+                          ) : (
+                            <span className="text-sm text-vercel-gray-300">—</span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-6 py-3 text-right">
                         <span className="text-sm text-vercel-gray-600">{formatHours(company.adjustedHours)}</span>
                       </td>
@@ -280,6 +293,11 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                         {hasBillingColumns && (
                           <>
                             <td className="px-6 py-3 text-right">
+                              <span className={`text-sm ${project.carryoverIn > 0 ? 'text-bteam-brand' : 'text-vercel-gray-200'}`}>
+                                {formatHours(project.carryoverIn || 0)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 text-right">
                               <span className={`text-sm ${project.adjustedHours !== project.roundedHours ? 'text-bteam-brand' : 'text-vercel-gray-200'}`}>
                                 {formatHours(project.adjustedHours)}
                               </span>
@@ -350,6 +368,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                               <td className="px-6 py-2 text-right">
                                 <span className="text-sm text-vercel-gray-300">—</span>
                               </td>
+                              <td className="px-6 py-2 text-right">
+                                <span className="text-sm text-vercel-gray-300">—</span>
+                              </td>
                             </>
                           )}
                           <td className="px-6 py-2 text-right">
@@ -408,6 +429,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                               <td className="px-6 py-3 text-right">
                                 <span className="text-sm text-vercel-gray-300">—</span>
                               </td>
+                              <td className="px-6 py-3 text-right">
+                                <span className="text-sm text-vercel-gray-300">—</span>
+                              </td>
                             </>
                           )}
                           <td className="px-6 py-3 text-right">
@@ -439,6 +463,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
                             </td>
                             {hasBillingColumns && (
                               <>
+                                <td className="px-6 py-2 text-right">
+                                  <span className="text-sm text-vercel-gray-300">—</span>
+                                </td>
                                 <td className="px-6 py-2 text-right">
                                   <span className="text-sm text-vercel-gray-300">—</span>
                                 </td>
@@ -484,6 +511,15 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
             </td>
             {hasBillingColumns && (
               <>
+                <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
+                  {(() => {
+                    const totalCarryover = billingResult.companies.reduce(
+                      (total, company) => total + company.projects.reduce((sum, p) => sum + (p.carryoverIn || 0), 0),
+                      0
+                    );
+                    return totalCarryover > 0 ? formatHours(totalCarryover) : '—';
+                  })()}
+                </td>
                 <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
                   {formatHours(billingResult.adjustedHours)}
                 </td>
