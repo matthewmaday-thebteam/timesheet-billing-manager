@@ -27,15 +27,12 @@ import { AccordionListTable } from '../../../components/AccordionListTable';
 import type { AccordionListTableColumn, AccordionListTableItem } from '../../../components/AccordionListTable';
 import { organisms } from '../../registry/organisms';
 import {
-  mockProjectSummaries,
-  mockResourceSummaries,
   mockResources,
   mockBurnGridData,
   mockHolidays,
   mockTimeOff,
   mockAppUsers,
   mockUnderHoursResources,
-  mockTimesheetEntries,
 } from '../mockData';
 
 // Components that require live Supabase data (hooks fire on mount)
@@ -258,8 +255,8 @@ export function OrganismsSection() {
           </div>
           <DashboardChartsRow
             pieData={[{ name: 'Alice', value: 80, color: '#3b82f6' }, { name: 'Bob', value: 60, color: '#10b981' }]}
-            topFiveByHours={[{ name: 'Alice', value: 80, formattedValue: '80.00 hrs' }, { name: 'Bob', value: 60, formattedValue: '60.00 hrs' }]}
-            topFiveByRevenue={[{ name: 'Alice', value: 4800, formattedValue: '$4,800' }, { name: 'Bob', value: 3180, formattedValue: '$3,180' }]}
+            topFiveByHours={[{ name: 'Alice', hours: 80, revenue: 4800 }, { name: 'Bob', hours: 60, revenue: 3180 }]}
+            topFiveByRevenue={[{ name: 'Alice', hours: 80, revenue: 4800 }, { name: 'Bob', hours: 60, revenue: 3180 }]}
             combinedRevenueByMonth={new Map()}
           />
           <div className="mt-4 p-3 bg-vercel-gray-50 rounded-lg">
