@@ -165,7 +165,7 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
               </>
             )}
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
-              Rounding
+              INC
             </th>
             <th className="px-6 py-3 text-right text-xs font-medium text-vercel-gray-400 uppercase tracking-wider">
               Rate
