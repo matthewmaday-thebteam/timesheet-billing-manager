@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
-import { useTimesheetData } from '../../hooks/useTimesheetData';
+import { useEmployeeTotals } from '../../hooks/useEmployeeTotals';
 import { useMonthlyRates } from '../../hooks/useMonthlyRates';
-import { useBilling } from '../../hooks/useBilling';
 import { useCanonicalCompanyMapping } from '../../hooks/useCanonicalCompanyMapping';
 import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
@@ -12,24 +11,16 @@ import { RangeSelector } from '../RangeSelector';
 import { EmployeePerformance } from '../EmployeePerformance';
 import { MetricCard } from '../MetricCard';
 import { Spinner } from '../Spinner';
-import { DEFAULT_ROUNDING_INCREMENT, formatCurrency } from '../../utils/billing';
+import { formatCurrency } from '../../utils/billing';
 import { minutesToHours } from '../../utils/calculations';
 import { useUtilizationMetrics } from '../../hooks/useUtilizationMetrics';
-import { useEmployeeProfit } from '../../hooks/useEmployeeProfit';
-import type { MonthSelection, RoundingIncrement, BulgarianHoliday } from '../../types';
-
-/**
- * Round minutes up to the nearest increment (matching billingCalculations.ts)
- */
-function roundMinutes(minutes: number, increment: RoundingIncrement): number {
-  if (increment === 0) return minutes;
-  return Math.ceil(minutes / increment) * increment;
-}
+import type { MonthSelection, BulgarianHoliday } from '../../types';
 
 export function EmployeesPage() {
   const { dateRange, mode, selectedMonth: filterSelectedMonth, setDateRange, setFilter } = useDateFilter();
 
-  const { entries, userIdToDisplayNameLookup, projectCanonicalIdLookup, loading, error } = useTimesheetData(dateRange);
+  // Fetch Layer 2 data (employee_totals) with canonical lookups
+  const { rows, userIdToDisplayNameLookup, projectCanonicalIdLookup, loading, error } = useEmployeeTotals(dateRange);
 
   // Convert dateRange to MonthSelection for the rates hook
   const selectedMonth = useMemo<MonthSelection>(() => ({
@@ -73,55 +64,50 @@ export function EmployeesPage() {
     return canonicalInfo?.canonicalDisplayName || 'Unknown';
   }, [getCanonicalCompany]);
 
-  // Use billing from summary table
-  const { billingResult } = useBilling({
-    selectedMonth,
-  });
-
-  // Fetch employee profit data for the selected month
-  const { profitData } = useEmployeeProfit(selectedMonth);
-
-  // Build project config map for rounding lookup (keyed by external project ID)
-  const projectConfigMap = useMemo(() => {
-    const map = new Map<string, { rounding: RoundingIncrement }>();
+  // Build project rate lookup for revenue calculation (keyed by external project ID)
+  const projectRateLookup = useMemo(() => {
+    const map = new Map<string, number>();
     for (const project of projectsWithRates) {
       if (project.externalProjectId) {
-        map.set(project.externalProjectId, {
-          rounding: project.effectiveRounding ?? DEFAULT_ROUNDING_INCREMENT,
-        });
+        map.set(project.externalProjectId, project.effectiveRate);
       }
     }
     return map;
   }, [projectsWithRates]);
 
-  // Build project billedRevenue lookup from billingResult
-  const projectBilledRevenueLookup = useMemo(() => {
-    const lookup = new Map<string, number>();
-    for (const company of billingResult.companies) {
-      for (const project of company.projects) {
-        if (project.projectId) {
-          lookup.set(project.projectId, project.billedRevenue);
-        }
+  // Build employee hourly rate lookup: canonical display name -> hourly_rate
+  const employeeHourlyRateLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const emp of employees) {
+      const displayName = emp.first_name || emp.last_name
+        ? [emp.first_name, emp.last_name].filter(Boolean).join(' ')
+        : emp.external_label;
+      if (emp.hourly_rate != null) {
+        map.set(displayName, emp.hourly_rate);
       }
     }
-    return lookup;
-  }, [billingResult]);
-
-  // Build total project minutes lookup using canonical project IDs
-  const projectTotalMinutesLookup = useMemo(() => {
-    const lookup = new Map<string, number>();
-    for (const entry of entries) {
-      const rawProjectId = entry.project_id || '';
-      // Map to canonical project ID (member -> primary)
-      const projectId = projectCanonicalIdLookup?.get(rawProjectId) || rawProjectId;
-      const current = lookup.get(projectId) || 0;
-      lookup.set(projectId, current + entry.total_minutes);
-    }
-    return lookup;
-  }, [entries, projectCanonicalIdLookup]);
+    return map;
+  }, [employees]);
 
   // Combined loading state for utilization metrics
   const metricsLoading = loading || ratesLoading || timeOffLoading || employeesLoading;
+
+  // Build synthetic entries for utilization metrics from Layer 2 rows
+  // useUtilizationMetrics needs entries with user_id, total_minutes, work_date
+  const syntheticEntries = useMemo(() => {
+    return rows.map(row => ({
+      ...row,
+      // useUtilizationMetrics uses total_minutes and work_date
+      total_minutes: row.rounded_minutes,
+      project_id: row.project_id,
+      project_name: row.project_name,
+      task_id: null,
+      task_key: '',
+      synced_at: '',
+      project_key: '',
+      user_key: '',
+    }));
+  }, [rows]);
 
   // Calculate utilization metrics (shared hook)
   const utilizationMetrics = useUtilizationMetrics({
@@ -129,11 +115,11 @@ export function EmployeesPage() {
     holidays,
     employees,
     timeOff,
-    entries,
+    entries: syntheticEntries as any,
     projectsWithRates,
   });
 
-  // Export to CSV
+  // Export to CSV using Layer 2 data
   const handleExportCSV = useCallback(() => {
     const csvRows: string[][] = [];
 
@@ -143,16 +129,16 @@ export function EmployeesPage() {
     // Header row
     csvRows.push(['Employee', 'Company', 'Project', 'Task', 'Hours', 'Profit', 'Revenue']);
 
-    // Build employee data (similar to EmployeePerformance logic)
+    // Build employee data from Layer 2 rows
     const userMap = new Map<string, Map<string, Map<string, Map<string, number>>>>();
     const userCompanyNames = new Map<string, Map<string, string>>();
 
-    for (const entry of entries) {
-      const userName = (entry.user_id && userIdToDisplayNameLookup.get(entry.user_id)) || entry.user_name;
-      const projectId = entry.project_id || '';
-      const projectName = entry.project_name || 'Unknown Project';
-      const taskName = entry.task_name || entry.task_key || 'No Task';
-      const companyId = entry.client_id || '';
+    for (const row of rows) {
+      const userName = (row.user_id && userIdToDisplayNameLookup.get(row.user_id)) || row.user_name;
+      const projectId = row.project_id || '';
+      const projectName = row.project_name || 'Unknown Project';
+      const taskName = row.task_name || 'No Task';
+      const companyId = row.client_id || '';
       const companyName = getCanonicalCompanyName(companyId);
 
       if (!userMap.has(userName)) {
@@ -174,67 +160,46 @@ export function EmployeesPage() {
       }
       const taskMap = projectMap.get(projectKey)!;
 
+      // Sum rounded_minutes
       const currentMinutes = taskMap.get(taskName) || 0;
-      taskMap.set(taskName, currentMinutes + entry.total_minutes);
+      taskMap.set(taskName, currentMinutes + row.rounded_minutes);
     }
 
-    // Convert to CSV rows with revenue calculation
+    // Convert to CSV rows with revenue/profit calculations
     const sortedUsers = Array.from(userMap.keys()).sort((a, b) => a.localeCompare(b));
 
     for (const userName of sortedUsers) {
       const companyMap = userMap.get(userName)!;
       const companyNameMap = userCompanyNames.get(userName)!;
+      const employeeHourlyRate = employeeHourlyRateLookup.get(userName) ?? null;
 
       for (const [companyId, projectMap] of companyMap) {
         const companyName = companyNameMap.get(companyId) || companyId;
 
         for (const [projectKey, taskMap] of projectMap) {
           const [projectId, projectName] = projectKey.split('::');
-          // Map to canonical project ID for all lookups
+          // Map to canonical project ID for rate lookup
           const canonicalProjectId = projectCanonicalIdLookup?.get(projectId) || projectId;
-          const config = projectConfigMap.get(canonicalProjectId);
-          const rounding = config?.rounding ?? DEFAULT_ROUNDING_INCREMENT;
+          const projectRate = projectRateLookup.get(canonicalProjectId) ?? 0;
 
-          // Calculate project totals for this employee
-          let employeeProjectMinutes = 0;
-          for (const taskMinutes of taskMap.values()) {
-            employeeProjectMinutes += taskMinutes;
-          }
+          for (const [taskName, roundedMinutes] of taskMap) {
+            const roundedHours = roundedMinutes / 60;
 
-          // Calculate proportional revenue using canonical project ID
-          const totalProjectMinutes = projectTotalMinutesLookup.get(canonicalProjectId) || employeeProjectMinutes;
-          const projectBilledRevenue = projectBilledRevenueLookup.get(canonicalProjectId) || 0;
-          const employeeShare = totalProjectMinutes > 0 ? employeeProjectMinutes / totalProjectMinutes : 0;
-          const employeeProjectRevenue = projectBilledRevenue * employeeShare;
+            // Revenue = rounded_hours x project_rate
+            const taskRevenue = roundedHours * projectRate;
 
-          // Calculate project rounded minutes for proportional task distribution
-          let projectRoundedMinutes = 0;
-          for (const taskMinutes of taskMap.values()) {
-            projectRoundedMinutes += roundMinutes(taskMinutes, rounding);
-          }
-
-          // Look up profit from profitData using display name and canonical project ID
-          const employeeProfitMap = profitData?.get(userName);
-          const projectProfitData = employeeProfitMap?.get(canonicalProjectId);
-          const projectProfit = projectProfitData?.profit ?? null;
-
-          for (const [taskName, taskMinutes] of taskMap) {
-            const roundedTaskMinutes = roundMinutes(taskMinutes, rounding);
-            const taskRevenue = projectRoundedMinutes > 0
-              ? employeeProjectRevenue * (roundedTaskMinutes / projectRoundedMinutes)
-              : 0;
-
-            // Distribute project profit proportionally by task minutes
-            const taskProfit = projectProfit !== null && employeeProjectMinutes > 0
-              ? projectProfit * (taskMinutes / employeeProjectMinutes)
-              : null;
+            // Profit = revenue - (rounded_hours x employee_hourly_rate)
+            let taskProfit: number | null = null;
+            if (employeeHourlyRate !== null) {
+              taskProfit = taskRevenue - (roundedHours * employeeHourlyRate);
+            }
 
             csvRows.push([
               userName,
               companyName,
               projectName,
               taskName,
-              minutesToHours(roundedTaskMinutes),
+              minutesToHours(roundedMinutes),
               taskProfit !== null ? taskProfit.toFixed(2) : '',
               taskRevenue.toFixed(2),
             ]);
@@ -258,7 +223,7 @@ export function EmployeesPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [entries, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectConfigMap, projectBilledRevenueLookup, projectTotalMinutesLookup, projectCanonicalIdLookup, profitData]);
+  }, [rows, dateRange, userIdToDisplayNameLookup, getCanonicalCompanyName, projectCanonicalIdLookup, projectRateLookup, employeeHourlyRateLookup]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -280,7 +245,7 @@ export function EmployeesPage() {
         exportOptions={[
           { label: 'Employee Performance Report', onClick: handleExportCSV },
         ]}
-        exportDisabled={loading || entries.length === 0}
+        exportDisabled={loading || rows.length === 0}
         controlledMode={mode}
         controlledSelectedMonth={filterSelectedMonth}
         onFilterChange={setFilter}
@@ -327,14 +292,13 @@ export function EmployeesPage() {
         </div>
       ) : (
         <EmployeePerformance
-          entries={entries}
+          rows={rows}
           projectsWithRates={projectsWithRates}
+          employees={employees}
           timeOff={timeOff}
-          billingResult={billingResult}
           getCanonicalCompanyName={getCanonicalCompanyName}
           userIdToDisplayNameLookup={userIdToDisplayNameLookup}
           projectCanonicalIdLookup={projectCanonicalIdLookup}
-          profitByEmployeeProject={profitData}
         />
       )}
     </div>

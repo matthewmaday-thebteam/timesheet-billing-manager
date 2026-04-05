@@ -7,42 +7,39 @@
  * - Tier 3: Project (Hours, Profit, Revenue)
  * - Tier 4: Task (Hours, Profit, Revenue)
  *
- * Revenue calculation uses the same rounding logic as unified billing.
- * Profit is sourced from the v_employee_project_profit database view via useEmployeeProfit hook.
+ * Revenue = rounded_hours x project_rate (from Rates page)
+ * Profit = revenue - (rounded_hours x employee_hourly_rate) (from Employee Management page)
+ * All hours are rounded hours from Layer 2 data (employee_totals).
  *
  * @category Component
  */
 
 import { useState, useMemo, useEffect, Fragment } from 'react';
-import type { TimesheetEntry, ProjectRateDisplayWithBilling, RoundingIncrement, EmployeeTimeOff } from '../types';
-import type { MonthlyBillingResult } from '../utils/billingCalculations';
-import { formatCurrency, formatHours, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
+import type { EmployeeTotal, ProjectRateDisplayWithBilling, EmployeeTimeOff, ResourceWithGrouping } from '../types';
+import { formatCurrency, formatHours } from '../utils/billing';
 import { minutesToHours } from '../utils/calculations';
 import { ChevronIcon } from './ChevronIcon';
 import { Card } from './Card';
 
 interface EmployeePerformanceProps {
-  /** Raw timesheet entries */
-  entries: TimesheetEntry[];
-  /** Projects with billing configuration */
+  /** Layer 2 employee_totals rows */
+  rows: EmployeeTotal[];
+  /** Projects with billing configuration (for project rates) */
   projectsWithRates: ProjectRateDisplayWithBilling[];
+  /** Employee entities (for employee hourly rate) */
+  employees: ResourceWithGrouping[];
   /** Employee time-off records for the period */
   timeOff?: EmployeeTimeOff[];
-  /** Billing result with correct billedRevenue (includes MIN/MAX adjustments) */
-  billingResult: MonthlyBillingResult;
   /** Function to get canonical company name from client_id (ID-only lookup) */
   getCanonicalCompanyName: (clientId: string) => string;
   /** Lookup from user_id to CANONICAL display name (for proper employee grouping) */
   userIdToDisplayNameLookup: Map<string, string>;
   /** Lookup from external project_id to CANONICAL project_id (for billing config lookups) */
   projectCanonicalIdLookup?: Map<string, string>;
-  /** Map from canonical display name to Map of canonical external project_id to profit data */
-  profitByEmployeeProject?: Map<string, Map<string, { revenue: number; cost: number | null; profit: number | null }>> | null;
 }
 
 interface TaskData {
   taskName: string;
-  minutes: number;
   roundedMinutes: number;
   revenue: number;
   profit: number | null;
@@ -51,7 +48,6 @@ interface TaskData {
 interface ProjectData {
   projectName: string;
   projectId: string;
-  minutes: number;
   roundedMinutes: number;
   revenue: number;
   profit: number | null;
@@ -61,7 +57,6 @@ interface ProjectData {
 interface CompanyData {
   companyName: string;
   companyId: string;
-  minutes: number;
   roundedMinutes: number;
   revenue: number;
   profit: number | null;
@@ -71,50 +66,51 @@ interface CompanyData {
 interface EmployeeData {
   name: string;
   ptoDays: number;
-  minutes: number;
   roundedMinutes: number;
   revenue: number;
   profit: number | null;
   companies: CompanyData[];
 }
 
-/**
- * Round minutes up to the nearest increment (matching billingCalculations.ts)
- */
-function roundMinutes(minutes: number, increment: RoundingIncrement): number {
-  if (increment === 0) return minutes;
-  return Math.ceil(minutes / increment) * increment;
-}
-
 export function EmployeePerformance({
-  entries,
+  rows,
   projectsWithRates,
+  employees,
   timeOff = [],
-  billingResult,
   getCanonicalCompanyName,
   userIdToDisplayNameLookup,
   projectCanonicalIdLookup,
-  profitByEmployeeProject,
 }: EmployeePerformanceProps) {
   // Helper to get canonical project ID (for member project -> primary project mapping)
   const getCanonicalProjectId = (projectId: string): string => {
     if (!projectId || !projectCanonicalIdLookup) return projectId;
     return projectCanonicalIdLookup.get(projectId) || projectId;
   };
-  // Build lookup map: projectId -> billing config (ID-based only)
-  const projectConfigMap = useMemo(() => {
-    const map = new Map<string, { rate: number; rounding: RoundingIncrement }>();
+
+  // Build lookup map: canonical external projectId -> rate
+  const projectRateLookup = useMemo(() => {
+    const map = new Map<string, number>();
     for (const p of projectsWithRates) {
-      map.set(p.externalProjectId, {
-        rate: p.effectiveRate,
-        rounding: p.effectiveRounding,
-      });
+      map.set(p.externalProjectId, p.effectiveRate);
     }
     return map;
   }, [projectsWithRates]);
 
+  // Build lookup map: canonical display name -> hourly_rate
+  const employeeHourlyRateLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const emp of employees) {
+      const displayName = emp.first_name || emp.last_name
+        ? [emp.first_name, emp.last_name].filter(Boolean).join(' ')
+        : emp.external_label;
+      if (emp.hourly_rate != null) {
+        map.set(displayName, emp.hourly_rate);
+      }
+    }
+    return map;
+  }, [employees]);
+
   // Build PTO lookup: display name -> total days
-  // Time-off records use employee_name which should match canonical display names
   const ptoByEmployee = useMemo(() => {
     const map = new Map<string, number>();
     for (const to of timeOff) {
@@ -125,53 +121,23 @@ export function EmployeePerformance({
     return map;
   }, [timeOff]);
 
-  // Build project billedRevenue lookup from billingResult
-  // This includes MIN/MAX/ROLLOVER adjustments at project level
-  const projectBilledRevenueLookup = useMemo(() => {
-    const lookup = new Map<string, number>();
-    for (const company of billingResult.companies) {
-      for (const project of company.projects) {
-        if (project.projectId) {
-          lookup.set(project.projectId, project.billedRevenue);
-        }
-      }
-    }
-    return lookup;
-  }, [billingResult]);
-
-  // Build total project minutes lookup (all employees combined) for proportional distribution
-  // Uses canonical project ID so member project minutes aggregate with primary
-  const projectTotalMinutesLookup = useMemo(() => {
-    const lookup = new Map<string, number>();
-    for (const entry of entries) {
-      const rawProjectId = entry.project_id || '';
-      // Map to canonical project ID (member -> primary)
-      const projectId = projectCanonicalIdLookup?.get(rawProjectId) || rawProjectId;
-      const current = lookup.get(projectId) || 0;
-      lookup.set(projectId, current + entry.total_minutes);
-    }
-    return lookup;
-  }, [entries, projectCanonicalIdLookup]);
-
   // Build hierarchical data: Employee -> Company -> Project -> Task
   const employeeData = useMemo(() => {
-    // First pass: group entries by user -> company -> project -> task
+    // First pass: group rows by user -> company -> project -> task
     // Key is CANONICAL display name (for proper grouping of employees across systems)
     const userMap = new Map<string, Map<string, Map<string, Map<string, number>>>>();
     // Track companyId to companyName mapping for each user
     const userCompanyNames = new Map<string, Map<string, string>>();
 
-    for (const entry of entries) {
+    for (const row of rows) {
       // Use user_id -> canonical display name lookup for proper employee grouping
-      // This ensures employees with different IDs in ClickUp/Clockify are grouped together
-      const userName = (entry.user_id && userIdToDisplayNameLookup.get(entry.user_id)) || entry.user_name;
-      const projectId = entry.project_id || '';
-      const projectName = entry.project_name || 'Unknown Project';
-      // Use task_name (description) instead of task_key (ID)
-      const taskName = entry.task_name || entry.task_key || 'No Task';
+      const userName = (row.user_id && userIdToDisplayNameLookup.get(row.user_id)) || row.user_name;
+      const projectId = row.project_id || '';
+      const projectName = row.project_name || 'Unknown Project';
+      const taskName = row.task_name || 'No Task';
 
-      // Get canonical company name via ID-based lookup (no name fallbacks)
-      const companyId = entry.client_id || '';
+      // Get canonical company name via ID-based lookup
+      const companyId = row.client_id || '';
       const companyName = getCanonicalCompanyName(companyId);
 
       if (!userMap.has(userName)) {
@@ -195,85 +161,68 @@ export function EmployeePerformance({
       }
       const taskMap = projectMap.get(projectKey)!;
 
+      // Sum rounded_minutes from Layer 2 data
       const currentMinutes = taskMap.get(taskName) || 0;
-      taskMap.set(taskName, currentMinutes + entry.total_minutes);
+      taskMap.set(taskName, currentMinutes + row.rounded_minutes);
     }
 
-    // Second pass: calculate proportional revenue based on billingResult
-    const employees: EmployeeData[] = [];
+    // Second pass: calculate revenue and profit from rounded hours
+    const employeesList: EmployeeData[] = [];
 
     for (const [userName, companyMap] of userMap) {
       const companyNameMap = userCompanyNames.get(userName)!;
       const companies: CompanyData[] = [];
-      let employeeTotalMinutes = 0;
       let employeeTotalRoundedMinutes = 0;
       let employeeTotalRevenue = 0;
       let employeeTotalProfit: number | null = null;
 
+      // Look up employee hourly rate
+      const employeeHourlyRate = employeeHourlyRateLookup.get(userName) ?? null;
+
       for (const [companyId, projectMap] of companyMap) {
         const projects: ProjectData[] = [];
-        let companyTotalMinutes = 0;
         let companyTotalRoundedMinutes = 0;
         let companyTotalRevenue = 0;
         let companyTotalProfit: number | null = null;
 
-        // Get company name from stored mapping
         const companyName = companyNameMap.get(companyId) || companyId;
 
         for (const [projectKey, taskMap] of projectMap) {
           const [projectId, projectName] = projectKey.split('::');
-          // Use canonical project ID for billing config lookup (member projects -> primary)
+          // Use canonical project ID for rate lookup
           const canonicalProjectId = getCanonicalProjectId(projectId);
-          const config = projectConfigMap.get(canonicalProjectId);
-          const rounding = config?.rounding ?? DEFAULT_ROUNDING_INCREMENT;
+          const projectRate = projectRateLookup.get(canonicalProjectId) ?? 0;
 
           const tasks: TaskData[] = [];
-          let projectTotalMinutes = 0;
           let projectTotalRoundedMinutes = 0;
 
-          for (const [taskName, taskMinutes] of taskMap) {
-            const roundedTaskMinutes = roundMinutes(taskMinutes, rounding);
+          for (const [taskName, roundedMinutes] of taskMap) {
+            const roundedHours = roundedMinutes / 60;
+
+            // Revenue = rounded_hours x project_rate
+            const taskRevenue = roundedHours * projectRate;
+
+            // Profit = revenue - (rounded_hours x employee_hourly_rate)
+            let taskProfit: number | null = null;
+            if (employeeHourlyRate !== null) {
+              taskProfit = taskRevenue - (roundedHours * employeeHourlyRate);
+            }
 
             tasks.push({
               taskName,
-              minutes: taskMinutes,
-              roundedMinutes: roundedTaskMinutes,
-              revenue: 0, // Will be calculated proportionally below
-              profit: null, // Will be calculated proportionally below
+              roundedMinutes,
+              revenue: taskRevenue,
+              profit: taskProfit,
             });
 
-            projectTotalMinutes += taskMinutes;
-            projectTotalRoundedMinutes += roundedTaskMinutes;
+            projectTotalRoundedMinutes += roundedMinutes;
           }
 
-          // Calculate employee's proportional share of project billedRevenue
-          // This ensures MIN/MAX/ROLLOVER adjustments are distributed to employees
-          // Use canonical project ID for both lookups (member projects aggregate under primary)
-          const totalProjectMinutes = projectTotalMinutesLookup.get(canonicalProjectId) || projectTotalMinutes;
-          const projectBilledRevenue = projectBilledRevenueLookup.get(canonicalProjectId) || 0;
-          const employeeShare = totalProjectMinutes > 0 ? projectTotalMinutes / totalProjectMinutes : 0;
-          const employeeProjectRevenue = projectBilledRevenue * employeeShare;
-
-          // Distribute revenue proportionally across tasks based on rounded minutes
-          for (const task of tasks) {
-            task.revenue = projectTotalRoundedMinutes > 0
-              ? employeeProjectRevenue * (task.roundedMinutes / projectTotalRoundedMinutes)
-              : 0;
-          }
-
-          // Look up profit from profitByEmployeeProject using canonical IDs
-          // The map is keyed by display name and canonical external project ID
-          const employeeProfitMap = profitByEmployeeProject?.get(userName);
-          const projectProfitData = employeeProfitMap?.get(canonicalProjectId);
-          const projectProfit = projectProfitData?.profit ?? null;
-
-          // Distribute project profit proportionally across tasks by task minutes
-          if (projectProfit !== null) {
-            for (const task of tasks) {
-              task.profit = projectTotalMinutes > 0
-                ? projectProfit * (task.minutes / projectTotalMinutes)
-                : null;
-            }
+          // Sum project revenue and profit from tasks
+          const projectRevenue = tasks.reduce((sum, t) => sum + t.revenue, 0);
+          let projectProfit: number | null = null;
+          if (employeeHourlyRate !== null) {
+            projectProfit = tasks.reduce((sum, t) => sum + (t.profit ?? 0), 0);
           }
 
           // Sort tasks alphabetically
@@ -282,16 +231,14 @@ export function EmployeePerformance({
           projects.push({
             projectName,
             projectId,
-            minutes: projectTotalMinutes,
             roundedMinutes: projectTotalRoundedMinutes,
-            revenue: employeeProjectRevenue,
+            revenue: projectRevenue,
             profit: projectProfit,
             tasks,
           });
 
-          companyTotalMinutes += projectTotalMinutes;
           companyTotalRoundedMinutes += projectTotalRoundedMinutes;
-          companyTotalRevenue += employeeProjectRevenue;
+          companyTotalRevenue += projectRevenue;
           if (projectProfit !== null) {
             companyTotalProfit = (companyTotalProfit ?? 0) + projectProfit;
           }
@@ -303,14 +250,12 @@ export function EmployeePerformance({
         companies.push({
           companyName,
           companyId,
-          minutes: companyTotalMinutes,
           roundedMinutes: companyTotalRoundedMinutes,
           revenue: companyTotalRevenue,
           profit: companyTotalProfit,
           projects,
         });
 
-        employeeTotalMinutes += companyTotalMinutes;
         employeeTotalRoundedMinutes += companyTotalRoundedMinutes;
         employeeTotalRevenue += companyTotalRevenue;
         if (companyTotalProfit !== null) {
@@ -321,10 +266,9 @@ export function EmployeePerformance({
       // Sort companies alphabetically
       companies.sort((a, b) => a.companyName.localeCompare(b.companyName));
 
-      employees.push({
+      employeesList.push({
         name: userName,
         ptoDays: ptoByEmployee.get(userName) || 0,
-        minutes: employeeTotalMinutes,
         roundedMinutes: employeeTotalRoundedMinutes,
         revenue: employeeTotalRevenue,
         profit: employeeTotalProfit,
@@ -333,12 +277,12 @@ export function EmployeePerformance({
     }
 
     // Sort employees by hours worked (highest first)
-    return employees.sort((a, b) => b.minutes - a.minutes);
-  }, [entries, projectConfigMap, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectBilledRevenueLookup, projectTotalMinutesLookup, profitByEmployeeProject]);
+    return employeesList.sort((a, b) => b.roundedMinutes - a.roundedMinutes);
+  }, [rows, projectRateLookup, employeeHourlyRateLookup, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectCanonicalIdLookup]);
 
-  // Calculate totals - use billingResult for consistency with Projects/Revenue pages
-  const totalBilledHours = billingResult.billedHours;
-  const totalBilledRevenue = billingResult.billedRevenue;
+  // Calculate footer totals from employee rows (NOT from billingResult)
+  const totalRoundedMinutes = employeeData.reduce((sum, emp) => sum + emp.roundedMinutes, 0);
+  const totalRevenue = employeeData.reduce((sum, emp) => sum + emp.revenue, 0);
   const totalPtoDays = employeeData.reduce((sum, emp) => sum + emp.ptoDays, 0);
   const totalProfit = employeeData.reduce((sum, emp) => emp.profit !== null ? sum + emp.profit : sum, 0);
   const hasAnyProfit = employeeData.some(emp => emp.profit !== null);
@@ -409,7 +353,7 @@ export function EmployeePerformance({
           <div className="text-right">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-success" />
-              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalBilledRevenue)}</span>
+              <span className="text-lg font-semibold text-vercel-gray-600">{formatCurrency(totalRevenue)}</span>
             </div>
             <div className="text-xs font-mono text-vercel-gray-400">total revenue</div>
           </div>
@@ -586,7 +530,7 @@ export function EmployeePerformance({
                 )}
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-                {formatHours(totalBilledHours)}
+                {formatHours(totalRoundedMinutes / 60)}
               </td>
               <td className="px-6 py-4 text-right">
                 <span className={`text-sm font-semibold ${hasAnyProfit && totalProfit < 0 ? 'text-error-text' : 'text-vercel-gray-600'}`}>
@@ -594,7 +538,7 @@ export function EmployeePerformance({
                 </span>
               </td>
               <td className="px-6 py-4 text-right text-sm font-semibold text-vercel-gray-600">
-                {formatCurrency(totalBilledRevenue)}
+                {formatCurrency(totalRevenue)}
               </td>
             </tr>
           </tfoot>

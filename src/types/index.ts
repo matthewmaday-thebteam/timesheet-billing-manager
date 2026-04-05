@@ -1097,6 +1097,28 @@ export interface EmployeeDailyTotal {
   entry_count: number;
 }
 
+/**
+ * Row from the employee_totals table (Layer 2).
+ * Pre-aggregated totals per employee + project + task + day, with rounded hours.
+ */
+export interface EmployeeTotal {
+  id: number;
+  user_id: string;
+  user_name: string;
+  project_id: string;
+  project_name: string;
+  task_name: string;
+  client_id: string;
+  client_name: string;
+  work_date: string;
+  actual_minutes: number;
+  rounded_minutes: number;
+  actual_hours: number;
+  rounded_hours: number;
+  entry_count: number;
+  updated_at: string;
+}
+
 // ============================================================================
 // Employee Project Profit Types (Migration 065)
 // ============================================================================
