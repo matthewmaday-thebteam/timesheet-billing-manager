@@ -2,17 +2,18 @@ import { useMemo } from 'react';
 import { minutesToHours } from '../utils/calculations';
 import { ANNUAL_BUDGET, TARGET_RATIO } from '../config/chartConfig';
 import { MetricCard } from './MetricCard';
-import type { ProjectSummary, ResourceSummary } from '../types';
 
 // Monthly budget and target from annual values
 const MONTHLY_BUDGET = ANNUAL_BUDGET / 12;
 const MONTHLY_TARGET = (ANNUAL_BUDGET * TARGET_RATIO) / 12;
 
 interface StatsOverviewProps {
-  projects: ProjectSummary[];
+  /** Total rounded minutes from Layer 2 data */
+  totalMinutes: number;
   /** Canonical project count from v_project_table_entities (per Formulas page definition) */
   projectCount: number;
-  resources: ResourceSummary[];
+  /** Distinct resource count from Layer 2 data */
+  resourceCount: number;
   underHoursCount: number;
   totalRevenue: number;
   utilizationPercent: number;
@@ -21,21 +22,20 @@ interface StatsOverviewProps {
 }
 
 export function StatsOverview({
-  projects,
+  totalMinutes,
   projectCount,
-  resources,
+  resourceCount,
   underHoursCount,
   totalRevenue,
   utilizationPercent,
   utilizationLoading = false,
   onUnderHoursClick,
 }: StatsOverviewProps) {
-  const totalMinutes = projects.reduce((sum, p) => sum + p.totalMinutes, 0);
   const hasUnderHours = underHoursCount > 0;
 
-  // Calculate revenue status
+  // Calculate revenue status (uses billing engine revenue)
   const revenueStatus = useMemo(() => {
-    if (projects.length === 0) {
+    if (totalRevenue === 0) {
       return { label: 'No Data', color: 'default' as const };
     }
 
@@ -51,7 +51,7 @@ export function StatsOverview({
       return { label: 'At Budget', color: 'orange' as const };
     }
     return { label: 'Below Budget', color: 'red' as const };
-  }, [projects.length, totalRevenue]);
+  }, [totalRevenue]);
 
   return (
     <div className="flex gap-4">
@@ -89,7 +89,7 @@ export function StatsOverview({
       <div className="w-[10%]">
         <MetricCard
           title="Resources"
-          value={resources.length.toLocaleString('en-US')}
+          value={resourceCount.toLocaleString('en-US')}
         />
       </div>
 

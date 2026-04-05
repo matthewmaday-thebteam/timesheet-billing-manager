@@ -23,24 +23,14 @@ import { LineGraphAtom } from './atoms/charts/LineGraphAtom';
 import { BarChartAtom } from './atoms/charts/BarChartAtom';
 import { CAGRChartAtom } from './atoms/charts/CAGRChartAtom';
 import {
-  transformResourcesToPieData,
   transformToLineChartData,
   transformToQuarterlyChartData,
   transformToMoMGrowthData,
   transformToCAGRProjectionData,
   calculateGrowthStats,
 } from '../utils/chartTransforms';
-import { formatCurrency, DEFAULT_ROUNDING_INCREMENT } from '../utils/billing';
-import type { ResourceSummary, TimesheetEntry, RoundingIncrement } from '../types';
-import type { MonthlyBillingResult } from '../utils/billingCalculations';
-
-/**
- * Round minutes up to the nearest increment (matching billingCalculations.ts)
- */
-function roundMinutes(minutes: number, increment: RoundingIncrement): number {
-  if (increment === 0) return minutes;
-  return Math.ceil(minutes / increment) * increment;
-}
+import { formatCurrency } from '../utils/billing';
+import type { PieChartDataPoint } from '../types/charts';
 
 /** Data for top resources list display */
 interface TopResourceItem {
@@ -50,18 +40,12 @@ interface TopResourceItem {
 }
 
 export interface DashboardChartsRowProps {
-  /** Resource summaries for pie chart (monthly data) */
-  resources: ResourceSummary[];
-  /** Raw timesheet entries for daily filtering */
-  entries: TimesheetEntry[];
-  /** Project rates lookup by external project_id (fallback) */
-  projectRates: Map<string, number>;
-  /** Canonical project ID lookup (external project_id -> canonical project_id) */
-  projectCanonicalIdLookup?: Map<string, string>;
-  /** Canonical user ID to display name lookup (user_id -> canonical display name) */
-  userIdToDisplayNameLookup?: Map<string, string>;
-  /** Unified billing result from useUnifiedBilling */
-  billingResult?: MonthlyBillingResult;
+  /** Pre-computed pie chart data from Layer 2 (hours per employee) */
+  pieData: PieChartDataPoint[];
+  /** Pre-computed top 5 by hours from Layer 2 */
+  topFiveByHours: TopResourceItem[];
+  /** Pre-computed top 5 by revenue from Layer 2 */
+  topFiveByRevenue: TopResourceItem[];
   /** Pre-computed combined revenue by month key (YYYY-MM -> dollars) from billing engine */
   combinedRevenueByMonth: Map<string, number>;
   /** Loading state */
@@ -72,140 +56,10 @@ export interface DashboardChartsRowProps {
   projectedAnnualRevenue?: number | null;
 }
 
-/**
- * Transform timesheet entries into top N resource list with hours and revenue.
- * Uses the unified billing result for accurate revenue calculations.
- * Applies rounding per task to match Employees page calculations.
- * @param sortBy - 'hours' or 'revenue' - determines sort order
- */
-function transformEntriesToTopList(
-  entries: TimesheetEntry[],
-  billingResult: MonthlyBillingResult | undefined,
-  projectRates: Map<string, number>,
-  projectCanonicalIdLookup: Map<string, string> | undefined,
-  userIdToDisplayNameLookup: Map<string, string> | undefined,
-  topN: number = 5,
-  sortBy: 'hours' | 'revenue' = 'hours'
-): TopResourceItem[] {
-  // Helper to get canonical project ID
-  const getCanonicalProjectId = (projectId: string | null): string => {
-    if (!projectId) return '';
-    return projectCanonicalIdLookup?.get(projectId) || projectId;
-  };
-
-  // Build project lookups from billing result (keyed by canonical project ID)
-  const projectRevenues = new Map<string, number>();
-  const projectActualMinutes = new Map<string, number>();
-  const projectRounding = new Map<string, RoundingIncrement>();
-
-  if (billingResult) {
-    for (const company of billingResult.companies) {
-      for (const project of company.projects) {
-        const projectId = project.projectId || '';
-        projectRevenues.set(projectId, project.billedRevenue);
-        projectActualMinutes.set(projectId, project.actualMinutes);
-        projectRounding.set(projectId, project.rounding);
-      }
-    }
-  }
-
-  // If no billing result, fall back to simple calculation using canonical project IDs
-  if (!billingResult) {
-    for (const entry of entries) {
-      const canonicalProjectId = getCanonicalProjectId(entry.project_id);
-      const current = projectActualMinutes.get(canonicalProjectId) || 0;
-      projectActualMinutes.set(canonicalProjectId, current + entry.total_minutes);
-
-      const rate = projectRates.get(canonicalProjectId) ?? 0;
-      const currentRevenue = projectRevenues.get(canonicalProjectId) || 0;
-      projectRevenues.set(canonicalProjectId, currentRevenue + (entry.total_minutes / 60) * rate);
-    }
-  }
-
-  // Group entries by user -> project -> task to apply rounding correctly
-  // Structure: userName -> projectId -> taskName -> minutes
-  const userProjectTasks = new Map<string, Map<string, Map<string, number>>>();
-
-  for (const entry of entries) {
-    const userName = (entry.user_id && userIdToDisplayNameLookup?.get(entry.user_id)) || entry.user_name;
-    const canonicalProjectId = getCanonicalProjectId(entry.project_id);
-    const taskName = entry.task_name || 'No Task';
-
-    if (!userProjectTasks.has(userName)) {
-      userProjectTasks.set(userName, new Map());
-    }
-    const projectMap = userProjectTasks.get(userName)!;
-
-    if (!projectMap.has(canonicalProjectId)) {
-      projectMap.set(canonicalProjectId, new Map());
-    }
-    const taskMap = projectMap.get(canonicalProjectId)!;
-
-    const currentMinutes = taskMap.get(taskName) || 0;
-    taskMap.set(taskName, currentMinutes + entry.total_minutes);
-  }
-
-  // Calculate rounded hours and proportional revenue per user
-  const userStats = new Map<string, { roundedMinutes: number; rawMinutes: number; revenue: number }>();
-
-  for (const [userName, projectMap] of userProjectTasks) {
-    let userRoundedMinutes = 0;
-    let userRawMinutes = 0;
-    let userRevenue = 0;
-
-    for (const [projectId, taskMap] of projectMap) {
-      const rounding = projectRounding.get(projectId) ?? DEFAULT_ROUNDING_INCREMENT;
-      let projectUserRawMinutes = 0;
-      let projectUserRoundedMinutes = 0;
-
-      // Apply rounding per task
-      for (const [, taskMinutes] of taskMap) {
-        projectUserRawMinutes += taskMinutes;
-        projectUserRoundedMinutes += roundMinutes(taskMinutes, rounding);
-      }
-
-      userRawMinutes += projectUserRawMinutes;
-      userRoundedMinutes += projectUserRoundedMinutes;
-
-      // Calculate proportional revenue based on raw minutes share
-      const totalProjectMinutes = projectActualMinutes.get(projectId) || 1;
-      const projectRevenue = projectRevenues.get(projectId) || 0;
-      const userShare = (projectUserRawMinutes / totalProjectMinutes) * projectRevenue;
-      userRevenue += userShare;
-    }
-
-    userStats.set(userName, {
-      roundedMinutes: userRoundedMinutes,
-      rawMinutes: userRawMinutes,
-      revenue: userRevenue,
-    });
-  }
-
-  // Convert to list format using rounded minutes for hours
-  const listData: TopResourceItem[] = Array.from(userStats.entries()).map(
-    ([name, stats]) => ({
-      name,
-      hours: stats.roundedMinutes / 60,
-      revenue: stats.revenue,
-    })
-  );
-
-  // Sort by specified field descending and take top N
-  if (sortBy === 'revenue') {
-    listData.sort((a, b) => b.revenue - a.revenue);
-  } else {
-    listData.sort((a, b) => b.hours - a.hours);
-  }
-  return listData.slice(0, topN);
-}
-
 export function DashboardChartsRow({
-  resources,
-  entries,
-  projectRates,
-  projectCanonicalIdLookup,
-  userIdToDisplayNameLookup,
-  billingResult,
+  pieData,
+  topFiveByHours,
+  topFiveByRevenue,
   combinedRevenueByMonth,
   loading = false,
   section = 'all',
@@ -214,39 +68,33 @@ export function DashboardChartsRow({
   const showResources = section === 'resources' || section === 'all';
   const showTrends = section === 'trends' || section === 'all';
 
-  // Quarter selector state — defaults to current quarter
+  // Quarter selector state -- defaults to current quarter
   const [selectedQuarter, setSelectedQuarter] = useState<string>(() =>
     String(Math.ceil((new Date().getMonth() + 1) / 3))
   );
 
   const quarterOptions = [
-    { value: '1', label: 'Q1 (Jan–Mar)' },
-    { value: '2', label: 'Q2 (Apr–Jun)' },
-    { value: '3', label: 'Q3 (Jul–Sep)' },
-    { value: '4', label: 'Q4 (Oct–Dec)' },
+    { value: '1', label: 'Q1 (Jan-Mar)' },
+    { value: '2', label: 'Q2 (Apr-Jun)' },
+    { value: '3', label: 'Q3 (Jul-Sep)' },
+    { value: '4', label: 'Q4 (Oct-Dec)' },
   ];
 
-  // Transform data for charts
-  const pieData = useMemo(
-    () => transformResourcesToPieData(resources),
-    [resources]
-  );
-
-  // Growth statistics for display (computed first — lineData depends on projectedAnnualRevenue)
+  // Growth statistics for display (computed first -- lineData depends on projectedAnnualRevenue)
   const growthStats = useMemo(
     () => calculateGrowthStats(combinedRevenueByMonth),
     [combinedRevenueByMonth]
   );
 
-  // Line chart data — built directly from combinedRevenueByMonth (billing engine output)
-  // Use shared client-side projected revenue only — no CAGR fallback
+  // Line chart data -- built directly from combinedRevenueByMonth (billing engine output)
+  // Use shared client-side projected revenue only -- no CAGR fallback
   const effectiveProjectedRevenue = projectedAnnualRevenueOverride ?? null;
   const lineData = useMemo(
     () => transformToLineChartData(combinedRevenueByMonth, undefined, undefined, effectiveProjectedRevenue),
     [combinedRevenueByMonth, effectiveProjectedRevenue]
   );
 
-  // Quarterly chart data — slice of the 12-month data for the selected quarter
+  // Quarterly chart data -- slice of the 12-month data for the selected quarter
   const quarterlyData = useMemo(
     () => transformToQuarterlyChartData(lineData, Number(selectedQuarter)),
     [lineData, selectedQuarter]
@@ -262,18 +110,6 @@ export function DashboardChartsRow({
   const cagrData = useMemo(
     () => transformToCAGRProjectionData(combinedRevenueByMonth),
     [combinedRevenueByMonth]
-  );
-
-  // Top 5 by hours for the selected month
-  const topFiveByHours = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup, 5, 'hours'),
-    [entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup]
-  );
-
-  // Top 5 by revenue for the selected month
-  const topFiveByRevenue = useMemo(
-    () => transformEntriesToTopList(entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup, 5, 'revenue'),
-    [entries, billingResult, projectRates, projectCanonicalIdLookup, userIdToDisplayNameLookup]
   );
 
   // Loading state
@@ -332,7 +168,7 @@ export function DashboardChartsRow({
   }
 
   // Empty state - no data
-  if (resources.length === 0 && combinedRevenueByMonth.size === 0) {
+  if (pieData.length === 0 && combinedRevenueByMonth.size === 0) {
     return null;
   }
 

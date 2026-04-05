@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
-import { useTimesheetData } from '../hooks/useTimesheetData';
-import { useProjects } from '../hooks/useProjects';
+import { useEmployeeTotals } from '../hooks/useEmployeeTotals';
+import { useEmployeeDailyTotals } from '../hooks/useEmployeeDailyTotals';
 import { useProjectTableEntities } from '../hooks/useProjectTableEntities';
 import { useMonthlyRates } from '../hooks/useMonthlyRates';
 import { useBilling } from '../hooks/useBilling';
@@ -15,8 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDateFilter } from '../contexts/DateFilterContext';
 import { supabase } from '../lib/supabase';
 import type { BulgarianHoliday } from '../types';
-import { getUnderHoursResources, getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
-import { buildDbRateLookup } from '../utils/billing';
+import { getProratedExpectedHours, getWorkingDaysInfo } from '../utils/calculations';
+import type { UnderHoursResource } from '../utils/calculations';
 import { RangeSelector } from './RangeSelector';
 import { DashboardChartsRow } from './DashboardChartsRow';
 import { StatsOverview } from './StatsOverview';
@@ -60,11 +60,20 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   const lastName = user?.user_metadata?.last_name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-  const { entries, projects, resources: resourceSummaries, projectCanonicalIdLookup, userIdToDisplayNameLookup, loading, error, refetch } = useTimesheetData(
-    dateRange,
-    { extendedMonths: HISTORICAL_MONTHS }
-  );
-  const { projects: dbProjects } = useProjects();
+  // Layer 2: employee_totals for hours metrics, pie chart, top 5, under hours
+  const {
+    rows: layer2Rows,
+    userIdToDisplayNameLookup,
+    projectCanonicalIdLookup,
+    loading: layer2Loading,
+    error: layer2Error,
+  } = useEmployeeTotals(dateRange);
+
+  // Layer 3: employee_daily_totals for DailyHoursChart
+  const {
+    rows: layer3Rows,
+    loading: layer3Loading,
+  } = useEmployeeDailyTotals(dateRange);
 
   // Fetch canonical project count from v_project_table_entities (per Formulas page definition)
   const { projects: canonicalProjects } = useProjectTableEntities();
@@ -129,7 +138,6 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   const effectiveEndDate = dateRange.end > effectiveToday ? effectiveToday : dateRange.end;
   const expectedHours = getProratedExpectedHours(effectiveEndDate);
   const workingDays = getWorkingDaysInfo(effectiveEndDate);
-  const allUnderHoursItems = getUnderHoursResources(resourceSummaries, effectiveEndDate);
 
   // Build set of billable employee names (Full-time/Part-time only, excludes vendors/contractors)
   const billableEmployeeNames = useMemo(() => {
@@ -137,8 +145,8 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
     for (const emp of employees) {
       const empType = emp.employment_type?.name;
       if (empType === 'Full-time' || empType === 'Part-time') {
-        const displayName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.external_label;
-        names.add(displayName);
+        const empDisplayName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.external_label;
+        names.add(empDisplayName);
         // Also add external_label in case that's used for matching
         if (emp.external_label) {
           names.add(emp.external_label);
@@ -148,16 +156,194 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
     return names;
   }, [employees]);
 
-  // Filter under hours items to exclude vendors/contractors
-  const underHoursItems = useMemo(() =>
-    allUnderHoursItems.filter(item =>
-      billableEmployeeNames.has(item.displayName) || billableEmployeeNames.has(item.userName)
-    ),
-    [allUnderHoursItems, billableEmployeeNames]
+  // --- Layer 2 aggregates ---
+
+  // Total rounded minutes from Layer 2
+  const totalRoundedMinutes = useMemo(() =>
+    layer2Rows.reduce((sum, r) => sum + r.rounded_minutes, 0),
+    [layer2Rows]
   );
 
-  // Build database rate lookup by external project_id (fallback for projects not in monthly rates)
-  const dbRateLookup = useMemo(() => buildDbRateLookup(dbProjects), [dbProjects]);
+  // Resource count: distinct canonical user names from Layer 2
+  const layer2ResourceCount = useMemo(() => {
+    const names = new Set<string>();
+    for (const row of layer2Rows) {
+      const name = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
+      names.add(name);
+    }
+    return names.size;
+  }, [layer2Rows, userIdToDisplayNameLookup]);
+
+  // Under-hours resources from Layer 2 rounded_minutes
+  const underHoursItems = useMemo(() => {
+    // Aggregate Layer 2 rounded_minutes per canonical employee
+    const employeeMinutes = new Map<string, { userName: string; displayName: string; totalMinutes: number }>();
+    for (const row of layer2Rows) {
+      const displayName = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
+      const existing = employeeMinutes.get(displayName);
+      if (existing) {
+        existing.totalMinutes += row.rounded_minutes;
+      } else {
+        employeeMinutes.set(displayName, {
+          userName: row.user_name,
+          displayName,
+          totalMinutes: row.rounded_minutes,
+        });
+      }
+    }
+
+    // Calculate prorated expected using same approach as getUnderHoursResources
+    const proratedHours = getProratedExpectedHours(effectiveEndDate);
+    const proratedMinutes = proratedHours * 60;
+
+    const items: UnderHoursResource[] = [];
+    for (const [, emp] of employeeMinutes) {
+      // Only include billable employees (Full-time/Part-time)
+      if (!billableEmployeeNames.has(emp.displayName) && !billableEmployeeNames.has(emp.userName)) {
+        continue;
+      }
+      if (emp.totalMinutes < proratedMinutes) {
+        const actualHours = emp.totalMinutes / 60;
+        items.push({
+          userName: emp.userName,
+          displayName: emp.displayName,
+          actualHours,
+          expectedHours: proratedHours,
+          deficit: proratedHours - actualHours,
+        });
+      }
+    }
+
+    // Also add billable employees with zero hours (not in Layer 2 at all)
+    for (const emp of employees) {
+      const empType = emp.employment_type?.name;
+      if (empType !== 'Full-time' && empType !== 'Part-time') continue;
+      const empDisplayName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.external_label;
+      if (!employeeMinutes.has(empDisplayName)) {
+        const proratedHrs = getProratedExpectedHours(effectiveEndDate);
+        if (proratedHrs > 0) {
+          items.push({
+            userName: emp.external_label,
+            displayName: empDisplayName,
+            actualHours: 0,
+            expectedHours: proratedHrs,
+            deficit: proratedHrs,
+          });
+        }
+      }
+    }
+
+    // Sort by deficit descending
+    return items.sort((a, b) => b.deficit - a.deficit);
+  }, [layer2Rows, userIdToDisplayNameLookup, effectiveEndDate, billableEmployeeNames, employees]);
+
+  // Synthetic entries for useUtilizationMetrics (same pattern as EmployeesPage lines 97-109)
+  const syntheticEntries = useMemo(() => {
+    return layer2Rows.map(row => ({
+      ...row,
+      total_minutes: row.rounded_minutes,
+      project_id: row.project_id,
+      project_name: row.project_name,
+      task_id: null,
+      task_key: '',
+      synced_at: '',
+      project_key: '',
+      user_key: '',
+    }));
+  }, [layer2Rows]);
+
+  // Pie chart data: aggregate Layer 2 rounded_hours per canonical employee
+  const pieChartData = useMemo(() => {
+    const employeeHours = new Map<string, number>();
+    for (const row of layer2Rows) {
+      const name = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
+      const current = employeeHours.get(name) || 0;
+      employeeHours.set(name, current + row.rounded_hours);
+    }
+
+    const pieData = Array.from(employeeHours.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    // Top 5 + "Other" grouping
+    if (pieData.length <= 5) return pieData;
+    const top5 = pieData.slice(0, 5);
+    const otherValue = pieData.slice(5).reduce((sum, d) => sum + d.value, 0);
+    if (otherValue > 0) {
+      top5.push({ name: 'Other', value: otherValue });
+    }
+    return top5;
+  }, [layer2Rows, userIdToDisplayNameLookup]);
+
+  // Build project rate lookup for revenue calculations (keyed by external project ID)
+  const projectRateLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const project of projectsWithRates) {
+      if (project.externalProjectId) {
+        map.set(project.externalProjectId, project.effectiveRate);
+      }
+    }
+    return map;
+  }, [projectsWithRates]);
+
+  // Top 5 by hours from Layer 2
+  const topFiveByHours = useMemo(() => {
+    const employeeHours = new Map<string, { hours: number; revenue: number }>();
+    for (const row of layer2Rows) {
+      const name = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
+      const canonicalProjectId = projectCanonicalIdLookup.get(row.project_id) || row.project_id;
+      const rate = projectRateLookup.get(canonicalProjectId) ?? 0;
+      const revenue = row.rounded_hours * rate;
+
+      const existing = employeeHours.get(name);
+      if (existing) {
+        existing.hours += row.rounded_hours;
+        existing.revenue += revenue;
+      } else {
+        employeeHours.set(name, { hours: row.rounded_hours, revenue });
+      }
+    }
+
+    return Array.from(employeeHours.entries())
+      .map(([name, stats]) => ({ name, hours: stats.hours, revenue: stats.revenue }))
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 5);
+  }, [layer2Rows, userIdToDisplayNameLookup, projectCanonicalIdLookup, projectRateLookup]);
+
+  // Top 5 by revenue from Layer 2 (rounded_hours x rate)
+  const topFiveByRevenue = useMemo(() => {
+    const employeeRevenue = new Map<string, { hours: number; revenue: number }>();
+    for (const row of layer2Rows) {
+      const name = userIdToDisplayNameLookup.get(row.user_id) || row.user_name;
+      const canonicalProjectId = projectCanonicalIdLookup.get(row.project_id) || row.project_id;
+      const rate = projectRateLookup.get(canonicalProjectId) ?? 0;
+      const revenue = row.rounded_hours * rate;
+
+      const existing = employeeRevenue.get(name);
+      if (existing) {
+        existing.hours += row.rounded_hours;
+        existing.revenue += revenue;
+      } else {
+        employeeRevenue.set(name, { hours: row.rounded_hours, revenue });
+      }
+    }
+
+    return Array.from(employeeRevenue.entries())
+      .map(([name, stats]) => ({ name, hours: stats.hours, revenue: stats.revenue }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [layer2Rows, userIdToDisplayNameLookup, projectCanonicalIdLookup, projectRateLookup]);
+
+  // Layer 3: aggregate employee_daily_totals into dailyHoursByDate for DailyHoursChart
+  // Same approach as BurnPage
+  const dailyHoursByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of layer3Rows) {
+      const current = map.get(row.work_date) || 0;
+      map.set(row.work_date, current + row.rounded_hours);
+    }
+    return map;
+  }, [layer3Rows]);
 
   // Helper to get canonical company name (ID-only lookup, no name fallbacks)
   const getCanonicalCompanyName = useCallback((clientId: string): string => {
@@ -246,13 +432,18 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
   // Loading state for utilization inputs (employees, timeOff, holidays, rates)
   const utilizationLoading = employeesLoading || timeOffLoading || ratesLoading;
 
+  // Combined loading for Layer 2/3 data
+  const loading = layer2Loading || layer3Loading;
+  const error = layer2Error;
+
   // Utilization metrics (shared hook — same calculation as EmployeesPage)
+  // Uses synthetic entries from Layer 2 (rounded_minutes) for consistency
   const utilizationMetrics = useUtilizationMetrics({
     dateRange,
     holidays,
     employees,
     timeOff,
-    entries,
+    entries: syntheticEntries as any,
     projectsWithRates,
   });
 
@@ -332,7 +523,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
                 This is what is going on with <span className="text-bteam-brand font-medium">The B Team</span> today
               </p>
             </div>
-            <Button variant="secondary" onClick={refetch}>
+            <Button variant="secondary" onClick={() => window.location.reload()}>
               Refresh
             </Button>
           </div>
@@ -357,9 +548,9 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
           </div>
         ) : (
           <StatsOverview
-            projects={projects}
+            totalMinutes={totalRoundedMinutes}
             projectCount={canonicalProjects.length}
-            resources={resourceSummaries}
+            resourceCount={layer2ResourceCount}
             underHoursCount={underHoursItems.length}
             totalRevenue={combinedTotalRevenue}
             utilizationPercent={utilizationMetrics.utilizationPercent}
@@ -370,14 +561,11 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
 
         {/* Charts Section: Resources + Trends with consistent internal spacing */}
         <div className="space-y-4">
-          {/* Resources Charts: Hours by Resource + Top 5 lists */}
+          {/* Resources Charts: Hours by Resource + Top 5 lists (Layer 2) */}
           <DashboardChartsRow
-            resources={resourceSummaries}
-            entries={entries}
-            projectRates={dbRateLookup}
-            projectCanonicalIdLookup={projectCanonicalIdLookup}
-            userIdToDisplayNameLookup={userIdToDisplayNameLookup}
-            billingResult={billingResult}
+            pieData={pieChartData}
+            topFiveByHours={topFiveByHours}
+            topFiveByRevenue={topFiveByRevenue}
             combinedRevenueByMonth={combinedRevenueByMonth}
             loading={loading || billingsLoading || combinedRevenueLoading}
             section="resources"
@@ -390,7 +578,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
               Resource Utilization - {format(dateRange.start, 'MMMM yyyy')}
             </h3>
             <DailyHoursChart
-              entries={entries}
+              dailyHoursByDate={dailyHoursByDate}
               startDate={dateRange.start}
               endDate={dateRange.end}
               holidays={holidays}
@@ -399,16 +587,13 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
             />
           </Card>
 
-          {/* Trend Charts: Revenue Trend + MoM + CAGR */}
+          {/* Trend Charts: Revenue Trend + MoM + CAGR (billing engine) */}
           <DashboardChartsRow
-            resources={resourceSummaries}
-            entries={entries}
-            projectRates={dbRateLookup}
-            projectCanonicalIdLookup={projectCanonicalIdLookup}
-            userIdToDisplayNameLookup={userIdToDisplayNameLookup}
-            billingResult={billingResult}
+            pieData={[]}
+            topFiveByHours={[]}
+            topFiveByRevenue={[]}
             combinedRevenueByMonth={combinedRevenueByMonth}
-            loading={loading || billingsLoading || combinedRevenueLoading}
+            loading={billingsLoading || combinedRevenueLoading}
             section="trends"
             projectedAnnualRevenue={projectedAnnualRevenue}
           />
@@ -430,7 +615,7 @@ export function Dashboard({ syncAlerts = [], onDismissAlert }: DashboardProps) {
         isOpen={isUnderHoursModalOpen}
         onClose={() => setIsUnderHoursModalOpen(false)}
         items={underHoursItems}
-        entries={entries}
+        layer2Rows={layer2Rows}
         expectedHours={expectedHours}
         workingDaysElapsed={workingDays.elapsed}
         workingDaysTotal={workingDays.total}

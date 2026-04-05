@@ -7,13 +7,14 @@ import { AccordionListTable } from './AccordionListTable';
 import type { AccordionListTableColumn, AccordionListTableItem } from './AccordionListTable';
 import { minutesToHours } from '../utils/calculations';
 import type { UnderHoursResource } from '../utils/calculations';
-import type { TimesheetEntry } from '../types';
+import type { EmployeeTotal } from '../types';
 
 interface UnderHoursModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: UnderHoursResource[];
-  entries: TimesheetEntry[];
+  /** Layer 2 employee_totals rows for task breakdown */
+  layer2Rows: EmployeeTotal[];
   expectedHours: number;
   workingDaysElapsed: number;
   workingDaysTotal: number;
@@ -36,37 +37,37 @@ export function UnderHoursModal({
   isOpen,
   onClose,
   items,
-  entries,
+  layer2Rows,
   expectedHours,
   workingDaysElapsed,
   workingDaysTotal,
   userIdToDisplayNameLookup,
   getCanonicalCompanyName,
 }: UnderHoursModalProps) {
-  // Build accordion items from under-hours resources
+  // Build accordion items from under-hours resources using Layer 2 data
   const accordionItems: AccordionListTableItem[] = useMemo(() => {
     return items.map((item) => {
-      // Get task entries for this user, sorted by Company -> Project -> Date (desc) -> Task
+      // Get Layer 2 rows for this user, sorted by Company -> Project -> Date (desc) -> Task
       // Use canonical display name matching via userIdToDisplayNameLookup for proper grouping
-      const userEntries = entries
-        .filter((e) => {
+      const userEntries = layer2Rows
+        .filter((row) => {
           // Match by canonical display name if lookup is available
-          if (userIdToDisplayNameLookup && e.user_id) {
-            const canonicalName = userIdToDisplayNameLookup.get(e.user_id);
+          if (userIdToDisplayNameLookup && row.user_id) {
+            const canonicalName = userIdToDisplayNameLookup.get(row.user_id);
             return canonicalName === item.displayName;
           }
           // Fallback to raw user_name match
-          return e.user_name === item.userName;
+          return row.user_name === item.userName;
         })
-        .map((entry) => ({
+        .map((row) => ({
           // Use canonical company name if available, otherwise fallback to client_name or project_name
-          company: entry.client_id && getCanonicalCompanyName
-            ? getCanonicalCompanyName(entry.client_id)
-            : (entry.client_name || entry.project_name),
-          project: entry.project_name,
-          date: entry.work_date,
-          task: entry.task_name,
-          minutes: entry.total_minutes,
+          company: row.client_id && getCanonicalCompanyName
+            ? getCanonicalCompanyName(row.client_id)
+            : (row.client_name || row.project_name),
+          project: row.project_name,
+          date: row.work_date,
+          task: row.task_name,
+          minutes: row.rounded_minutes,
         }))
         .sort((a, b) => {
           const companyCompare = a.company.localeCompare(b.company);
@@ -132,7 +133,7 @@ export function UnderHoursModal({
         emptyMessage: 'No tasks recorded for this period',
       };
     });
-  }, [items, entries, userIdToDisplayNameLookup, getCanonicalCompanyName]);
+  }, [items, layer2Rows, userIdToDisplayNameLookup, getCanonicalCompanyName]);
 
   // Sticky header content (summary cards + info banner)
   const stickyHeaderContent = (
