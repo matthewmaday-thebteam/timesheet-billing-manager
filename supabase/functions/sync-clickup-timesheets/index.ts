@@ -610,6 +610,63 @@ serve(async (req) => {
     }
 
     // =========================================================================
+    // STEP 5.5: Populate rounded_minutes for synced entries
+    // =========================================================================
+    // Non-blocking: failures are logged but never stop the sync.
+    // Calls RPC populate_rounded_minutes(p_workspace_id, p_range_start, p_range_end)
+    // =========================================================================
+    let roundingResult: Record<string, unknown> = { action: 'rounding_not_attempted' };
+
+    if (!fetchComplete) {
+      roundingResult = {
+        action: 'rounding_skipped',
+        reason: 'fetch_incomplete',
+        sync_run_id: syncRunId,
+      };
+      console.log(`[sync-clickup] Rounding population skipped: fetch incomplete`);
+    } else {
+      try {
+        const roundingStartDate = rangeStartISO.split('T')[0];
+        const roundingEndDate = rangeEndISO.split('T')[0];
+
+        const { data: rpcRoundingResult, error: roundingError } = await supabase
+          .rpc('populate_rounded_minutes', {
+            p_workspace_id: clickupTeamId,
+            p_range_start: roundingStartDate,
+            p_range_end: roundingEndDate,
+          });
+
+        if (roundingError) {
+          console.error('[sync-clickup] Rounding population error:', roundingError.message);
+          roundingResult = {
+            action: 'rounding_failed',
+            reason: 'rpc_error',
+            sync_run_id: syncRunId,
+            error: roundingError.message,
+          };
+        } else {
+          const updatedCount = typeof rpcRoundingResult === 'number'
+            ? rpcRoundingResult
+            : 0;
+          roundingResult = {
+            action: 'rounding_executed',
+            sync_run_id: syncRunId,
+            updated_count: updatedCount,
+          };
+          console.log(`[sync-clickup] Populated rounded_minutes for ${updatedCount} entries`);
+        }
+      } catch (err) {
+        roundingResult = {
+          action: 'rounding_failed',
+          reason: 'exception',
+          sync_run_id: syncRunId,
+          error: (err as Error).message,
+        };
+        console.error(`[sync-clickup] Rounding population failed: ${(err as Error).message}`);
+      }
+    }
+
+    // =========================================================================
     // STEP 6: Drain recalculation queue
     // =========================================================================
     // Only runs if fetch was complete.
@@ -1043,6 +1100,7 @@ serve(async (req) => {
         error: upsertError,
       },
       cleanup: cleanupResult,
+      rounding: roundingResult,
       recalculation: recalcResult,
       reconciliation: reconciliationResult,
     };
