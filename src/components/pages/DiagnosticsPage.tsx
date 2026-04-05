@@ -143,7 +143,7 @@ export function DiagnosticsPage() {
             onClick={() =>
               exportTableToCSV(
                 'timesheet_daily_rollups',
-                'timesheet_daily_rollups.csv',
+                'layer_1.csv',
                 setExportingTimesheets,
               )
             }
