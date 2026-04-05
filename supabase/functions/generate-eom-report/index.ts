@@ -280,7 +280,7 @@ interface CompanyCSVData {
   billedRevenue: number;
 }
 
-function generateCSV(company: CompanyCSVData, monthLabel: string): string {
+function generateCSV(company: CompanyCSVData, monthLabel: string, year: number, month: number): string {
   // Determine extended vs standard layout
   const hasBillingLimits = company.projects.some(p => p.hasBillingLimits);
   const colCount = hasBillingLimits ? 12 : 8;
@@ -288,7 +288,10 @@ function generateCSV(company: CompanyCSVData, monthLabel: string): string {
   const rows: string[] = [];
 
   // --- Title row ---
-  rows.push(csvRow([`Revenue for the month of ${monthLabel}`]));
+  const periodStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate(); // day 0 of next month = last day of this month
+  const periodEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  rows.push(csvRow([`Revenue for the month of ${monthLabel} (${periodStart} to ${periodEnd})`]));
 
   // --- Header row ---
   const header = hasBillingLimits
@@ -799,7 +802,7 @@ async function generateCompanyReport(
 
   let csvContent: string;
   try {
-    csvContent = generateCSV(companyCSVData, monthLabel);
+    csvContent = generateCSV(companyCSVData, monthLabel, year, month);
   } catch (csvError) {
     return {
       companyId,

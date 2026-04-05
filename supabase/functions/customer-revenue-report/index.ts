@@ -408,9 +408,16 @@ serve(async (req) => {
     ];
     const monthLabel = `${monthNames[monthNum - 1]} ${year}`;
 
+    // Compute period start/end dates for the reporting month
+    const periodStart = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, monthNum, 0).getDate(); // day 0 of next month = last day of this month
+    const periodEnd = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
     return jsonResponse({
       reportTitle: `Customer Revenue Report - ${monthLabel}`,
       month,
+      periodStart,
+      periodEnd,
       company: {
         companyName: companyDisplayName,
         companyHours: companyBilledHours,
