@@ -94,19 +94,21 @@ export function RevenuePage() {
           if (!rawTasks || rawTasks.length === 0) return project;
 
           // Apply per-task rounding and compute revenue using the project's config
-          const tasks = rawTasks.map(t => {
-            const roundedMinutes = applyRounding(t.actualMinutes, project.rounding);
-            const actualHours = t.actualMinutes / 60;
-            const roundedHours = roundedMinutes / 60;
-            return {
-              taskName: t.taskName,
-              actualMinutes: t.actualMinutes,
-              roundedMinutes,
-              actualHours: Math.round(actualHours * 100) / 100,
-              roundedHours: Math.round(roundedHours * 100) / 100,
-              baseRevenue: roundCurrency(roundedHours * project.rate),
-            };
-          });
+          const tasks = rawTasks
+            .filter(t => t.actualMinutes > 0)
+            .map(t => {
+              const roundedMinutes = applyRounding(t.actualMinutes, project.rounding);
+              const actualHours = t.actualMinutes / 60;
+              const roundedHours = roundedMinutes / 60;
+              return {
+                taskName: t.taskName,
+                actualMinutes: t.actualMinutes,
+                roundedMinutes,
+                actualHours: Math.round(actualHours * 100) / 100,
+                roundedHours: Math.round(roundedHours * 100) / 100,
+                baseRevenue: roundCurrency(roundedHours * project.rate),
+              };
+            });
 
           return { ...project, tasks };
         }),
@@ -167,19 +169,21 @@ export function RevenuePage() {
         if (!config) continue;
 
         // Compute per-task rounding and revenue
-        const tasks = weeklyTasks.map(t => {
-          const roundedMinutes = applyRounding(t.actualMinutes, config.rounding as 0 | 5 | 15 | 30);
-          const actualHours = t.actualMinutes / 60;
-          const roundedHours = roundedMinutes / 60;
-          return {
-            taskName: t.taskName,
-            actualMinutes: t.actualMinutes,
-            roundedMinutes,
-            actualHours: Math.round(actualHours * 100) / 100,
-            roundedHours: Math.round(roundedHours * 100) / 100,
-            baseRevenue: roundCurrency(roundedHours * config.rate),
-          };
-        });
+        const tasks = weeklyTasks
+          .filter(t => t.actualMinutes > 0)
+          .map(t => {
+            const roundedMinutes = applyRounding(t.actualMinutes, config.rounding as 0 | 5 | 15 | 30);
+            const actualHours = t.actualMinutes / 60;
+            const roundedHours = roundedMinutes / 60;
+            return {
+              taskName: t.taskName,
+              actualMinutes: t.actualMinutes,
+              roundedMinutes,
+              actualHours: Math.round(actualHours * 100) / 100,
+              roundedHours: Math.round(roundedHours * 100) / 100,
+              baseRevenue: roundCurrency(roundedHours * config.rate),
+            };
+          });
 
         const projectBilledHours = tasks.reduce((sum, t) => sum + t.roundedHours, 0);
         const projectBilledRevenue = tasks.reduce((sum, t) => sum + t.baseRevenue, 0);
