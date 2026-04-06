@@ -179,8 +179,16 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
           {sortedCompanies.map((company) => {
             const isCompanyExpanded = expandedCompanies.has(company.companyId);
 
-            // Sort projects alphabetically by name
-            const sortedProjects = [...company.projects].sort((a, b) => a.projectName.localeCompare(b.projectName));
+            // Sort projects alphabetically by name, filter out 0-revenue projects
+            // Keep projects that have: actual hours, minimum billing, milestone, or fixed billing
+            const sortedProjects = [...company.projects]
+              .filter(p => {
+                const hasBilledHours = p.billedHours > 0;
+                const hasMinimum = p.minimumApplied;
+                const hasMilestone = p.projectId ? milestoneByExternalProjectId?.has(p.projectId) : false;
+                return hasBilledHours || hasMinimum || hasMilestone;
+              })
+              .sort((a, b) => a.projectName.localeCompare(b.projectName));
 
             // Get billing revenue for this company
             const companyBillingData = billingsByClientId.get(company.companyId);
@@ -188,6 +196,9 @@ export function RevenueTable({ billingResult, companyBillings = [], totalBilling
             // Apply milestone adjustment: replaces timesheet revenue with milestone amount
             const milestoneAdj = milestoneAdjustmentByCompany.get(company.companyId) || 0;
             const companyTotalRevenue = company.billedRevenue + (companyBillingCents / 100) + milestoneAdj;
+
+            // Skip companies with no visible projects and no revenue
+            if (sortedProjects.length === 0 && companyTotalRevenue === 0) return null;
 
             return (
               <Fragment key={company.companyId}>
