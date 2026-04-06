@@ -11,6 +11,24 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-04-06',
+    title: 'Per-Entry Rounding & Billing Data Hierarchy',
+    highlights: [
+      'Critical fix: billing engine was rounding per-task-aggregate instead of per-entry, systematically underbilling clients. New configurable rounding mode (task vs entry) per project per month via Rate page.',
+      'Built 3-layer data hierarchy: Layer 1 (raw entries with rounding), Layer 2 (employee+task+day), Layer 3 (task+day, employee daily, task monthly with actual/entry-rounded/task-rounded columns).',
+      'Dashboard, Burn, Employees, and Projects pages now use Layer 2/3 rounded hours — no carryover contamination in work-performed views.',
+      'Employees page: revenue = rounded hours x project rate, profit = revenue - (rounded hours x employee hourly rate). Renamed "Total Revenue" to "Earned Revenue".',
+      'Employee hourly rate auto-calculated on save for FT/PT (monthly cost / expected hours). Contractors enter manually.',
+      'Revenue page: added C/O (Carryover) column, renamed Rounding to INC, added date range to report headers, filtered out 0-hour tasks and 0-revenue projects.',
+      'Billing engine reads from task_monthly_totals with rounding mode switch. April 2026 set to per-entry rounding for all projects.',
+      'Canonical company resolution trigger on project_monthly_summary prevents duplicate company rows across sync sources.',
+      'Rate page: fixed project filter that was excluding 31 of 54 projects, restored existed_in_month indicator, added rounding mode toggle.',
+      'Diagnostics page: export buttons for Layer 1, Layer 2 Employees, Layer 3 Tasks, Layer 3 Employee Daily Totals, Task Monthly Totals, and Legacy Billing Summary.',
+      'Sync scope temporarily limited to first of current month to protect pre-April Layer data (revert in May).',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-04-04',
     title: 'ClickUp Sync Migration & Revenue Trend Fix',
     highlights: [
