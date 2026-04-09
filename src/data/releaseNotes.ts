@@ -11,6 +11,20 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-04-09',
+    title: 'Rate Table Guardrails & Audit Trail',
+    highlights: [
+      'Fixed critical bug: projects without explicit rates were showing $0/hr instead of the $45 default due to a regression in migrations 096-098.',
+      'Restored 4-state rate source tracking (explicit/inherited/backfill/default) that was collapsed to 2-state, breaking the ability to distinguish inherited rates.',
+      'Added audit trigger on project_monthly_rates table — was the only billing table missing audit coverage. All rate INSERT/UPDATE/DELETE now logged.',
+      'Rate table now shows Inherited/Backfill/Default badges next to rates so users can see which values are explicitly set vs auto-populated.',
+      'New $0 rate warning: saving a $0 rate requires explicit checkbox acknowledgment and warns about inheritance to future months.',
+      'New confirmation dialog: all rate changes now show a field-by-field old → new comparison before saving.',
+      'Employees page now sorted by profit generated (highest first) instead of hours worked.',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-04-06',
     title: 'Per-Entry Rounding & Billing Data Hierarchy',
     highlights: [
