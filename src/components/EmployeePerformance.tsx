@@ -276,8 +276,8 @@ export function EmployeePerformance({
       });
     }
 
-    // Sort employees by hours worked (highest first)
-    return employeesList.sort((a, b) => b.roundedMinutes - a.roundedMinutes);
+    // Sort employees by profit generated (highest first)
+    return employeesList.sort((a, b) => (b.profit ?? -Infinity) - (a.profit ?? -Infinity));
   }, [rows, projectRateLookup, employeeHourlyRateLookup, ptoByEmployee, userIdToDisplayNameLookup, getCanonicalCompanyName, projectCanonicalIdLookup]);
 
   // Calculate footer totals from employee rows (NOT from billingResult)
