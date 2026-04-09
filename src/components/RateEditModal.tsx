@@ -143,8 +143,8 @@ export function RateEditModal({
       setRoundingValue(displayProject?.effectiveRounding ?? 15);
       setRoundingModeValue(displayProject?.effectiveRoundingMode ?? 'task');
       // Billing limits
-      setMinHoursValue(displayProject?.minimumHours?.toString() || '');
-      setMaxHoursValue(displayProject?.maximumHours?.toString() || '');
+      setMinHoursValue(displayProject?.minimumHours != null ? displayProject.minimumHours.toString() : '');
+      setMaxHoursValue(displayProject?.maximumHours != null ? displayProject.maximumHours.toString() : '');
       setCarryoverEnabled(displayProject?.carryoverEnabled ?? false);
       // Active status
       setIsActiveValue(displayProject?.isActive ?? true);
