@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { AccordionFlat } from './AccordionFlat';
 import { RateEditModal } from './RateEditModal';
 import { DropdownMenu } from './DropdownMenu';
+import { Badge } from './Badge';
 import { useCanonicalCompanyMapping } from '../hooks/useCanonicalCompanyMapping';
 import type { AccordionFlatColumn, AccordionFlatRow, AccordionFlatGroup } from './AccordionFlat';
 import type { ProjectRateDisplayWithBilling, MonthSelection, RoundingIncrement, RoundingMode, ProjectBillingLimits } from '../types';
@@ -169,11 +170,18 @@ export function BillingRatesTable({
       </span>
     );
 
-    // Rate cell
+    // Rate cell with source badge
     const rateContent = (
-      <span className="text-sm text-vercel-gray-600">
-        ${project.effectiveRate.toFixed(2)}
-      </span>
+      <div className="flex items-center justify-end gap-1.5">
+        {project.source !== 'explicit' && (
+          <Badge variant="default" size="sm">
+            {project.source === 'inherited' ? 'Inherited' : project.source === 'backfill' ? 'Backfill' : 'Default'}
+          </Badge>
+        )}
+        <span className="text-sm text-vercel-gray-600">
+          ${project.effectiveRate.toFixed(2)}
+        </span>
+      </div>
     );
 
     return {

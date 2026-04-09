@@ -12,13 +12,15 @@
  * @category Component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
 import { Toggle } from './Toggle';
 import { Select } from './Select';
 import { Input } from './Input';
+import { Alert } from './Alert';
+import { Checkbox } from './Checkbox';
 import { DateCycle } from './molecules/DateCycle';
 import { useSingleProjectRate } from '../hooks/useSingleProjectRate';
 import type { MonthSelection, ProjectRateDisplayWithBilling, RoundingIncrement, RoundingMode, ProjectBillingLimits } from '../types';
@@ -48,6 +50,12 @@ const ROUNDING_MODE_OPTIONS = [
   { value: 'task', label: 'Per task (legacy)' },
   { value: 'entry', label: 'Per entry' },
 ];
+
+interface PendingChange {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
 
 /**
  * Convert MonthSelection to Date (first of month)
@@ -109,13 +117,19 @@ export function RateEditModal({
   // Active status state
   const [isActiveValue, setIsActiveValue] = useState(true);
 
+  // Confirmation dialog state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [zeroRateAcknowledged, setZeroRateAcknowledged] = useState(false);
+
   // Track the last key used for form reset to avoid redundant resets
   const [lastResetKey, setLastResetKey] = useState<string>('');
 
-  // Reset currentMonth when modal opens with a new project or the initialMonth changes
+  // Reset currentMonth and confirmation state when modal opens with a new project or the initialMonth changes
   useEffect(() => {
     if (isOpen) {
       setCurrentMonth(initialMonth);
+      setShowConfirmation(false);
+      setZeroRateAcknowledged(false);
     }
   }, [isOpen, initialMonth.year, initialMonth.month, project?.projectId]);
 
@@ -140,52 +154,139 @@ export function RateEditModal({
   const handleMonthChange = (newDate: Date) => {
     const newMonth = dateToMonth(newDate);
     setCurrentMonth(newMonth);
+    setShowConfirmation(false);
+    setZeroRateAcknowledged(false);
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  // Compute pending changes for confirmation display
+  const pendingChanges = useMemo((): PendingChange[] => {
+    if (!displayProject) return [];
+
+    const changes: PendingChange[] = [];
+    const rate = parseFloat(rateValue);
+
+    if (!isNaN(rate) && rate !== displayProject.effectiveRate) {
+      changes.push({
+        field: 'Hourly Rate',
+        oldValue: `$${displayProject.effectiveRate.toFixed(2)}`,
+        newValue: `$${rate.toFixed(2)}`,
+      });
+    }
+
+    if (roundingValue !== displayProject.effectiveRounding) {
+      const formatRounding = (v: number) => v === 0 ? 'Actual' : `${v} minutes`;
+      changes.push({
+        field: 'Rounding Increment',
+        oldValue: formatRounding(displayProject.effectiveRounding),
+        newValue: formatRounding(roundingValue),
+      });
+    }
+
+    if (roundingModeValue !== displayProject.effectiveRoundingMode) {
+      const formatMode = (v: string) => v === 'task' ? 'Per task' : 'Per entry';
+      changes.push({
+        field: 'Rounding Mode',
+        oldValue: formatMode(displayProject.effectiveRoundingMode),
+        newValue: formatMode(roundingModeValue),
+      });
+    }
+
+    const minHours = minHoursValue === '' ? null : parseFloat(minHoursValue);
+    const maxHours = maxHoursValue === '' ? null : parseFloat(maxHoursValue);
+
+    if (minHours !== displayProject.minimumHours) {
+      changes.push({
+        field: 'Minimum Hours',
+        oldValue: displayProject.minimumHours !== null ? String(displayProject.minimumHours) : 'None',
+        newValue: minHours !== null ? String(minHours) : 'None',
+      });
+    }
+
+    if (maxHours !== displayProject.maximumHours) {
+      changes.push({
+        field: 'Maximum Hours',
+        oldValue: displayProject.maximumHours !== null ? String(displayProject.maximumHours) : 'None',
+        newValue: maxHours !== null ? String(maxHours) : 'None',
+      });
+    }
+
+    if (carryoverEnabled !== displayProject.carryoverEnabled) {
+      changes.push({
+        field: 'Carry-over',
+        oldValue: displayProject.carryoverEnabled ? 'Enabled' : 'Disabled',
+        newValue: carryoverEnabled ? 'Enabled' : 'Disabled',
+      });
+    }
+
+    if (isActiveValue !== displayProject.isActive) {
+      changes.push({
+        field: 'Minimum Billing',
+        oldValue: displayProject.isActive ? 'Active' : 'Inactive',
+        newValue: isActiveValue ? 'Active' : 'Inactive',
+      });
+    }
+
+    return changes;
+  }, [displayProject, rateValue, roundingValue, roundingModeValue, minHoursValue, maxHoursValue, carryoverEnabled, isActiveValue]);
+
+  const isZeroRate = parseFloat(rateValue) === 0;
+  const hasChanges = pendingChanges.length > 0;
+
+  // Step 1: User clicks Save -> show confirmation dialog (with $0 warning if applicable)
+  const handleRequestSave = useCallback((e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     if (!project) return;
 
     const rate = parseFloat(rateValue);
-    if (isNaN(rate) || rate < 0) {
-      return;
-    }
+    if (isNaN(rate) || rate < 0) return;
 
-    // Parse billing limits
+    // Parse billing limits for validation
     const minHours = minHoursValue === '' ? null : parseFloat(minHoursValue);
     const maxHours = maxHoursValue === '' ? null : parseFloat(maxHoursValue);
 
     // Validate min <= max
-    if (minHours !== null && maxHours !== null && minHours > maxHours) {
-      return; // Invalid configuration
+    if (minHours !== null && maxHours !== null && minHours > maxHours) return;
+
+    // If nothing changed, just close
+    if (!hasChanges) {
+      onClose();
+      return;
     }
 
-    // Compare against displayProject (the data for currentMonth)
-    const rateChanged = displayProject ? rate !== displayProject.effectiveRate : true;
-    const roundingChanged = displayProject
-      ? roundingValue !== displayProject.effectiveRounding || roundingModeValue !== displayProject.effectiveRoundingMode
-      : true;
-    const limitsChanged = displayProject
-      ? minHours !== displayProject.minimumHours ||
-        maxHours !== displayProject.maximumHours ||
-        carryoverEnabled !== displayProject.carryoverEnabled
-      : true;
-    const activeChanged = displayProject ? isActiveValue !== displayProject.isActive : true;
+    // Reset zero-rate acknowledgment when entering confirmation
+    setZeroRateAcknowledged(false);
+    setShowConfirmation(true);
+  }, [project, rateValue, minHoursValue, maxHoursValue, hasChanges, onClose]);
+
+  // Step 2: User confirms in the confirmation dialog -> execute save
+  const handleConfirmedSave = useCallback(async () => {
+    if (!project || !displayProject) return;
+
+    // If rate is $0 and user hasn't acknowledged, block save
+    if (isZeroRate && !zeroRateAcknowledged) return;
+
+    const rate = parseFloat(rateValue);
+    const minHours = minHoursValue === '' ? null : parseFloat(minHoursValue);
+    const maxHours = maxHoursValue === '' ? null : parseFloat(maxHoursValue);
+
+    const rateChanged = rate !== displayProject.effectiveRate;
+    const roundingChanged = roundingValue !== displayProject.effectiveRounding || roundingModeValue !== displayProject.effectiveRoundingMode;
+    const limitsChanged = minHours !== displayProject.minimumHours ||
+      maxHours !== displayProject.maximumHours ||
+      carryoverEnabled !== displayProject.carryoverEnabled;
+    const activeChanged = isActiveValue !== displayProject.isActive;
 
     let success = true;
 
-    // Save rate if changed - use currentMonth, not initialMonth
     if (rateChanged) {
       success = await onSave(project.projectId, currentMonth, rate);
     }
 
-    // Save rounding if changed
     if (success && roundingChanged) {
       success = await onSaveRounding(project.projectId, currentMonth, roundingValue, roundingModeValue);
     }
 
-    // Save billing limits if changed
     if (success && limitsChanged) {
       success = await onSaveBillingLimits(project.projectId, currentMonth, {
         minimumHours: minHours,
@@ -194,15 +295,15 @@ export function RateEditModal({
       });
     }
 
-    // Save active status if changed
     if (success && activeChanged) {
       success = await onSaveActiveStatus(project.projectId, currentMonth, isActiveValue);
     }
 
     if (success) {
+      setShowConfirmation(false);
       onClose();
     }
-  };
+  }, [project, displayProject, rateValue, roundingValue, roundingModeValue, minHoursValue, maxHoursValue, carryoverEnabled, isActiveValue, isZeroRate, zeroRateAcknowledged, currentMonth, onSave, onSaveRounding, onSaveBillingLimits, onSaveActiveStatus, onClose]);
 
   const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -231,6 +332,86 @@ export function RateEditModal({
 
   if (!project) return null;
 
+  // Confirmation dialog content
+  if (showConfirmation) {
+    const confirmFooter = (
+      <>
+        <Button variant="secondary" onClick={() => setShowConfirmation(false)}>
+          Back
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleConfirmedSave}
+          disabled={isSaving || (isZeroRate && !zeroRateAcknowledged)}
+        >
+          {isSaving ? (
+            <span className="flex items-center gap-2">
+              <Spinner size="sm" />
+              Saving...
+            </span>
+          ) : (
+            'Confirm'
+          )}
+        </Button>
+      </>
+    );
+
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Confirm Changes"
+        maxWidth="xl"
+        footer={confirmFooter}
+      >
+        <div className="space-y-6">
+          {/* Project context */}
+          <div className="text-sm text-vercel-gray-400">
+            {project.projectName} — {new Date(currentMonth.year, currentMonth.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </div>
+
+          {/* Zero rate warning */}
+          {isZeroRate && (
+            <div className="space-y-3">
+              <Alert
+                message="You are setting the hourly rate to $0.00. This project will generate no revenue for this month and all future months until a new rate is set."
+                icon="warning"
+                variant="warning"
+              />
+              <Checkbox
+                checked={zeroRateAcknowledged}
+                onChange={setZeroRateAcknowledged}
+                label="I confirm this rate should be $0.00"
+              />
+            </div>
+          )}
+
+          {/* Changes table */}
+          <div className="border border-vercel-gray-100 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-vercel-gray-50">
+                  <th className="text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider px-4 py-2">Field</th>
+                  <th className="text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider px-4 py-2">Old Value</th>
+                  <th className="text-left text-xs font-medium text-vercel-gray-400 uppercase tracking-wider px-4 py-2">New Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingChanges.map((change, idx) => (
+                  <tr key={change.field} className={idx !== pendingChanges.length - 1 ? 'border-b border-vercel-gray-100' : ''}>
+                    <td className="px-4 py-2 text-sm font-medium text-vercel-gray-600">{change.field}</td>
+                    <td className="px-4 py-2 text-sm text-vercel-gray-400">{change.oldValue}</td>
+                    <td className="px-4 py-2 text-sm text-vercel-gray-600 font-medium">{change.newValue}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   const footerContent = (
     <>
       <Button variant="secondary" onClick={onClose}>
@@ -238,7 +419,7 @@ export function RateEditModal({
       </Button>
       <Button
         variant="primary"
-        onClick={() => handleSubmit()}
+        onClick={() => handleRequestSave()}
         disabled={isSaving || isLoadingRate || rateValue === '' || showMinMaxError}
       >
         {isSaving ? (
