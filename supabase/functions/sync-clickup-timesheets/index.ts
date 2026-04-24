@@ -125,7 +125,7 @@ serve(async (req) => {
       rangeEndISO = body.rangeEndDate as string;
       console.log(`[sync-clickup] Manual date range: ${rangeStartISO} to ${rangeEndISO}`);
     } else {
-      // TEMPORARY: Sync starts at first of month (was 14 days before). Protects pre-April Layer 2 data. Revert in May 2026.
+      // Default: 14 days before 1st of current month through end of month
       const now = new Date();
 
       // 1st of the current month at 00:00:00.000Z
@@ -136,7 +136,8 @@ serve(async (req) => {
         0, 0, 0, 0,
       ));
 
-      const rangeStart = firstOfMonth;
+      // 14 days before 1st of month (~10 days into prior month)
+      const rangeStart = new Date(firstOfMonth.getTime() - 14 * 24 * 60 * 60 * 1000);
 
       // Last millisecond of the current month:
       // 1st of next month at 00:00:00.000Z minus 1 ms
@@ -743,6 +744,43 @@ serve(async (req) => {
             taskMonthlyResult = { action: 'task_monthly_failed', reason: 'exception', error: (err as Error).message };
             console.error('[sync-clickup] Task monthly totals failed:', (err as Error).message);
         }
+    }
+
+    // =========================================================================
+    // STEP 5.8: Reconciliation invariant (migration 101)
+    // =========================================================================
+    // Hard abort: if task_monthly_totals has diverged from the canonical-
+    // resolved sum of timesheet_daily_rollups by more than 2 minutes for any
+    // (canonical_project, summary_month) in the sync range, we must NOT drain
+    // the recalculation queue -- billing would compute off corrupt totals.
+    //
+    // RPC invocation failures are logged but non-fatal (they don't block
+    // drain); only actual discrepancies trigger the abort. This preserves
+    // availability during transient RPC outages while guaranteeing correctness
+    // whenever the check does run.
+    // =========================================================================
+    const rangeStartDate = rangeStartISO.split('T')[0];
+    const rangeEndDate = rangeEndISO.split('T')[0];
+
+    const { data: discrepancies, error: reconcileError } = await supabase.rpc(
+      'validate_task_monthly_totals_vs_rollups',
+      { p_range_start: rangeStartDate, p_range_end: rangeEndDate }
+    );
+    if (reconcileError) {
+      console.error('[sync-clickup] reconciliation RPC failed:', reconcileError);
+      // Continue to drain -- RPC failures shouldn't block a sync run, but must surface
+    }
+    if (discrepancies && discrepancies.length > 0) {
+      // Sample stays in server-side logs ONLY. Do not include it in the
+      // response body: discrepancy rows expose canonical_project_id values
+      // and raw minute totals, which cross tenant boundaries in the
+      // reconciliation scan.
+      console.error('[sync-clickup] RECONCILIATION FAILURE -- aborting drain. Discrepancies:', JSON.stringify(discrepancies.slice(0, 20)));
+      return new Response(JSON.stringify({
+        success: false,
+        reason: 'reconciliation_failed',
+        discrepancy_count: discrepancies.length,
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     // =========================================================================
