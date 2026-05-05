@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useTimesheetData } from '../../hooks/useTimesheetData';
-import { useMonthlyRates } from '../../hooks/useMonthlyRates';
 import { useBilling } from '../../hooks/useBilling';
 import { useBillings } from '../../hooks/useBillings';
+import { useCanonicalProjectExternalIds } from '../../hooks/useCanonicalProjectExternalIds';
 import { formatCurrency, applyRounding, roundCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
 import { useTaskBreakdown } from '../../hooks/useTaskBreakdown';
@@ -31,9 +31,6 @@ export function RevenuePage() {
     year: dateRange.start.getFullYear(),
     month: dateRange.start.getMonth() + 1,
   }), [dateRange.start]);
-
-  // Fetch monthly rates (which now includes rounding data)
-  const { projectsWithRates } = useMonthlyRates({ selectedMonth });
 
   // Use billing from summary table
   const { totalRevenue, billingResult } = useBilling({
@@ -219,25 +216,34 @@ export function RevenuePage() {
     };
   }, [customerReportWeek, weeklyTasksByProject, hydratedBillingResult]);
 
-  // Build lookup: internal UUID -> externalProjectId
-  const internalToExternalId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of projectsWithRates) {
-      if (p.projectId && p.externalProjectId) {
-        map.set(p.projectId, p.externalProjectId);
+  // Resolve every project (primary, standalone, member) to its canonical primary's external id —
+  // member projects must resolve to the primary so milestone billings linking any project succeed.
+  const { internalToExternalId } = useCanonicalProjectExternalIds();
+
+  // External project ids that have a summary row this month (i.e. time-revenue tracked).
+  // Milestones whose linked project has NO summary row must flow through as regular fixed
+  // billings instead of being suppressed — otherwise their amount silently drops to $0.
+  const externalIdsWithSummaryRow = useMemo(() => {
+    const set = new Set<string>();
+    for (const company of hydratedBillingResult.companies) {
+      for (const project of company.projects) {
+        if (project.projectId) set.add(project.projectId);
       }
     }
-    return map;
-  }, [projectsWithRates]);
+    return set;
+  }, [hydratedBillingResult.companies]);
 
-  // Build lookup: externalProjectId -> milestone billing data
+  // Build lookup: externalProjectId -> milestone billing data.
+  // Only includes milestones whose resolved external id has a summary row this month;
+  // milestones without a matching summary row are intentionally omitted so the
+  // replacement adjustment loop ignores them and they remain in filteredCompanyBillings.
   const milestoneByExternalProjectId = useMemo(() => {
     const map = new Map<string, { totalCents: number; billingId: string }>();
     for (const company of companyBillings) {
       for (const billing of company.billings) {
         if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
           const externalId = internalToExternalId.get(billing.linkedProjectId);
-          if (externalId) {
+          if (externalId && externalIdsWithSummaryRow.has(externalId)) {
             // Sum if multiple milestones for same project
             const existing = map.get(externalId);
             map.set(externalId, {
@@ -249,16 +255,21 @@ export function RevenuePage() {
       }
     }
     return map;
-  }, [companyBillings, internalToExternalId]);
+  }, [companyBillings, internalToExternalId, externalIdsWithSummaryRow]);
 
-  // Filter out linked milestone billings from display
+  // Filter out linked milestone billings from display — but only when the linked project
+  // has a summary row this month (the milestone amount is then applied via milestoneAdjustment).
+  // When there is no summary row, leave the milestone in place so it contributes its full
+  // amount to filteredBillingCents exactly once.
   const filteredCompanyBillings = useMemo(() => {
     const linkedBillingIds = new Set<string>();
     for (const company of companyBillings) {
       for (const billing of company.billings) {
         if (billing.type === 'revenue_milestone' && billing.linkedProjectId) {
           const externalId = internalToExternalId.get(billing.linkedProjectId);
-          if (externalId) linkedBillingIds.add(billing.id);
+          if (externalId && externalIdsWithSummaryRow.has(externalId)) {
+            linkedBillingIds.add(billing.id);
+          }
         }
       }
     }
@@ -273,7 +284,7 @@ export function RevenuePage() {
         totalCents: filteredTotalCents,
       };
     });
-  }, [companyBillings, internalToExternalId]);
+  }, [companyBillings, internalToExternalId, externalIdsWithSummaryRow]);
 
   // Calculate filtered billing cents (excludes linked milestones)
   const filteredBillingCents = useMemo(() => {

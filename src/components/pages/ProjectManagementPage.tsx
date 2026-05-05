@@ -4,11 +4,18 @@ import { Spinner } from '../Spinner';
 import { Tooltip } from '../Tooltip';
 import { DropdownMenu } from '../DropdownMenu';
 import { Select } from '../Select';
+import type { SelectOption } from '../Select';
 import { RangeSelector } from '../RangeSelector';
 import { ProjectEditorModal } from '../ProjectEditorModal';
+import { Modal } from '../Modal';
+import { Button } from '../Button';
+import { Input } from '../Input';
+import { Alert } from '../Alert';
 import type { Project, ProjectWithGrouping } from '../../types';
 import { useProjectTableEntities } from '../../hooks/useProjectTableEntities';
 import { useAllProjectManagers } from '../../hooks/useProjectManagers';
+import { useCompanies } from '../../hooks/useCompanies';
+import { useProjects } from '../../hooks/useProjects';
 
 export function ProjectManagementPage() {
   const {
@@ -21,8 +28,23 @@ export function ProjectManagementPage() {
   // Fetch project managers (keyed by internal UUID — matches project.id directly)
   const { managerLookup, refetch: refetchManagers } = useAllProjectManagers();
 
+  // Companies for the Add Project company dropdown
+  const { companies } = useCompanies();
+
+  // Project create hook
+  const { createProject, error: createProjectError, isOperating: isSavingProject } = useProjects();
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  // Add Project modal state
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newCompanyId, setNewCompanyId] = useState('');
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newRate, setNewRate] = useState('');
+  const [companyError, setCompanyError] = useState<string | undefined>(undefined);
+  const [projectNameError, setProjectNameError] = useState<string | undefined>(undefined);
+  const [showAddError, setShowAddError] = useState(false);
 
   // Filter state
   const [filterManager, setFilterManager] = useState('');
@@ -117,6 +139,78 @@ export function ProjectManagementPage() {
     refetchManagers();
   };
 
+  // Company options for Add Project select (sorted by display name)
+  const addCompanyOptions: SelectOption[] = useMemo(() =>
+    [...companies]
+      .sort((a, b) =>
+        (a.display_name || a.client_name).localeCompare(b.display_name || b.client_name)
+      )
+      .map((c) => ({
+        value: c.id,
+        label: c.display_name || c.client_name,
+      })),
+    [companies]
+  );
+
+  // Add Project handlers
+  const handleOpenAdd = () => {
+    setNewCompanyId('');
+    setNewProjectName('');
+    setNewRate('');
+    setCompanyError(undefined);
+    setProjectNameError(undefined);
+    setShowAddError(false);
+    setIsAddOpen(true);
+  };
+
+  const handleCloseAdd = () => {
+    if (isSavingProject) return;
+    setIsAddOpen(false);
+    setShowAddError(false);
+  };
+
+  const handleSaveAdd = async () => {
+    let invalid = false;
+    if (!newCompanyId) {
+      setCompanyError('Company is required');
+      invalid = true;
+    }
+    const trimmedName = newProjectName.trim();
+    if (!trimmedName) {
+      setProjectNameError('Project name is required');
+      invalid = true;
+    }
+    if (invalid) return;
+
+    setShowAddError(false);
+
+    let rateValue: number | null = null;
+    if (newRate.trim() !== '') {
+      const parsed = Number(newRate);
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        rateValue = parsed;
+      }
+    }
+
+    const created = await createProject({
+      companyUuid: newCompanyId,
+      projectName: trimmedName,
+      rate: rateValue,
+    });
+
+    if (created) {
+      setIsAddOpen(false);
+      setNewCompanyId('');
+      setNewProjectName('');
+      setNewRate('');
+      // Refresh the table view so the new project appears immediately
+      refetch();
+      refetchManagers();
+    } else {
+      setShowAddError(true);
+    }
+  };
+
   // Get total ID count for a project (itself + members)
   const getIdCount = (project: ProjectWithGrouping): number => {
     if (project.grouping_role === 'primary') {
@@ -169,6 +263,9 @@ export function ProjectManagementPage() {
             Manage project information and associations
           </p>
         </div>
+        <Button variant="primary" onClick={handleOpenAdd}>
+          Add Project
+        </Button>
       </div>
 
       {/* Export Button */}
@@ -347,6 +444,85 @@ export function ProjectManagementPage() {
         project={selectedProject}
         onGroupChange={handleGroupChange}
       />
+
+      {/* Add Project Modal */}
+      <Modal
+        isOpen={isAddOpen}
+        onClose={handleCloseAdd}
+        title="Add Project"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCloseAdd} disabled={isSavingProject}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveAdd}
+              disabled={isSavingProject || !newCompanyId || !newProjectName.trim()}
+            >
+              {isSavingProject ? (
+                <span className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  Saving...
+                </span>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveAdd(); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+              Company
+            </label>
+            <Select
+              value={newCompanyId}
+              onChange={(value) => {
+                setNewCompanyId(value);
+                if (companyError) setCompanyError(undefined);
+              }}
+              options={addCompanyOptions}
+              placeholder="Select company..."
+              className="w-full"
+              disabled={isSavingProject}
+            />
+            {companyError && (
+              <p className="mt-1 text-xs text-bteam-brand" role="alert">
+                {companyError}
+              </p>
+            )}
+          </div>
+          <Input
+            label="Project Name"
+            value={newProjectName}
+            onChange={(e) => {
+              setNewProjectName(e.target.value);
+              if (projectNameError) setProjectNameError(undefined);
+            }}
+            placeholder="e.g., Website Redesign"
+            error={projectNameError}
+            disabled={isSavingProject}
+          />
+          <Input
+            label="Rate"
+            type="number"
+            step="0.01"
+            min="0"
+            value={newRate}
+            onChange={(e) => setNewRate(e.target.value)}
+            placeholder="0.00"
+            helperText="Optional. Sets the rate for the current month. Can be edited later on the Rates page."
+            disabled={isSavingProject}
+            startAddon="$"
+          />
+          {showAddError && createProjectError && (
+            <Alert message={createProjectError} icon="error" variant="error" />
+          )}
+        </form>
+      </Modal>
     </div>
   );
 }

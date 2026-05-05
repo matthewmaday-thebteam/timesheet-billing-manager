@@ -70,6 +70,87 @@ export function useProjects() {
     }
   }, [projects]);
 
+  // Create a new manually-originated project
+  const createProject = useCallback(async (input: {
+    companyUuid: string;
+    projectName: string;
+    rate?: number | null;
+  }): Promise<Project | null> => {
+    setIsOperating(true);
+    setError(null);
+
+    const previousProjects = [...projects];
+    const projectId = 'manual_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+
+    try {
+      // Fetch the chosen company's legacy keys so the project participates in
+      // legacy joins (e.g. get_all_project_rates_for_month joins p.client_id
+      // = c.client_id). Without this, manual projects appear "Unassigned" on
+      // surfaces that haven't migrated to the canonical company_id FK.
+      const { data: companyRow, error: companyError } = await supabase
+        .from('companies')
+        .select('client_id, client_name')
+        .eq('id', input.companyUuid)
+        .single();
+
+      if (companyError) throw companyError;
+      if (!companyRow) {
+        throw new Error('Selected company not found');
+      }
+
+      // Set first_seen_month at insert so the project appears on the Rates
+      // page from creation. get_all_project_rates_for_month filters out rows
+      // with NULL first_seen_month, and get_effective_project_rate falls back
+      // to the $45 default — without this, time entries arriving later would
+      // silently bill at $45/hr with no admin-visible rate-setting surface.
+      const now = new Date();
+      const firstOfMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+
+      const { data, error: insertError } = await supabase
+        .from('projects')
+        .insert({
+          project_id: projectId,
+          project_name: input.projectName.trim(),
+          company_id: input.companyUuid,
+          client_id: companyRow.client_id,
+          client_name: companyRow.client_name,
+          first_seen_month: firstOfMonth,
+          manual_origin: true,
+        })
+        .select('*')
+        .single();
+
+      if (insertError) throw insertError;
+
+      const created = data as Project;
+      setProjects(prev => [...prev, created]);
+
+      // Set the rate for the current month if requested. If this fails after
+      // the insert, leave the project in place and surface the error — the
+      // project is still valid, only the rate write failed.
+      if (input.rate != null && input.rate >= 0) {
+        const { error: rateError } = await supabase.rpc('set_project_rate_for_month', {
+          p_project_id: created.id,
+          p_month: firstOfMonth,
+          p_rate: input.rate,
+        });
+
+        if (rateError) {
+          setError(rateError.message);
+        }
+      }
+
+      return created;
+    } catch (err) {
+      console.error('Error creating project:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create project');
+      setProjects(previousProjects);
+      return null;
+    } finally {
+      setIsOperating(false);
+    }
+  }, [projects]);
+
   // Get rate for a project (with fallback)
   const getProjectRate = useCallback((projectId: string): number => {
     const project = projects.find(p => p.project_id === projectId);
@@ -99,6 +180,7 @@ export function useProjects() {
     isOperating,
     fetchProjects,
     updateProject,
+    createProject,
     getProjectRate,
     buildRateLookup,
   };

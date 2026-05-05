@@ -4,6 +4,10 @@ import { Spinner } from '../Spinner';
 import { DropdownMenu } from '../DropdownMenu';
 import { RangeSelector } from '../RangeSelector';
 import { CompanyEditorModal } from '../CompanyEditorModal';
+import { Modal } from '../Modal';
+import { Button } from '../Button';
+import { Input } from '../Input';
+import { Alert } from '../Alert';
 import { useCompanies } from '../../hooks/useCompanies';
 import type { CompanyWithGrouping, CompanyFormData } from '../../types';
 
@@ -14,11 +18,20 @@ export function CompaniesPage() {
     error,
     refetch,
     updateCompany,
+    createCompany,
     isUpdating,
   } = useCompanies();
 
   const [selectedCompany, setSelectedCompany] = useState<CompanyWithGrouping | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  // Add Company modal state
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [newClientName, setNewClientName] = useState('');
+  const [showAddError, setShowAddError] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [displayNameError, setDisplayNameError] = useState<string | undefined>(undefined);
 
   // Export to CSV - just company names (primary only for grouped companies)
   const handleExportCSV = useCallback(() => {
@@ -67,6 +80,43 @@ export function CompaniesPage() {
     refetch();
   };
 
+  // Add Company handlers
+  const handleOpenAdd = () => {
+    setNewDisplayName('');
+    setNewClientName('');
+    setShowAddError(false);
+    setDisplayNameError(undefined);
+    setIsAddOpen(true);
+  };
+
+  const handleCloseAdd = () => {
+    if (isSaving) return;
+    setIsAddOpen(false);
+    setShowAddError(false);
+  };
+
+  const handleSaveAdd = async () => {
+    const trimmedDisplay = newDisplayName.trim();
+    if (!trimmedDisplay) {
+      setDisplayNameError('Display name is required');
+      return;
+    }
+    setDisplayNameError(undefined);
+    setShowAddError(false);
+    setIsSaving(true);
+    const trimmedClient = newClientName.trim();
+    const created = await createCompany(trimmedDisplay, trimmedClient || undefined);
+    setIsSaving(false);
+    if (created) {
+      setIsAddOpen(false);
+      setNewDisplayName('');
+      setNewClientName('');
+    } else {
+      // Hook sets `error` on failure; surface it inline below.
+      setShowAddError(true);
+    }
+  };
+
   // Get display name for a company
   const getDisplayName = (company: CompanyWithGrouping): string => {
     return company.display_name || company.client_name;
@@ -92,6 +142,9 @@ export function CompaniesPage() {
             Manage company information and associations
           </p>
         </div>
+        <Button variant="primary" onClick={handleOpenAdd}>
+          Add Company
+        </Button>
       </div>
 
       {/* Export Button */}
@@ -189,6 +242,61 @@ export function CompaniesPage() {
         isSaving={isUpdating}
         onGroupChange={handleGroupChange}
       />
+
+      {/* Add Company Modal */}
+      <Modal
+        isOpen={isAddOpen}
+        onClose={handleCloseAdd}
+        title="Add Company"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCloseAdd} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveAdd}
+              disabled={isSaving || !newDisplayName.trim()}
+            >
+              {isSaving ? (
+                <span className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  Saving...
+                </span>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveAdd(); }} className="space-y-4">
+          <Input
+            label="Display Name"
+            value={newDisplayName}
+            onChange={(e) => {
+              setNewDisplayName(e.target.value);
+              if (displayNameError) setDisplayNameError(undefined);
+            }}
+            placeholder="e.g., Acme Corp"
+            error={displayNameError}
+            disabled={isSaving}
+            autoFocus
+          />
+          <Input
+            label="Client Name"
+            value={newClientName}
+            onChange={(e) => setNewClientName(e.target.value)}
+            placeholder="Optional"
+            helperText="Defaults to display name if blank"
+            disabled={isSaving}
+          />
+          {showAddError && error && (
+            <Alert message={error} icon="error" variant="error" />
+          )}
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -130,6 +130,7 @@ export interface Project {
   send_weekly_report: boolean;
   created_at: string;
   updated_at: string;
+  manual_origin?: boolean;
 }
 
 export interface ProjectFormData {
@@ -482,6 +483,7 @@ export interface Company {
   display_name: string | null;
   created_at: string;
   updated_at: string;
+  manual_origin?: boolean;
 }
 
 /**
