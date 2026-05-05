@@ -17,7 +17,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Button style variant */
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'link';
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
   /** Icon-only button (square with equal padding) */
@@ -54,6 +54,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         'active:bg-error-text',
         'disabled:bg-error-border disabled:text-vercel-gray-200',
       ].join(' '),
+      link: [
+        'bg-transparent text-bteam-brand',
+        'hover:underline',
+        'focus:ring-1 focus:ring-black rounded',
+        'disabled:text-vercel-gray-200 disabled:hover:no-underline',
+      ].join(' '),
     };
 
     const sizeClasses = {
@@ -69,10 +75,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'p-3.5 text-base',
     };
 
+    // Link variant overrides: no box padding (inline text-link), still respects size for font scale
+    const linkSizeClasses = {
+      sm: 'p-0 text-xs',
+      md: 'p-0 text-sm',
+      lg: 'p-0 text-base',
+    };
+
+    const resolvedSizeClasses = variant === 'link'
+      ? linkSizeClasses[size]
+      : iconOnly
+        ? iconOnlySizeClasses[size]
+        : sizeClasses[size];
+
     return (
       <button
         ref={ref}
-        className={`${baseClasses} ${variantClasses[variant]} ${iconOnly ? iconOnlySizeClasses[size] : sizeClasses[size]} ${className}`}
+        className={`${baseClasses} ${variantClasses[variant]} ${resolvedSizeClasses} ${className}`}
         disabled={disabled}
         {...props}
       >

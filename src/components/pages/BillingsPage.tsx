@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { startOfMonth, format, parse } from 'date-fns';
 import { useBillings, formatCentsToDisplay, parseMoneyToCents } from '../../hooks/useBillings';
 import { useCompanies } from '../../hooks/useCompanies';
+import { useProjects } from '../../hooks/useProjects';
 import { useDateFilter } from '../../contexts/DateFilterContext';
 import { RangeSelector } from '../RangeSelector';
 import { Modal } from '../Modal';
@@ -79,7 +80,10 @@ export function BillingsPage() {
   } = useBillings({ dateRange });
 
   // Fetch companies for the dropdown
-  const { companies } = useCompanies();
+  const { companies, createCompany, error: createCompanyError } = useCompanies();
+
+  // Project create hook (for inline "Add Project" inside the billing modals)
+  const { createProject, error: createProjectError } = useProjects();
 
   // Company options for Select
   const companyOptions: SelectOption[] = useMemo(() =>
@@ -122,6 +126,28 @@ export function BillingsPage() {
   const [isUpdatingBilling, setIsUpdatingBilling] = useState(false);
   const [editBillingErrors, setEditBillingErrors] = useState<{ company?: string; name?: string }>({});
   const [editBillingProjects, setEditBillingProjects] = useState<ProjectWithGrouping[]>([]);
+
+  // Nested "Add Company" / "Add Project" view state inside the billing modals.
+  // The billing modal swaps its content to render the nested form (instead of
+  // stacking a second Modal) — this keeps Escape-handling, body-scroll lock,
+  // and z-index on the single underlying Modal atom.
+  type NestedView = null | 'company' | 'project';
+  const [createNestedView, setCreateNestedView] = useState<NestedView>(null);
+  const [editNestedView, setEditNestedView] = useState<NestedView>(null);
+
+  // Nested Add Company form state (shared — only one nested view is open at a time)
+  const [nestedCompanyDisplayName, setNestedCompanyDisplayName] = useState('');
+  const [nestedCompanyClientName, setNestedCompanyClientName] = useState('');
+  const [nestedCompanyDisplayNameError, setNestedCompanyDisplayNameError] = useState<string | undefined>(undefined);
+  const [nestedCompanyShowError, setNestedCompanyShowError] = useState(false);
+  const [isSavingNestedCompany, setIsSavingNestedCompany] = useState(false);
+
+  // Nested Add Project form state (shared)
+  const [nestedProjectName, setNestedProjectName] = useState('');
+  const [nestedProjectRate, setNestedProjectRate] = useState('');
+  const [nestedProjectNameError, setNestedProjectNameError] = useState<string | undefined>(undefined);
+  const [nestedProjectShowError, setNestedProjectShowError] = useState(false);
+  const [isSavingNestedProject, setIsSavingNestedProject] = useState(false);
 
   // Edit transaction form state (simplified - no type or linkedProject)
   const [editTransactionDate, setEditTransactionDate] = useState('');
@@ -174,6 +200,9 @@ export function BillingsPage() {
     setNewBillingLinkedProjectId('');
     setCreateBillingErrors({});
     setNewBillingProjects([]);
+    setCreateNestedView(null);
+    resetNestedCompanyForm();
+    resetNestedProjectForm();
     setIsCreateBillingOpen(true);
   };
 
@@ -265,6 +294,9 @@ export function BillingsPage() {
     setEditBillingType(billing.type);
     setEditBillingLinkedProjectId(billing.linkedProjectId || '');
     setEditBillingErrors({});
+    setEditNestedView(null);
+    resetNestedCompanyForm();
+    resetNestedProjectForm();
 
     // Fetch projects for the company
     const projects = await fetchProjectsForCompany(billing.companyId);
@@ -391,6 +423,161 @@ export function BillingsPage() {
     if (result) {
       setIsEditTransactionOpen(false);
     }
+  };
+
+  // ---------- Nested "Add Company" / "Add Project" handlers ----------
+
+  // Reset nested company form fields and errors
+  const resetNestedCompanyForm = () => {
+    setNestedCompanyDisplayName('');
+    setNestedCompanyClientName('');
+    setNestedCompanyDisplayNameError(undefined);
+    setNestedCompanyShowError(false);
+  };
+
+  // Reset nested project form fields and errors
+  const resetNestedProjectForm = () => {
+    setNestedProjectName('');
+    setNestedProjectRate('');
+    setNestedProjectNameError(undefined);
+    setNestedProjectShowError(false);
+  };
+
+  // Open nested Add Company view inside the Create Billing modal
+  const handleOpenNestedCompanyForCreate = () => {
+    resetNestedCompanyForm();
+    setCreateNestedView('company');
+  };
+
+  // Open nested Add Company view inside the Edit Billing modal
+  const handleOpenNestedCompanyForEdit = () => {
+    resetNestedCompanyForm();
+    setEditNestedView('company');
+  };
+
+  // Open nested Add Project view inside the Create Billing modal
+  const handleOpenNestedProjectForCreate = () => {
+    resetNestedProjectForm();
+    setCreateNestedView('project');
+  };
+
+  // Open nested Add Project view inside the Edit Billing modal
+  const handleOpenNestedProjectForEdit = () => {
+    resetNestedProjectForm();
+    setEditNestedView('project');
+  };
+
+  // Cancel/close nested view (return to billing form)
+  const handleCancelNested = (parent: 'create' | 'edit') => {
+    if (parent === 'create') {
+      setCreateNestedView(null);
+    } else {
+      setEditNestedView(null);
+    }
+    resetNestedCompanyForm();
+    resetNestedProjectForm();
+  };
+
+  // Save nested Add Company. On success, auto-select the new company in the
+  // active parent modal and return to that parent form.
+  const handleSaveNestedCompany = async (parent: 'create' | 'edit') => {
+    const trimmedDisplay = nestedCompanyDisplayName.trim();
+    if (!trimmedDisplay) {
+      setNestedCompanyDisplayNameError('Display name is required');
+      return;
+    }
+    setNestedCompanyDisplayNameError(undefined);
+    setNestedCompanyShowError(false);
+
+    const trimmedClient = nestedCompanyClientName.trim();
+    setIsSavingNestedCompany(true);
+    const created = await createCompany(trimmedDisplay, trimmedClient || undefined);
+    setIsSavingNestedCompany(false);
+
+    if (created) {
+      // Auto-select the new company on the parent form. The parent's
+      // useEffect on companyId change will refetch projects (an empty list
+      // for a brand-new company), and clear any previously selected linked
+      // project. companyOptions also re-derives from useCompanies().companies,
+      // which createCompany already updated.
+      if (parent === 'create') {
+        setNewBillingCompanyId(created.id);
+        setNewBillingLinkedProjectId('');
+        setCreateBillingErrors((prev) => ({ ...prev, company: undefined }));
+        setCreateNestedView(null);
+      } else {
+        setEditBillingCompanyId(created.id);
+        setEditBillingLinkedProjectId('');
+        setEditBillingErrors((prev) => ({ ...prev, company: undefined }));
+        setEditNestedView(null);
+      }
+      resetNestedCompanyForm();
+    } else {
+      // Hook sets `error` on failure; surface it inline.
+      setNestedCompanyShowError(true);
+    }
+  };
+
+  // Save nested Add Project. The parent company is the parent modal's
+  // currently selected company. On success, auto-select the new project.
+  const handleSaveNestedProject = async (parent: 'create' | 'edit') => {
+    const companyId = parent === 'create' ? newBillingCompanyId : editBillingCompanyId;
+    if (!companyId) {
+      // Should not happen — the affordance is hidden until a company is
+      // selected — but guard anyway.
+      setNestedProjectShowError(true);
+      return;
+    }
+
+    const trimmedName = nestedProjectName.trim();
+    if (!trimmedName) {
+      setNestedProjectNameError('Project name is required');
+      return;
+    }
+    setNestedProjectNameError(undefined);
+    setNestedProjectShowError(false);
+
+    let rateValue: number | null = null;
+    if (nestedProjectRate.trim() !== '') {
+      const parsed = Number(nestedProjectRate);
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        rateValue = parsed;
+      }
+    }
+
+    setIsSavingNestedProject(true);
+    const created = await createProject({
+      companyUuid: companyId,
+      projectName: trimmedName,
+      rate: rateValue,
+    });
+    setIsSavingNestedProject(false);
+
+    if (created) {
+      // Refresh the parent's project list from the canonical view, then
+      // auto-select the new project.
+      const refreshed = await fetchProjectsForCompany(companyId);
+      if (parent === 'create') {
+        setNewBillingProjects(refreshed);
+        setNewBillingLinkedProjectId(created.id);
+        setCreateNestedView(null);
+      } else {
+        setEditBillingProjects(refreshed);
+        setEditBillingLinkedProjectId(created.id);
+        setEditNestedView(null);
+      }
+      resetNestedProjectForm();
+    } else {
+      setNestedProjectShowError(true);
+    }
+  };
+
+  // Resolve the display name of the currently selected company (for the
+  // nested Add Project header). Falls back to the company's client_name.
+  const resolveSelectedCompanyName = (companyId: string): string => {
+    const c = companies.find((co) => co.id === companyId);
+    if (!c) return '';
+    return c.display_name || c.client_name;
   };
 
   // Delete transaction
@@ -583,104 +770,256 @@ export function BillingsPage() {
         </div>
       )}
 
-      {/* Create Billing Modal - includes type and linkedProject */}
+      {/* Create Billing Modal - includes type and linkedProject. Swaps to a
+          nested "Add Company" / "Add Project" form when createNestedView is
+          set, instead of stacking a second Modal (avoids Escape/scroll-lock
+          conflicts in the Modal atom). */}
       <Modal
         isOpen={isCreateBillingOpen}
-        onClose={() => setIsCreateBillingOpen(false)}
-        title="Add Billing"
+        onClose={() => {
+          // Escape / backdrop should close the whole flow. Reset nested state
+          // so reopening starts clean.
+          setIsCreateBillingOpen(false);
+          setCreateNestedView(null);
+          resetNestedCompanyForm();
+          resetNestedProjectForm();
+        }}
+        title={
+          createNestedView === 'company'
+            ? 'Add Company'
+            : createNestedView === 'project'
+              ? 'Add Project'
+              : 'Add Billing'
+        }
         maxWidth="sm"
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsCreateBillingOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveBilling}
-              disabled={isSavingBilling}
-            >
-              {isSavingBilling ? (
-                <span className="flex items-center gap-2">
-                  <Spinner size="sm" />
-                  Saving...
-                </span>
-              ) : (
-                'Add Billing'
-              )}
-            </Button>
-          </>
+          createNestedView === 'company' ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => handleCancelNested('create')}
+                disabled={isSavingNestedCompany}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleSaveNestedCompany('create')}
+                disabled={isSavingNestedCompany || !nestedCompanyDisplayName.trim()}
+              >
+                {isSavingNestedCompany ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </>
+          ) : createNestedView === 'project' ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => handleCancelNested('create')}
+                disabled={isSavingNestedProject}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleSaveNestedProject('create')}
+                disabled={isSavingNestedProject || !nestedProjectName.trim()}
+              >
+                {isSavingNestedProject ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => setIsCreateBillingOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSaveBilling}
+                disabled={isSavingBilling}
+              >
+                {isSavingBilling ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Add Billing'
+                )}
+              </Button>
+            </>
+          )
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleSaveBilling(); }} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-              Company
-            </label>
-            <Select
-              value={newBillingCompanyId}
-              onChange={(value) => {
-                setNewBillingCompanyId(value);
-                setNewBillingLinkedProjectId(''); // Clear project when company changes
-                if (createBillingErrors.company) {
-                  setCreateBillingErrors((prev) => ({ ...prev, company: undefined }));
-                }
-              }}
-              options={companyOptions}
-              placeholder="Select company..."
-              className="w-full"
-            />
-            {createBillingErrors.company && (
-              <p className="mt-1 text-xs text-bteam-brand" role="alert">
-                {createBillingErrors.company}
-              </p>
-            )}
-          </div>
-
-          <Input
-            label="Billing Name"
-            value={newBillingName}
-            onChange={(e) => {
-              setNewBillingName(e.target.value);
-              if (createBillingErrors.name) {
-                setCreateBillingErrors((prev) => ({ ...prev, name: undefined }));
-              }
+        {createNestedView === 'company' ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveNestedCompany('create');
             }}
-            placeholder="e.g., Q1 Milestone Payment"
-            error={createBillingErrors.name}
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-              Type
-            </label>
-            <Select
-              value={newBillingType}
-              onChange={(value) => {
-                setNewBillingType(value as TransactionType);
-                if (value !== 'revenue_milestone') {
-                  setNewBillingLinkedProjectId('');
-                }
+            className="space-y-4"
+          >
+            <Input
+              label="Display Name"
+              value={nestedCompanyDisplayName}
+              onChange={(e) => {
+                setNestedCompanyDisplayName(e.target.value);
+                if (nestedCompanyDisplayNameError) setNestedCompanyDisplayNameError(undefined);
               }}
-              options={TRANSACTION_TYPE_OPTIONS}
-              className="w-full"
+              placeholder="e.g., Acme Corp"
+              error={nestedCompanyDisplayNameError}
+              disabled={isSavingNestedCompany}
+              autoFocus
             />
-          </div>
-
-          {newBillingType === 'revenue_milestone' && newBillingCompanyId && (
+            <Input
+              label="Client Name"
+              value={nestedCompanyClientName}
+              onChange={(e) => setNestedCompanyClientName(e.target.value)}
+              placeholder="Optional"
+              helperText="Defaults to display name if blank"
+              disabled={isSavingNestedCompany}
+            />
+            {nestedCompanyShowError && createCompanyError && (
+              <Alert message={createCompanyError} icon="error" variant="error" />
+            )}
+          </form>
+        ) : createNestedView === 'project' ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveNestedProject('create');
+            }}
+            className="space-y-4"
+          >
+            <p className="text-sm text-vercel-gray-400">
+              for{' '}
+              <span className="text-vercel-gray-600 font-medium">
+                {resolveSelectedCompanyName(newBillingCompanyId)}
+              </span>
+            </p>
+            <Input
+              label="Project Name"
+              value={nestedProjectName}
+              onChange={(e) => {
+                setNestedProjectName(e.target.value);
+                if (nestedProjectNameError) setNestedProjectNameError(undefined);
+              }}
+              placeholder="e.g., Website Redesign"
+              error={nestedProjectNameError}
+              disabled={isSavingNestedProject}
+              autoFocus
+            />
+            <Input
+              label="Rate"
+              type="number"
+              step="0.01"
+              min="0"
+              value={nestedProjectRate}
+              onChange={(e) => setNestedProjectRate(e.target.value)}
+              placeholder="0.00"
+              helperText="Optional. Sets the rate for the current month."
+              disabled={isSavingNestedProject}
+              startAddon="$"
+            />
+            {nestedProjectShowError && createProjectError && (
+              <Alert message={createProjectError} icon="error" variant="error" />
+            )}
+          </form>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveBilling(); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-                Linked Project
+                Company
               </label>
               <Select
-                value={newBillingLinkedProjectId}
-                onChange={setNewBillingLinkedProjectId}
-                options={newBillingProjectOptions}
-                placeholder="Select project..."
+                value={newBillingCompanyId}
+                onChange={(value) => {
+                  setNewBillingCompanyId(value);
+                  setNewBillingLinkedProjectId(''); // Clear project when company changes
+                  if (createBillingErrors.company) {
+                    setCreateBillingErrors((prev) => ({ ...prev, company: undefined }));
+                  }
+                }}
+                options={companyOptions}
+                placeholder="Select company..."
+                className="w-full"
+              />
+              <div className="mt-1">
+                <Button type="button" variant="link" size="sm" onClick={handleOpenNestedCompanyForCreate}>
+                  + Add new company
+                </Button>
+              </div>
+              {createBillingErrors.company && (
+                <p className="mt-1 text-xs text-bteam-brand" role="alert">
+                  {createBillingErrors.company}
+                </p>
+              )}
+            </div>
+
+            <Input
+              label="Billing Name"
+              value={newBillingName}
+              onChange={(e) => {
+                setNewBillingName(e.target.value);
+                if (createBillingErrors.name) {
+                  setCreateBillingErrors((prev) => ({ ...prev, name: undefined }));
+                }
+              }}
+              placeholder="e.g., Q1 Milestone Payment"
+              error={createBillingErrors.name}
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                Type
+              </label>
+              <Select
+                value={newBillingType}
+                onChange={(value) => {
+                  setNewBillingType(value as TransactionType);
+                  if (value !== 'revenue_milestone') {
+                    setNewBillingLinkedProjectId('');
+                  }
+                }}
+                options={TRANSACTION_TYPE_OPTIONS}
                 className="w-full"
               />
             </div>
-          )}
-        </form>
+
+            {newBillingType === 'revenue_milestone' && newBillingCompanyId && (
+              <div>
+                <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                  Linked Project
+                </label>
+                <Select
+                  value={newBillingLinkedProjectId}
+                  onChange={setNewBillingLinkedProjectId}
+                  options={newBillingProjectOptions}
+                  placeholder="Select project..."
+                  className="w-full"
+                />
+                <div className="mt-1">
+                  <Button type="button" variant="link" size="sm" onClick={handleOpenNestedProjectForCreate}>
+                    + Add new project
+                  </Button>
+                </div>
+              </div>
+            )}
+          </form>
+        )}
       </Modal>
 
       {/* Add Transaction Modal - simplified, no type or linkedProject */}
@@ -747,107 +1086,256 @@ export function BillingsPage() {
         </form>
       </Modal>
 
-      {/* Edit Billing Modal - includes type and linkedProject */}
+      {/* Edit Billing Modal - includes type and linkedProject. Mirrors the
+          Create Billing nested-view pattern for inline Add Company / Add
+          Project. */}
       <Modal
         isOpen={isEditBillingOpen}
-        onClose={() => setIsEditBillingOpen(false)}
-        title="Edit Billing"
+        onClose={() => {
+          setIsEditBillingOpen(false);
+          setEditNestedView(null);
+          resetNestedCompanyForm();
+          resetNestedProjectForm();
+        }}
+        title={
+          editNestedView === 'company'
+            ? 'Add Company'
+            : editNestedView === 'project'
+              ? 'Add Project'
+              : 'Edit Billing'
+        }
         maxWidth="sm"
         footer={
-          <>
-            <Button variant="danger" onClick={handleDeleteBilling} disabled={isUpdatingBilling}>
-              Delete
-            </Button>
-            <div className="flex-1" />
-            <Button variant="secondary" onClick={() => setIsEditBillingOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleUpdateBilling}
-              disabled={isUpdatingBilling}
-            >
-              {isUpdatingBilling ? (
-                <span className="flex items-center gap-2">
-                  <Spinner size="sm" />
-                  Saving...
-                </span>
-              ) : (
-                'Save'
-              )}
-            </Button>
-          </>
+          editNestedView === 'company' ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => handleCancelNested('edit')}
+                disabled={isSavingNestedCompany}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleSaveNestedCompany('edit')}
+                disabled={isSavingNestedCompany || !nestedCompanyDisplayName.trim()}
+              >
+                {isSavingNestedCompany ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </>
+          ) : editNestedView === 'project' ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => handleCancelNested('edit')}
+                disabled={isSavingNestedProject}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleSaveNestedProject('edit')}
+                disabled={isSavingNestedProject || !nestedProjectName.trim()}
+              >
+                {isSavingNestedProject ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="danger" onClick={handleDeleteBilling} disabled={isUpdatingBilling}>
+                Delete
+              </Button>
+              <div className="flex-1" />
+              <Button variant="secondary" onClick={() => setIsEditBillingOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleUpdateBilling}
+                disabled={isUpdatingBilling}
+              >
+                {isUpdatingBilling ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </>
+          )
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleUpdateBilling(); }} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-              Company
-            </label>
-            <Select
-              value={editBillingCompanyId}
-              onChange={(value) => {
-                setEditBillingCompanyId(value);
-                setEditBillingLinkedProjectId(''); // Clear project when company changes
-                if (editBillingErrors.company) {
-                  setEditBillingErrors((prev) => ({ ...prev, company: undefined }));
-                }
-              }}
-              options={companyOptions}
-              placeholder="Select company..."
-              className="w-full"
-            />
-            {editBillingErrors.company && (
-              <p className="mt-1 text-xs text-bteam-brand" role="alert">
-                {editBillingErrors.company}
-              </p>
-            )}
-          </div>
-
-          <Input
-            label="Billing Name"
-            value={editBillingName}
-            onChange={(e) => {
-              setEditBillingName(e.target.value);
-              if (editBillingErrors.name) {
-                setEditBillingErrors((prev) => ({ ...prev, name: undefined }));
-              }
+        {editNestedView === 'company' ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveNestedCompany('edit');
             }}
-            error={editBillingErrors.name}
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-              Type
-            </label>
-            <Select
-              value={editBillingType}
-              onChange={(value) => {
-                setEditBillingType(value as TransactionType);
-                if (value !== 'revenue_milestone') {
-                  setEditBillingLinkedProjectId('');
-                }
+            className="space-y-4"
+          >
+            <Input
+              label="Display Name"
+              value={nestedCompanyDisplayName}
+              onChange={(e) => {
+                setNestedCompanyDisplayName(e.target.value);
+                if (nestedCompanyDisplayNameError) setNestedCompanyDisplayNameError(undefined);
               }}
-              options={TRANSACTION_TYPE_OPTIONS}
-              className="w-full"
+              placeholder="e.g., Acme Corp"
+              error={nestedCompanyDisplayNameError}
+              disabled={isSavingNestedCompany}
+              autoFocus
             />
-          </div>
-
-          {editBillingType === 'revenue_milestone' && editBillingCompanyId && (
+            <Input
+              label="Client Name"
+              value={nestedCompanyClientName}
+              onChange={(e) => setNestedCompanyClientName(e.target.value)}
+              placeholder="Optional"
+              helperText="Defaults to display name if blank"
+              disabled={isSavingNestedCompany}
+            />
+            {nestedCompanyShowError && createCompanyError && (
+              <Alert message={createCompanyError} icon="error" variant="error" />
+            )}
+          </form>
+        ) : editNestedView === 'project' ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveNestedProject('edit');
+            }}
+            className="space-y-4"
+          >
+            <p className="text-sm text-vercel-gray-400">
+              for{' '}
+              <span className="text-vercel-gray-600 font-medium">
+                {resolveSelectedCompanyName(editBillingCompanyId)}
+              </span>
+            </p>
+            <Input
+              label="Project Name"
+              value={nestedProjectName}
+              onChange={(e) => {
+                setNestedProjectName(e.target.value);
+                if (nestedProjectNameError) setNestedProjectNameError(undefined);
+              }}
+              placeholder="e.g., Website Redesign"
+              error={nestedProjectNameError}
+              disabled={isSavingNestedProject}
+              autoFocus
+            />
+            <Input
+              label="Rate"
+              type="number"
+              step="0.01"
+              min="0"
+              value={nestedProjectRate}
+              onChange={(e) => setNestedProjectRate(e.target.value)}
+              placeholder="0.00"
+              helperText="Optional. Sets the rate for the current month."
+              disabled={isSavingNestedProject}
+              startAddon="$"
+            />
+            {nestedProjectShowError && createProjectError && (
+              <Alert message={createProjectError} icon="error" variant="error" />
+            )}
+          </form>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); handleUpdateBilling(); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
-                Linked Project
+                Company
               </label>
               <Select
-                value={editBillingLinkedProjectId}
-                onChange={setEditBillingLinkedProjectId}
-                options={editBillingProjectOptions}
-                placeholder="Select project..."
+                value={editBillingCompanyId}
+                onChange={(value) => {
+                  setEditBillingCompanyId(value);
+                  setEditBillingLinkedProjectId(''); // Clear project when company changes
+                  if (editBillingErrors.company) {
+                    setEditBillingErrors((prev) => ({ ...prev, company: undefined }));
+                  }
+                }}
+                options={companyOptions}
+                placeholder="Select company..."
+                className="w-full"
+              />
+              <div className="mt-1">
+                <Button type="button" variant="link" size="sm" onClick={handleOpenNestedCompanyForEdit}>
+                  + Add new company
+                </Button>
+              </div>
+              {editBillingErrors.company && (
+                <p className="mt-1 text-xs text-bteam-brand" role="alert">
+                  {editBillingErrors.company}
+                </p>
+              )}
+            </div>
+
+            <Input
+              label="Billing Name"
+              value={editBillingName}
+              onChange={(e) => {
+                setEditBillingName(e.target.value);
+                if (editBillingErrors.name) {
+                  setEditBillingErrors((prev) => ({ ...prev, name: undefined }));
+                }
+              }}
+              error={editBillingErrors.name}
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                Type
+              </label>
+              <Select
+                value={editBillingType}
+                onChange={(value) => {
+                  setEditBillingType(value as TransactionType);
+                  if (value !== 'revenue_milestone') {
+                    setEditBillingLinkedProjectId('');
+                  }
+                }}
+                options={TRANSACTION_TYPE_OPTIONS}
                 className="w-full"
               />
             </div>
-          )}
-        </form>
+
+            {editBillingType === 'revenue_milestone' && editBillingCompanyId && (
+              <div>
+                <label className="block text-sm font-medium text-vercel-gray-600 mb-1">
+                  Linked Project
+                </label>
+                <Select
+                  value={editBillingLinkedProjectId}
+                  onChange={setEditBillingLinkedProjectId}
+                  options={editBillingProjectOptions}
+                  placeholder="Select project..."
+                  className="w-full"
+                />
+                <div className="mt-1">
+                  <Button type="button" variant="link" size="sm" onClick={handleOpenNestedProjectForEdit}>
+                    + Add new project
+                  </Button>
+                </div>
+              </div>
+            )}
+          </form>
+        )}
       </Modal>
 
       {/* Edit Transaction Modal - simplified, no type or linkedProject */}

@@ -15,7 +15,7 @@ export const atoms: DesignSystemEntry[] = [
   // ---------------------------------------------------------------------------
   {
     name: 'Button',
-    description: 'Interactive button with primary, secondary, ghost, and danger variants in sm/md/lg sizes.',
+    description: 'Interactive button with primary, secondary, ghost, danger, and link variants in sm/md/lg sizes.',
     tier: 'atom',
     filePath: 'src/components/Button.tsx',
     usedIn: [
@@ -23,6 +23,7 @@ export const atoms: DesignSystemEntry[] = [
       'EmployeeEditorModal', 'UserEditorModal', 'HolidayEditorModal',
       'CompanyEditorModal', 'ProjectEditorModal', 'ProfileEditorModal',
       'RateEditModal', 'LegalModal', 'HolidaysPage', 'UsersPage',
+      'BillingsPage', 'LoginPage',
     ],
     introducedIn: 'Task 014',
   },
