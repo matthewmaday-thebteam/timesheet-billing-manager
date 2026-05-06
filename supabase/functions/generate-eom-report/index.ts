@@ -34,6 +34,32 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 // =============================================================================
+// Paginated fetch for task_monthly_totals (defense-in-depth)
+// =============================================================================
+// PostgREST caps result sets at ~1000 rows by default. The integrity assertion
+// (Σ task rounded minutes == summary.rounded_minutes per project-month) would
+// catch silent truncation today, but we paginate explicitly so a pathological
+// (company × projects × tasks × clients) matrix can never trip the cap.
+// Mirrors the helper shape used in supabase/functions/send-weekly-revenue-report.
+// Errors surface immediately — no silent fallbacks.
+async function fetchAllRowsTMT<T>(
+  queryBuilder: ReturnType<ReturnType<typeof createClient>['from']>,
+  pageSize = 1000,
+): Promise<{ data: T[]; error: null } | { data: null; error: { message: string } }> {
+  const allData: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    allData.push(...(data as T[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { data: allData, error: null };
+}
+
+// =============================================================================
 // Utility functions (replicated from src/utils/billing.ts and edge function)
 // =============================================================================
 
@@ -577,16 +603,19 @@ async function generateCompanyReport(
   // --- Fetch task_monthly_totals for the canonical projects in this month ---
   let taskTotalsRows: TaskMonthlyTotalRow[] = [];
   if (companyCanonicalProjectIds.length > 0) {
-    const { data: tmtData, error: tmtError } = await supabase
+    const tmtQuery = supabase
       .from('task_monthly_totals')
       .select('project_id, task_name, client_id, rounded_entry_minutes, rounded_task_minutes')
       .eq('summary_month', monthStr)
       .in('project_id', companyCanonicalProjectIds);
 
+    const { data: tmtData, error: tmtError } =
+      await fetchAllRowsTMT<TaskMonthlyTotalRow>(tmtQuery);
+
     if (tmtError) {
       return { companyId, companyName, year, month, status: 'failed', error: `task_monthly_totals query: ${tmtError.message}` };
     }
-    taskTotalsRows = (tmtData as TaskMonthlyTotalRow[]) || [];
+    taskTotalsRows = tmtData || [];
   }
 
   // Group TMT rows by canonical project UUID -> (task_name -> rounded_minutes).
