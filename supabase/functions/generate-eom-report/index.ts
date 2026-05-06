@@ -34,34 +34,8 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 // =============================================================================
-// Paginated fetch — guarantees all rows regardless of Supabase default limits
-// =============================================================================
-
-async function fetchAllRows<T>(
-  queryBuilder: ReturnType<ReturnType<typeof createClient>['from']>,
-  pageSize = 1000,
-): Promise<{ data: T[]; error: null } | { data: null; error: { message: string } }> {
-  const allData: T[] = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
-    if (error) return { data: null, error };
-    if (!data || data.length === 0) break;
-    allData.push(...(data as T[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return { data: allData, error: null };
-}
-
-// =============================================================================
 // Utility functions (replicated from src/utils/billing.ts and edge function)
 // =============================================================================
-
-function applyRounding(minutes: number, increment: number): number {
-  if (increment === 0) return minutes;
-  return Math.ceil(minutes / increment) * increment;
-}
 
 function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
@@ -120,8 +94,10 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
 // =============================================================================
 
 interface SummaryRow {
-  project_id: string;
+  project_id: string; // internal canonical UUID
   company_id: string;
+  actual_minutes: number;
+  rounded_minutes: number;
   actual_hours: number;
   rounded_hours: number;
   carryover_in_hours: number;
@@ -145,6 +121,19 @@ interface SummaryRow {
   };
 }
 
+interface TaskMonthlyTotalRow {
+  project_id: string; // canonical project UUID
+  task_name: string;
+  client_id: string;
+  rounded_entry_minutes: number;
+  rounded_task_minutes: number;
+}
+
+interface RoundingModeRow {
+  project_id: string;
+  effective_rounding_mode: 'entry' | 'task';
+}
+
 interface BillingRow {
   billing_id: string;
   company_id: string;
@@ -159,12 +148,6 @@ interface BillingRow {
   transaction_month: string | null;
   amount_cents: number | null;
   transaction_description: string | null;
-}
-
-interface TaskEntry {
-  project_id: string;
-  task_name: string;
-  total_minutes: number;
 }
 
 interface CompanyReportResult {
@@ -471,10 +454,6 @@ async function generateCompanyReport(
   generatedBy: string | null,
 ): Promise<CompanyReportResult> {
   const monthStr = `${year}-${String(month).padStart(2, '0')}-01`;
-  const rangeStart = monthStr;
-  const rangeEnd = month === 12
-    ? `${year + 1}-01-01`
-    : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
   // --- Look up company ---
   const { data: companyData, error: companyError } = await supabase
@@ -497,8 +476,13 @@ async function generateCompanyReport(
   const companyName = companyData.display_name || companyData.client_name;
   const companyClientId = companyData.client_id;
 
-  // --- Parallel data queries (same pattern as customer-revenue-report) ---
-  const [summaryResult, entriesResult, projectsResult, groupMembersResult, billingsResult] =
+  // --- Parallel data queries ---
+  // Task rows are sourced from task_monthly_totals (mig-093/094/101). The
+  // rounding-mode hierarchy comes from get_all_project_roundings_for_month
+  // (mig-093), the same source used by recalculate_project_month when it
+  // populates project_monthly_summary.rounded_minutes. Both functions read
+  // canonical project UUIDs, so no client-side canonical mapping is needed.
+  const [summaryResult, projectsResult, billingsResult, roundingsResult] =
     await Promise.all([
       // 1. Project billing summary for this company-month
       supabase
@@ -511,80 +495,68 @@ async function generateCompanyReport(
         .eq('summary_month', monthStr)
         .eq('company_id', companyId),
 
-      // 2a. Timesheet entries for the month (all companies — filtered after resolution)
-      // Uses paginated fetch to guarantee all rows are returned.
-      fetchAllRows<TaskEntry>(
-        supabase
-          .from('v_timesheet_entries')
-          .select('project_id, task_name, total_minutes')
-          .gte('work_date', rangeStart)
-          .lt('work_date', rangeEnd),
-      ),
-
-      // 2b. All projects (for external <> internal ID mapping)
+      // 2. All projects (for milestone linkedProjectId UUID -> external project_id)
       supabase
         .from('projects')
         .select('id, project_id'),
-
-      // 2c. Project group members
-      supabase
-        .from('project_group_members')
-        .select('member_project_id, group:project_groups!inner(primary_project_id)'),
 
       // 3. Billings with transactions for the month
       supabase.rpc('get_billings_with_transactions', {
         p_start_month: monthStr,
         p_end_month: monthStr,
       }),
+
+      // 4. Rounding mode + increment per canonical project for this month
+      supabase.rpc('get_all_project_roundings_for_month', { p_month: monthStr }),
     ]);
 
   if (summaryResult.error) {
     return { companyId, companyName, year, month, status: 'failed', error: `Summary query: ${summaryResult.error.message}` };
   }
-  if (entriesResult.error) {
-    return { companyId, companyName, year, month, status: 'failed', error: `Entries query: ${entriesResult.error.message}` };
-  }
   if (projectsResult.error) {
     return { companyId, companyName, year, month, status: 'failed', error: `Projects query: ${projectsResult.error.message}` };
-  }
-  if (groupMembersResult.error) {
-    return { companyId, companyName, year, month, status: 'failed', error: `Group members query: ${groupMembersResult.error.message}` };
   }
   if (billingsResult.error) {
     return { companyId, companyName, year, month, status: 'failed', error: `Billings query: ${billingsResult.error.message}` };
   }
+  if (roundingsResult.error) {
+    return { companyId, companyName, year, month, status: 'failed', error: `Roundings query: ${roundingsResult.error.message}` };
+  }
 
   const summaryRows = (summaryResult.data as SummaryRow[]) || [];
-  const allEntries = (entriesResult.data as TaskEntry[]) || [];
   const allProjects = projectsResult.data || [];
-  const groupMembers = groupMembersResult.data || [];
   const billingRows = (billingsResult.data as BillingRow[]) || [];
+  const roundingsRows = (roundingsResult.data as RoundingModeRow[]) || [];
 
-  // --- Build project ID mappings ---
-  const externalToInternal = new Map<string, string>();
+  // --- Build project ID mappings (still needed for milestone linking) ---
   const internalToExternal = new Map<string, string>();
   for (const p of allProjects) {
-    externalToInternal.set(p.project_id, p.id);
     internalToExternal.set(p.id, p.project_id);
   }
 
-  // Build member internal UUID -> primary canonical external project_id
-  const memberToPrimaryExternal = new Map<string, string>();
-  for (const gm of groupMembers) {
-    const group = gm.group as unknown as { primary_project_id: string };
-    const primaryExternal = internalToExternal.get(group.primary_project_id);
-    if (primaryExternal) {
-      memberToPrimaryExternal.set(gm.member_project_id, primaryExternal);
-    }
+  // --- Build effective_rounding_mode lookup keyed on canonical project UUID ---
+  // mig-093 contract: 'task' is the default fallback when no row exists.
+  const roundingModeByProject = new Map<string, 'entry' | 'task'>();
+  for (const r of roundingsRows) {
+    const mode: 'entry' | 'task' = r.effective_rounding_mode === 'entry' ? 'entry' : 'task';
+    roundingModeByProject.set(r.project_id, mode);
   }
 
   // --- Build project config from summary data ---
-  const companyProjectExternalIds = new Set<string>();
+  // canonicalExternalId -> ProjectData (mirrors the existing externalId-keyed
+  // structure that downstream CSV generation expects). canonicalProjectId is
+  // tracked separately because task_monthly_totals is keyed on canonical UUID.
   const projectDataMap = new Map<string, ProjectData>();
+  const summaryRoundedMinutesByExternal = new Map<string, number>();
+  const externalToCanonicalProjectId = new Map<string, string>();
+  const companyCanonicalProjectIds: string[] = [];
 
   for (const row of summaryRows) {
     const externalId = row.projects.project_id;
-    companyProjectExternalIds.add(externalId);
+    const canonicalProjectId = row.project_id; // canonical UUID per mig-050 view
+    externalToCanonicalProjectId.set(externalId, canonicalProjectId);
+    companyCanonicalProjectIds.push(canonicalProjectId);
+    summaryRoundedMinutesByExternal.set(externalId, Number(row.rounded_minutes));
     projectDataMap.set(externalId, {
       projectName: row.projects.project_name,
       externalId,
@@ -602,48 +574,92 @@ async function generateCompanyReport(
     });
   }
 
-  // --- Build task breakdown (grouped by canonical external project ID) ---
-  const tasksByProject = new Map<string, Map<string, number>>();
+  // --- Fetch task_monthly_totals for the canonical projects in this month ---
+  let taskTotalsRows: TaskMonthlyTotalRow[] = [];
+  if (companyCanonicalProjectIds.length > 0) {
+    const { data: tmtData, error: tmtError } = await supabase
+      .from('task_monthly_totals')
+      .select('project_id, task_name, client_id, rounded_entry_minutes, rounded_task_minutes')
+      .eq('summary_month', monthStr)
+      .in('project_id', companyCanonicalProjectIds);
 
-  for (const entry of allEntries) {
-    if (!entry.project_id || entry.total_minutes <= 0) continue;
-
-    // Resolve to canonical external project ID
-    const internalId = externalToInternal.get(entry.project_id);
-    let canonicalExternal = entry.project_id;
-    if (internalId && memberToPrimaryExternal.has(internalId)) {
-      canonicalExternal = memberToPrimaryExternal.get(internalId)!;
+    if (tmtError) {
+      return { companyId, companyName, year, month, status: 'failed', error: `task_monthly_totals query: ${tmtError.message}` };
     }
-
-    // Filter to company projects only
-    if (!companyProjectExternalIds.has(canonicalExternal)) continue;
-
-    const taskName = entry.task_name || 'No Task';
-    if (!tasksByProject.has(canonicalExternal)) {
-      tasksByProject.set(canonicalExternal, new Map());
-    }
-    const taskMap = tasksByProject.get(canonicalExternal)!;
-    taskMap.set(taskName, (taskMap.get(taskName) || 0) + entry.total_minutes);
+    taskTotalsRows = (tmtData as TaskMonthlyTotalRow[]) || [];
   }
 
-  // --- Populate tasks on each project ---
+  // Group TMT rows by canonical project UUID -> (task_name -> rounded_minutes).
+  // Multiple TMT rows for (project, task) but different client_ids are summed
+  // — the EOM CSV does not break out task rows by client_id.
+  const tasksByCanonicalProject = new Map<string, Map<string, number>>();
+  for (const tmt of taskTotalsRows) {
+    const canonicalProjectId = tmt.project_id;
+    const mode = roundingModeByProject.get(canonicalProjectId) ?? 'task';
+    const roundedMinutes = mode === 'entry'
+      ? Number(tmt.rounded_entry_minutes)
+      : Number(tmt.rounded_task_minutes);
+
+    if (!tasksByCanonicalProject.has(canonicalProjectId)) {
+      tasksByCanonicalProject.set(canonicalProjectId, new Map());
+    }
+    const taskMap = tasksByCanonicalProject.get(canonicalProjectId)!;
+    const taskName = tmt.task_name || 'No Task';
+    taskMap.set(taskName, (taskMap.get(taskName) || 0) + roundedMinutes);
+  }
+
+  // --- Populate tasks on each project from task_monthly_totals ---
   for (const [externalId, project] of projectDataMap) {
-    const rawTasks = tasksByProject.get(externalId);
+    const canonicalProjectId = externalToCanonicalProjectId.get(externalId)!;
+    const summaryRoundedMinutes = summaryRoundedMinutesByExternal.get(externalId) ?? 0;
+    const rawTasks = tasksByCanonicalProject.get(canonicalProjectId);
+    let taskRoundedMinutesSum = 0;
+
     if (rawTasks) {
-      for (const [taskName, actualMinutes] of rawTasks) {
-        const roundedMinutes = applyRounding(actualMinutes, project.rounding);
-        const actualHrs = roundHours(actualMinutes / 60);
+      for (const [taskName, roundedMinutes] of rawTasks) {
+        taskRoundedMinutesSum += roundedMinutes;
         const roundedHrs = roundHours(roundedMinutes / 60);
         const baseRevenue = roundCurrency(roundedHrs * project.rate);
         project.tasks.push({
           taskName,
-          actualMinutes,
+          // actualMinutes is preserved on the task shape for downstream sort
+          // ("sort by hours desc"); use rounded minutes here since TMT does
+          // not expose per-(task,client) raw actual minutes after rounding-
+          // mode selection — the magnitude ordering is what matters for sort.
+          actualMinutes: roundedMinutes,
           roundedMinutes,
-          actualHours: actualHrs,
+          actualHours: roundedHrs,
           roundedHours: roundedHrs,
           baseRevenue,
         });
       }
+    }
+
+    // Round-trip integrity: sum(task rounded minutes) MUST equal
+    // project_monthly_summary.rounded_minutes for this project-month. This is
+    // the same aggregate recalculate_project_month consumed when populating
+    // the summary (mig-094 STEP 3). Any drift means task_monthly_totals is
+    // stale relative to project_monthly_summary — fail loudly so the report
+    // is never written with numbers that don't tie back to canonical truth.
+    if (Math.abs(summaryRoundedMinutes - taskRoundedMinutesSum) > 0) {
+      const errMsg =
+        `Task-row rounded minutes (${taskRoundedMinutesSum}) do not equal ` +
+        `project_monthly_summary.rounded_minutes (${summaryRoundedMinutes}) for ` +
+        `project=${externalId} canonical_uuid=${canonicalProjectId} ` +
+        `month=${monthStr}. task_monthly_totals may be stale — re-run ` +
+        `populate_task_monthly_totals for this range and retry.`;
+      console.error('generate-eom-report rounding integrity failure', {
+        companyId,
+        companyClientId,
+        year,
+        month,
+        projectExternalId: externalId,
+        canonicalProjectId,
+        summaryRoundedMinutes,
+        taskRowSumMinutes: taskRoundedMinutesSum,
+        tmtRowsFound: rawTasks ? rawTasks.size : 0,
+      });
+      return { companyId, companyName, year, month, status: 'failed', error: errMsg };
     }
   }
 

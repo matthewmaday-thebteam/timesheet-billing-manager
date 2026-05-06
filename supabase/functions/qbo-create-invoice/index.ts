@@ -142,9 +142,11 @@ async function getValidToken(supabase: SupabaseClient): Promise<{ access_token: 
 // =============================================================================
 
 interface SummaryRow {
-  project_id: string;
+  project_id: string; // internal canonical UUID
   company_id: string;
   billed_hours: number;
+  rounded_minutes: number;
+  rounded_hours: number;
   billed_revenue_cents: number;
   rate_used: number;
   rounding_used: number;
@@ -155,10 +157,17 @@ interface SummaryRow {
   };
 }
 
-interface TaskEntry {
-  project_id: string;
+interface TaskMonthlyTotalRow {
+  project_id: string; // canonical project UUID
   task_name: string;
-  total_minutes: number;
+  client_id: string;
+  rounded_entry_minutes: number;
+  rounded_task_minutes: number;
+}
+
+interface RoundingModeRow {
+  project_id: string;
+  effective_rounding_mode: 'entry' | 'task';
 }
 
 interface BillingRow {
@@ -378,19 +387,25 @@ serve(async (req) => {
     // --- Query billing data for this company-month ---
     const monthStr = `${year}-${String(month).padStart(2, '0')}-01`;
 
-    const rangeStart = monthStr;
-    const rangeEnd = month === 12
-      ? `${year + 1}-01-01`
-      : `${year}-${String(month + 1).padStart(2, '0')}-01`;
-
-    const [summaryResult, billingsResult, projectsResult, entriesResult] = await Promise.all([
-      // Project billing summary for this company-month
+    // Task rows in the QBO line description are sourced from task_monthly_totals
+    // (mig-093/094/101). The rounding-mode hierarchy comes from
+    // get_all_project_roundings_for_month (mig-093), the same source used by
+    // recalculate_project_month when populating project_monthly_summary —
+    // ensuring the description's task breakdown ties back to the same canonical
+    // aggregate that produced the QBO line Amount/Qty/UnitPrice.
+    const [summaryResult, billingsResult, projectsResult, roundingsResult] = await Promise.all([
+      // Project billing summary for this company-month.
+      // project_id is the canonical UUID (v_canonical excludes member rows
+      // per mig-050). rounded_minutes is the source-of-truth aggregate that
+      // task description rows must sum to.
       supabase
         .from('v_canonical_project_monthly_summary')
         .select(`
           project_id,
           company_id,
           billed_hours,
+          rounded_minutes,
+          rounded_hours,
           billed_revenue_cents,
           rate_used,
           rounding_used,
@@ -406,17 +421,13 @@ serve(async (req) => {
         p_end_month: monthStr,
       }),
 
-      // All projects (for internal UUID -> external ID mapping, needed for milestone matching)
+      // All projects (for milestone linkedProjectId UUID -> external project_id)
       supabase
         .from('projects')
         .select('id, project_id'),
 
-      // Timesheet entries for task breakdown
-      supabase
-        .from('v_timesheet_entries')
-        .select('project_id, task_name, total_minutes')
-        .gte('work_date', rangeStart)
-        .lt('work_date', rangeEnd),
+      // Rounding mode + increment per canonical project for this month
+      supabase.rpc('get_all_project_roundings_for_month', { p_month: monthStr }),
     ]);
 
     if (summaryResult.error) {
@@ -431,29 +442,66 @@ serve(async (req) => {
       console.error('Projects query failed:', projectsResult.error.message);
       return jsonResponse({ error: `Failed to query projects: ${projectsResult.error.message}` }, 500);
     }
-    if (entriesResult.error) {
-      console.error('Entries query failed:', entriesResult.error.message);
-      // Non-fatal — tasks are for description enrichment, not billing amounts
+    if (roundingsResult.error) {
+      console.error('Roundings query failed:', roundingsResult.error.message);
+      return jsonResponse({ error: `Failed to query roundings: ${roundingsResult.error.message}` }, 500);
     }
 
     const summaryRows = (summaryResult.data as SummaryRow[]) || [];
     const billingRows = (billingsResult.data as BillingRow[]) || [];
     const allProjects = projectsResult.data || [];
-    const allEntries = (entriesResult.data as TaskEntry[]) || [];
+    const roundingsRows = (roundingsResult.data as RoundingModeRow[]) || [];
 
-    // Build task breakdown per project (external project_id -> task list)
-    const tasksByProject = new Map<string, Map<string, number>>();
-    for (const entry of allEntries) {
-      if (!entry.project_id || entry.total_minutes <= 0) continue;
-      const taskName = entry.task_name || 'No Task';
-      if (!tasksByProject.has(entry.project_id)) {
-        tasksByProject.set(entry.project_id, new Map());
-      }
-      const taskMap = tasksByProject.get(entry.project_id)!;
-      taskMap.set(taskName, (taskMap.get(taskName) || 0) + entry.total_minutes);
+    // Build effective_rounding_mode lookup keyed on canonical project UUID.
+    // mig-093 contract: 'task' is the default fallback when no row exists.
+    const roundingModeByProject = new Map<string, 'entry' | 'task'>();
+    for (const r of roundingsRows) {
+      const mode: 'entry' | 'task' = r.effective_rounding_mode === 'entry' ? 'entry' : 'task';
+      roundingModeByProject.set(r.project_id, mode);
     }
 
-    // Build internal UUID -> external project_id map
+    // Collect canonical project UUIDs in this company-month for the TMT query.
+    const companyCanonicalProjectIds: string[] = [];
+    for (const row of summaryRows) {
+      companyCanonicalProjectIds.push(row.project_id);
+    }
+
+    // Fetch task_monthly_totals for the canonical projects in this month.
+    let taskTotalsRows: TaskMonthlyTotalRow[] = [];
+    if (companyCanonicalProjectIds.length > 0) {
+      const { data: tmtData, error: tmtError } = await supabase
+        .from('task_monthly_totals')
+        .select('project_id, task_name, client_id, rounded_entry_minutes, rounded_task_minutes')
+        .eq('summary_month', monthStr)
+        .in('project_id', companyCanonicalProjectIds);
+
+      if (tmtError) {
+        console.error('task_monthly_totals query failed:', tmtError.message);
+        return jsonResponse({ error: `Failed to query task_monthly_totals: ${tmtError.message}` }, 500);
+      }
+      taskTotalsRows = (tmtData as TaskMonthlyTotalRow[]) || [];
+    }
+
+    // Group TMT rows by canonical project UUID -> (task_name -> rounded_minutes).
+    // Multiple TMT rows for (project, task) but different client_ids are summed
+    // — the QBO description does not break out by client_id.
+    const tasksByCanonicalProject = new Map<string, Map<string, number>>();
+    for (const tmt of taskTotalsRows) {
+      const canonicalProjectId = tmt.project_id;
+      const mode = roundingModeByProject.get(canonicalProjectId) ?? 'task';
+      const roundedMinutes = mode === 'entry'
+        ? Number(tmt.rounded_entry_minutes)
+        : Number(tmt.rounded_task_minutes);
+
+      if (!tasksByCanonicalProject.has(canonicalProjectId)) {
+        tasksByCanonicalProject.set(canonicalProjectId, new Map());
+      }
+      const taskMap = tasksByCanonicalProject.get(canonicalProjectId)!;
+      const taskName = tmt.task_name || 'No Task';
+      taskMap.set(taskName, (taskMap.get(taskName) || 0) + roundedMinutes);
+    }
+
+    // Build internal UUID -> external project_id map (still needed for milestone linking)
     const internalToExternal = new Map<string, string>();
     for (const p of allProjects) {
       internalToExternal.set(p.id, p.project_id);
@@ -605,13 +653,18 @@ serve(async (req) => {
     const lineItems: any[] = [];
     let totalAmountCents = 0;
 
-    // 1. Project lines: each project with billed_revenue > 0 becomes a line
+    // 1. Project lines: each project with billed_revenue > 0 becomes a line.
+    //    The line Amount/Qty/UnitPrice are unchanged (mig-094 contract — they
+    //    are derived from project_monthly_summary). Only the task breakdown
+    //    INSIDE the description is now sourced from task_monthly_totals.
     for (const row of summaryRows) {
       const billedRevenueCents = Number(row.billed_revenue_cents);
       const billedHours = Number(row.billed_hours);
+      const summaryRoundedMinutes = Number(row.rounded_minutes);
       const rate = Number(row.rate_used);
       const projectName = row.projects.project_name;
       const externalId = row.projects.project_id;
+      const canonicalProjectId = row.project_id;
 
       // Check for milestone override — if present, use milestone amount instead
       const milestoneCents = milestoneByExternalProjectId.get(externalId);
@@ -629,17 +682,49 @@ serve(async (req) => {
       let qty: number;
       let unitPrice: number;
 
-      // Build task breakdown for description
-      const rounding = Number(row.rounding_used) || 0;
-      const projectTasks = tasksByProject.get(externalId);
+      // Build task breakdown for description from pre-computed task_monthly_totals.
+      // The rounded minutes already reflect the project-month's effective
+      // rounding mode and increment — same source recalculate_project_month
+      // consumed when populating project_monthly_summary.
+      const projectTasks = tasksByCanonicalProject.get(canonicalProjectId);
       let taskLines = '';
+      let taskRoundedMinutesSum = 0;
+
       if (projectTasks && projectTasks.size > 0) {
         const sorted = [...projectTasks.entries()].sort((a, b) => b[1] - a[1]);
         taskLines = '\n' + sorted.map(([name, mins]) => {
-          const roundedMins = rounding > 0 ? Math.ceil(mins / rounding) * rounding : mins;
-          const hrs = Math.round((roundedMins / 60) * 100) / 100;
+          taskRoundedMinutesSum += mins;
+          const hrs = Math.round((mins / 60) * 100) / 100;
           return `${name}: ${hrs} hrs`;
         }).join('\n');
+      }
+
+      // Round-trip integrity (only meaningful for non-milestone projects since
+      // milestone Amount comes from billings, not summary.rounded_hours):
+      // sum(task rounded minutes) MUST equal project_monthly_summary.rounded_minutes.
+      // For projects with billing limits, the description header still shows
+      // billed_hours (post-min/max/carryover) — the task lines below show the
+      // pre-limit rounded breakdown that ties to summary.rounded_minutes.
+      if (milestoneCents === undefined && summaryRoundedMinutes > 0) {
+        if (Math.abs(summaryRoundedMinutes - taskRoundedMinutesSum) > 0) {
+          const errMsg =
+            `Task-row rounded minutes (${taskRoundedMinutesSum}) do not equal ` +
+            `project_monthly_summary.rounded_minutes (${summaryRoundedMinutes}) for ` +
+            `project=${externalId} canonical_uuid=${canonicalProjectId} ` +
+            `month=${monthStr}. task_monthly_totals may be stale — re-run ` +
+            `populate_task_monthly_totals for this range and retry.`;
+          console.error('qbo-create-invoice rounding integrity failure', {
+            companyId,
+            year,
+            month,
+            projectExternalId: externalId,
+            canonicalProjectId,
+            summaryRoundedMinutes,
+            taskRowSumMinutes: taskRoundedMinutesSum,
+            tmtRowsFound: projectTasks ? projectTasks.size : 0,
+          });
+          throw new Error(errMsg);
+        }
       }
 
       if (milestoneCents !== undefined) {
