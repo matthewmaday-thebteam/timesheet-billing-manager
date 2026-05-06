@@ -4,7 +4,7 @@ import { useTimesheetData } from '../../hooks/useTimesheetData';
 import { useBilling } from '../../hooks/useBilling';
 import { useBillings } from '../../hooks/useBillings';
 import { useCanonicalProjectExternalIds } from '../../hooks/useCanonicalProjectExternalIds';
-import { formatCurrency, applyRounding, roundCurrency } from '../../utils/billing';
+import { formatCurrency, roundCurrency } from '../../utils/billing';
 import { generateRevenueCSV, downloadCSV } from '../../utils/generateRevenueCSV';
 import { useTaskBreakdown } from '../../hooks/useTaskBreakdown';
 import { getWeekOptionsForMonth } from '../../utils/calculations';
@@ -77,8 +77,12 @@ export function RevenuePage() {
     skip: customerReportWeek === 'all',
   });
 
-  // Hydrate billing result with task-level data from timesheet_daily_rollups.
-  // The summary table doesn't store tasks, so we merge them in here.
+  // Hydrate billing result with task-level data from task_monthly_totals (Layer 4).
+  // The summary table doesn't store tasks, so we merge them in here. Each task row
+  // carries both rounded_entry_minutes and rounded_task_minutes pre-computed; we
+  // select the column matching the project-month's effective_rounding_mode so the
+  // children sum exactly equals the parent (which the billing engine derives from
+  // the same Layer 4 source — see mig-094 STEP 3).
   const hydratedBillingResult = useMemo(() => {
     if (tasksByProject.size === 0) return billingResult;
 
@@ -87,14 +91,15 @@ export function RevenuePage() {
       companies: billingResult.companies.map(company => ({
         ...company,
         projects: company.projects.map(project => {
-          const rawTasks = project.projectId ? tasksByProject.get(project.projectId) : undefined;
-          if (!rawTasks || rawTasks.length === 0) return project;
+          const breakdown = project.projectId ? tasksByProject.get(project.projectId) : undefined;
+          if (!breakdown || breakdown.tasks.length === 0) return project;
 
-          // Apply per-task rounding and compute revenue using the project's config
-          const tasks = rawTasks
+          const useEntryRounding = breakdown.effectiveRoundingMode === 'entry';
+
+          const tasks = breakdown.tasks
             .filter(t => t.actualMinutes > 0)
             .map(t => {
-              const roundedMinutes = applyRounding(t.actualMinutes, project.rounding);
+              const roundedMinutes = useEntryRounding ? t.roundedEntryMinutes : t.roundedTaskMinutes;
               const actualHours = t.actualMinutes / 60;
               const roundedHours = roundedMinutes / 60;
               return {
@@ -159,17 +164,18 @@ export function RevenuePage() {
     for (const company of hydratedBillingResult.companies) {
       for (const project of company.projects) {
         if (!project.projectId) continue;
-        const weeklyTasks = weeklyTasksByProject.get(project.projectId);
-        if (!weeklyTasks || weeklyTasks.length === 0) continue;
+        const weeklyBreakdown = weeklyTasksByProject.get(project.projectId);
+        if (!weeklyBreakdown || weeklyBreakdown.tasks.length === 0) continue;
 
         const config = projectConfigMap.get(project.projectId);
         if (!config) continue;
 
-        // Compute per-task rounding and revenue
-        const tasks = weeklyTasks
+        // Weekly mode is always per-entry rounded — `roundedEntryMinutes` is the
+        // sum of `tdr.rounded_minutes` over the week (no client-side re-rounding).
+        const tasks = weeklyBreakdown.tasks
           .filter(t => t.actualMinutes > 0)
           .map(t => {
-            const roundedMinutes = applyRounding(t.actualMinutes, config.rounding as 0 | 5 | 15 | 30);
+            const roundedMinutes = t.roundedEntryMinutes;
             const actualHours = t.actualMinutes / 60;
             const roundedHours = roundedMinutes / 60;
             return {
