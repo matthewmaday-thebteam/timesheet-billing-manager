@@ -11,6 +11,20 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-05-06',
+    title: 'Revenue Report Task Row Math Fix',
+    highlights: [
+      'Fixed: on the Revenue page, Detailed Revenue CSV, Customer Revenue Report, and End-of-Month CSV exports, the task rows now sum exactly to the project total. The project total used per-entry rounding while the task rows were using a legacy task-aggregate method, which caused the breakdown to under-state hours whenever a task had multiple time entries.',
+      'No client invoice amounts were affected — already-sent invoices remain correct. The fix changes how task hours display beneath the project total, not the billable totals themselves.',
+      'Future QBO invoices: task-line descriptions now sum cleanly to the line amount header.',
+      'Backfilled all 56 stored End-of-Month CSVs for January through April 2026 so historical exports are consistent with the new behavior.',
+      'Repaired two stale project_monthly_summary rows surfaced by the new integrity check: Paideia SLA February 2026 (under-recorded by 15 minutes / $12.50) and a phantom True Productions April 2026 row that had 7 hours stored but no underlying time entries.',
+      'Added internal integrity assertion to all three billing edge functions — task-row rounded minutes must equal the project total or the function fails loudly. Future drift will surface immediately instead of silently shipping inconsistent numbers.',
+      'Added explicit pagination on task_monthly_totals reads in edge functions (defense in depth against PostgREST row caps).',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-04-09',
     title: 'Rate Table Guardrails & Audit Trail',
     highlights: [
