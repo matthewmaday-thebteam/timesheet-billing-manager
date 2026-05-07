@@ -4,6 +4,7 @@
 BEGIN;
 
 DROP VIEW IF EXISTS mcp_api.v_api_employee_time_off;
+DROP VIEW IF EXISTS mcp_api.v_api_employee_project_daily;
 DROP VIEW IF EXISTS mcp_api.v_api_employee_daily;
 DROP VIEW IF EXISTS mcp_api.v_api_projects;
 DROP VIEW IF EXISTS mcp_api.v_api_companies;

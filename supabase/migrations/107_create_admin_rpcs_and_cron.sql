@@ -37,10 +37,13 @@ SET LOCAL search_path = mcp_api, public;
 -- mcp_owner via SECURITY DEFINER. Inside the function body we explicitly
 -- call public.is_admin(auth.uid()) to confirm the *caller* is an admin.
 
+-- NOTE: This function is intentionally VOLATILE (Postgres default). A STABLE
+-- declaration would let the planner cache results within a query — an admin
+-- gate must execute every call so a recently-revoked admin cannot ride a
+-- cached "true" through a multi-statement plan.
 CREATE OR REPLACE FUNCTION mcp_api._internal_assert_admin()
 RETURNS VOID
 LANGUAGE plpgsql
-STABLE
 SECURITY DEFINER
 SET search_path = mcp_api, pg_temp
 AS $$
@@ -64,10 +67,12 @@ REVOKE ALL ON FUNCTION mcp_api._internal_assert_admin() FROM PUBLIC;
 --       revoked_at, last_used_at, created_by }
 -- We do NOT return key_hash (would defeat the whole point).
 
+-- NOTE: VOLATILE by default (no STABLE). The function performs an admin gate
+-- that must execute on every invocation; STABLE would invite the planner to
+-- elide repeated calls within a query.
 CREATE OR REPLACE FUNCTION mcp_api.admin_list_api_keys()
 RETURNS SETOF JSONB
 LANGUAGE plpgsql
-STABLE
 SECURITY DEFINER
 SET search_path = mcp_api, pg_temp
 AS $$

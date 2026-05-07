@@ -26,6 +26,7 @@ DROP FUNCTION IF EXISTS mcp_api._internal_aggregate_employee_hours(UUID, DATE, D
 
 -- Helpers
 DROP FUNCTION IF EXISTS mcp_api.api_log_request(UUID, TEXT, TEXT, JSONB, TEXT, INTEGER, TEXT, TEXT, INTEGER, TEXT, TEXT);
+DROP FUNCTION IF EXISTS mcp_api._authenticate_and_consume(TEXT, INTEGER, INTEGER);
 DROP FUNCTION IF EXISTS mcp_api.api_consume_rate_limit(UUID, TEXT, INTEGER);
 DROP FUNCTION IF EXISTS mcp_api.api_authenticate_key(TEXT);
 

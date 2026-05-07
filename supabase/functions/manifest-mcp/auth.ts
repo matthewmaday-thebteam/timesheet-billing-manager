@@ -13,12 +13,36 @@
 //     functions as SQL. Function bodies are SECURITY DEFINER, so the
 //     mcp_reader role only needs EXECUTE on the function — it never gets
 //     SELECT on any table.
-//   - Bearer parse -> sha256 -> mcp_api.api_authenticate_key(hash)
-//                 -> mcp_api.api_consume_rate_limit(key_id, kind, limit)
+//   - Bearer parse -> sha256 -> mcp_api._authenticate_and_consume(hash, mins, hours)
 //                 -> mcp_api.api_log_request(...)
+//
+// Race-safety note (Fix H2):
+//   Auth and rate-limit consumption are wrapped in a single SQL helper
+//   (`mcp_api._authenticate_and_consume`) so a key revocation cannot race
+//   between the lookup and the bucket increment. The whole helper runs in
+//   one implicit transaction on the connection. This is preferred over the
+//   alternative of bracketing two separate calls with `BEGIN`/`COMMIT`
+//   because it keeps the wire round-trip count to one and the SQL atomicity
+//   contract is on the Postgres side rather than the Deno client.
+//
+// Wire-message uniformity note (Fix H1):
+//   The public response collapses every auth failure (missing/malformed
+//   token, hash-not-found, revoked, inactive) to a single
+//   "Invalid API key." message. The internal `error_code` written to
+//   `api_audit_log` retains the distinction (NOT_FOUND vs REVOKED) for
+//   incident response. The wire MUST NOT let an attacker confirm whether
+//   a specific token has ever existed or has just been revoked.
+//
+// Connection-hygiene note (Fix H3):
+//   The Deno postgres `Pool` reuses connections. A request that aborted
+//   mid-statement could leave behind `SET LOCAL` overrides, advisory
+//   locks, or aborted-transaction state. We wrap every checkout in
+//   `withClient` which always issues `DISCARD ALL` before releasing —
+//   this is cheap (single round-trip) and gives every request a clean
+//   session.
 // =============================================================================
 
-import { Pool } from 'https://deno.land/x/postgres@v0.19.3/mod.ts';
+import { Pool, PoolClient } from 'https://deno.land/x/postgres@v0.19.3/mod.ts';
 
 // -----------------------------------------------------------------------------
 // Connection pool
@@ -37,6 +61,37 @@ if (!DB_URL) {
 }
 
 const pool = new Pool(DB_URL || undefined, 4, true);
+
+// -----------------------------------------------------------------------------
+// withClient — connection-hygiene wrapper (Fix H3)
+// -----------------------------------------------------------------------------
+// Every checkout from the Pool MUST go through this helper. We always run
+// `DISCARD ALL` before release, so the next request that picks up the
+// connection sees a vanilla session: no lingering `SET LOCAL`, no advisory
+// locks, no aborted-tx state. Discard failures are swallowed (logged) so we
+// don't surface infrastructure noise to the caller — but the connection is
+// still released to the pool either way.
+async function withClient<T>(
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    return await fn(client);
+  } finally {
+    try {
+      await client.queryArray('DISCARD ALL');
+    } catch (err) {
+      console.error('[manifest-mcp] DISCARD ALL failed:', err);
+    }
+    client.release();
+  }
+}
+
+// Public auth-failure message (Fix H1). The wire response MUST be byte-for-
+// byte identical for every auth failure mode (missing/malformed token,
+// hash-not-found, revoked, inactive). Any divergence becomes a side channel
+// an attacker can probe to confirm token existence or revocation status.
+const PUBLIC_AUTH_ERROR_MESSAGE = 'Invalid API key.';
 
 // -----------------------------------------------------------------------------
 // Rate-limit policy
@@ -96,11 +151,19 @@ export function parseBearer(headerValue: string | null): string | null {
 // -----------------------------------------------------------------------------
 
 export type AuthError =
-  | { kind: 'unauthorized'; message: string }
+  | {
+      kind: 'unauthorized';
+      // Wire-level message — always the same constant per Fix H1.
+      message: string;
+      // Internal code captured by api_log_request for incident response.
+      // The wire response NEVER surfaces this field.
+      internalErrorCode: 'MISSING_BEARER' | 'NOT_FOUND' | 'REVOKED';
+    }
   | {
       kind: 'rate_limited';
       message: string;
       retryAfterMs: number | null;
+      windowKind: 'minute' | 'hour';
     };
 
 export interface AuthOk {
@@ -112,11 +175,16 @@ export interface AuthOk {
 
 export type AuthResult = AuthOk | AuthError;
 
-interface KeyRow {
-  api_key_id: string;
-  status: 'active' | 'revoked';
-  prefix: string;
-  name: string;
+interface AuthAndConsumeRow {
+  envelope: {
+    ok: boolean;
+    reason?: 'invalid' | 'revoked' | 'rate_limited';
+    api_key_id?: string;
+    prefix?: string;
+    name?: string;
+    window_kind?: 'minute' | 'hour';
+    retry_after_ms?: number | null;
+  } | null;
 }
 
 /**
@@ -125,69 +193,58 @@ interface KeyRow {
  * On success returns the resolved key context.
  * On failure returns a structured AuthError suitable for surfacing to the
  * client. The caller is expected to log via `logRequest` afterwards.
+ *
+ * Implementation: a single SQL round-trip into `mcp_api._authenticate_and_consume`
+ * which performs auth + per-minute + per-hour consumption inside one
+ * function-call transaction (Fix H2). The connection is checked out via
+ * `withClient` so the session is `DISCARD ALL`-cleaned on release (Fix H3).
  */
 export async function authenticateAndRateLimit(
   authorizationHeader: string | null,
 ): Promise<AuthResult> {
   const token = parseBearer(authorizationHeader);
   if (!token) {
-    return { kind: 'unauthorized', message: 'Missing or malformed bearer token.' };
+    return {
+      kind: 'unauthorized',
+      message: PUBLIC_AUTH_ERROR_MESSAGE,
+      internalErrorCode: 'MISSING_BEARER',
+    };
   }
 
   const tokenHash = await sha256Hex(token);
 
-  const client = await pool.connect();
-  try {
-    // 1. Resolve the key.
-    const lookup = await client.queryObject<KeyRow>({
-      text: `SELECT api_key_id, status, prefix, name
-               FROM mcp_api.api_authenticate_key($1)`,
-      args: [tokenHash],
+  return await withClient(async (client) => {
+    const rs = await client.queryObject<AuthAndConsumeRow>({
+      text: `SELECT mcp_api._authenticate_and_consume($1, $2, $3) AS envelope`,
+      args: [tokenHash, RATE_LIMITS.perMinute, RATE_LIMITS.perHour],
     });
 
-    if (lookup.rows.length === 0) {
-      return { kind: 'unauthorized', message: 'Invalid API key.' };
-    }
-    const row = lookup.rows[0];
-    if (row.status !== 'active') {
-      return { kind: 'unauthorized', message: 'API key has been revoked.' };
-    }
-
-    // 2. Consume rate-limit windows. Per-minute first so the most
-    //    eager abuser fails fastest.
-    for (const [kind, limit] of [
-      ['minute', RATE_LIMITS.perMinute] as const,
-      ['hour', RATE_LIMITS.perHour] as const,
-    ]) {
-      const consume = await client.queryObject<{
-        allowed: boolean;
-        retry_after_ms: number | null;
-      }>({
-        text: `SELECT
-                 (r->>'allowed')::boolean       AS allowed,
-                 (r->>'retry_after_ms')::int    AS retry_after_ms
-               FROM mcp_api.api_consume_rate_limit($1, $2, $3) AS r`,
-        args: [row.api_key_id, kind, limit],
-      });
-      const r = consume.rows[0];
-      if (!r?.allowed) {
+    const env = rs.rows[0]?.envelope ?? null;
+    if (!env || env.ok !== true) {
+      // Distinguish *internally* between not-found and revoked so the audit
+      // log can capture the truth. The wire-level `message` stays uniform.
+      if (env?.reason === 'rate_limited') {
         return {
           kind: 'rate_limited',
-          message: `Rate limit exceeded for window=${kind}.`,
-          retryAfterMs: r?.retry_after_ms ?? null,
+          message: `Rate limit exceeded for window=${env.window_kind ?? 'minute'}.`,
+          retryAfterMs: env.retry_after_ms ?? null,
+          windowKind: (env.window_kind ?? 'minute') as 'minute' | 'hour',
         };
       }
+      return {
+        kind: 'unauthorized',
+        message: PUBLIC_AUTH_ERROR_MESSAGE,
+        internalErrorCode: env?.reason === 'revoked' ? 'REVOKED' : 'NOT_FOUND',
+      };
     }
 
     return {
       kind: 'ok',
-      apiKeyId: row.api_key_id,
-      prefix: row.prefix,
-      name: row.name,
+      apiKeyId: env.api_key_id!,
+      prefix: env.prefix!,
+      name: env.name!,
     };
-  } finally {
-    client.release();
-  }
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -215,8 +272,7 @@ export interface LogRequestInput {
  */
 export async function logRequest(input: LogRequestInput): Promise<void> {
   try {
-    const client = await pool.connect();
-    try {
+    await withClient(async (client) => {
       await client.queryArray({
         text: `SELECT mcp_api.api_log_request($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         args: [
@@ -233,9 +289,7 @@ export async function logRequest(input: LogRequestInput): Promise<void> {
           input.userAgent,
         ],
       });
-    } finally {
-      client.release();
-    }
+    });
   } catch (err) {
     console.error('[manifest-mcp] audit log insert failed:', err);
   }
@@ -253,14 +307,11 @@ export async function callApiFunction(
   sqlSnippet: string,
   args: unknown[],
 ): Promise<unknown> {
-  const client = await pool.connect();
-  try {
+  return await withClient(async (client) => {
     const rs = await client.queryObject<{ envelope: unknown }>({
       text: `SELECT (${sqlSnippet}) AS envelope`,
       args,
     });
     return rs.rows[0]?.envelope ?? null;
-  } finally {
-    client.release();
-  }
+  });
 }

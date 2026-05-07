@@ -32,6 +32,16 @@ DECLARE
         current_setting('mcp.semantic_company_id', true),
         ''
     );
+    -- Optional: a (canonical_employee_id, canonical_project_id) pair the
+    -- operator picks for the v_api_employee_project_daily pinned row. When
+    -- both are provided we add a row-checksum against the most-recent
+    -- non-zero day for that pair, exposing semantic drift in the
+    -- employee->project rollup that v_api_employee_daily cannot detect
+    -- (because it has no project_id).
+    project_id_seed TEXT := COALESCE(
+        current_setting('mcp.semantic_project_id', true),
+        ''
+    );
 BEGIN
     -- Each pinned row: a SQL snippet that must be deterministic, plus the
     -- expected md5 of its JSON form. The seeds above let CI inject the
@@ -65,9 +75,32 @@ BEGIN
                     $sql$, company_id_seed
                 ),
                 '__SEED_REQUIRED__'
+            ),
+            (
+                'v_api_employee_project_daily:total_hours(employee+project)',
+                -- Stable scalar: total rounded_hours for the (employee, project)
+                -- pair across all time. Uses the canonical project rollup so any
+                -- drift in the JOIN/WHERE chain (e.g., a regression on the
+                -- vpc.role filter) shifts the md5. Skipped automatically when
+                -- the project seed is absent.
+                CASE WHEN project_id_seed = '' THEN
+                    'SELECT NULL::text'
+                ELSE format(
+                    $sql$
+                    SELECT COALESCE(SUM(d.rounded_hours), 0)::text
+                      FROM mcp_api.v_api_employee_project_daily d
+                     WHERE d.canonical_employee_id = %L
+                       AND d.canonical_project_id  = %L
+                    $sql$, employee_id_seed, project_id_seed
+                ) END,
+                '__SEED_REQUIRED__'
             )
         ) AS t(label, sql_snippet, expected_md5)
     LOOP
+        -- Skip the project-pinned row when the operator has not supplied a
+        -- project id seed (we still NOTICE the actual md5 once seeded).
+        CONTINUE WHEN pinned.label LIKE 'v_api_employee_project_daily%'
+                 AND project_id_seed = '';
         EXECUTE 'SELECT md5(' || pinned.sql_snippet || '::text)' INTO actual_md5;
 
         IF actual_md5 IS NULL THEN

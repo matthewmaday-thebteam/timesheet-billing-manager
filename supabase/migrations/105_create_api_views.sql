@@ -163,6 +163,86 @@ COMMENT ON VIEW mcp_api.v_api_employee_daily IS
     'Hours only — minute-level fields and counts are intentionally excluded.';
 
 -- ----------------------------------------------------------------------------
+-- 4b. v_api_employee_project_daily
+-- ----------------------------------------------------------------------------
+-- Layer 2 (employee_totals) projected to canonical ids at PROJECT granularity.
+-- Layer 3 (employee_daily_totals, used by v_api_employee_daily) collapses to
+-- (user_id, client_id, work_date), which has no project_id — so the
+-- api_get_employee_projects tool MUST read from this view to attribute hours
+-- to canonical projects accurately. Surface is hours-only by design.
+--
+-- Joins:
+--   public.employee_totals et
+--     -> public.resource_user_associations rua  (et.user_id  -> resource_id)
+--     -> public.v_entity_canonical          vec  (rua.resource_id -> canonical employee)
+--     -> public.projects                    p    (et.project_id   -> projects.id)
+--     -> public.v_project_canonical         vpc  (p.id            -> canonical project)
+--     -> public.companies                   c    (et.client_id    -> companies.id)
+--     -> public.v_company_canonical         vcc  (c.id            -> canonical company)
+--
+-- Filters:
+--   vpc.role IN ('primary','unassociated')  — canonical projects only
+--   vec.role IN ('primary','unassociated')  — canonical employees only (matches
+--                                              v_api_employees membership)
+--
+-- Excluded (per Condition 10 / data-boundary contract):
+--   et.entry_count, raw user_id, raw project_id, raw client_id,
+--   actual_minutes, rounded_minutes, actual_hours, task_name, user_name.
+-- We surface only canonical ids, display names, work_date, and rounded_hours.
+--
+-- Note on aggregation: employee_totals carries one row per
+-- (user_id, project_id, task_name, client_id, work_date). Two source rows
+-- can therefore project to the same (canonical_employee, canonical_project,
+-- canonical_company, work_date) when (a) two source resources are grouped
+-- to the same canonical employee or (b) two source projects are grouped to
+-- the same canonical project. We SUM rounded_hours at the view level so
+-- consumers see one row per canonical tuple per day.
+
+CREATE OR REPLACE VIEW mcp_api.v_api_employee_project_daily AS
+SELECT
+    vec.canonical_entity_id                                  AS canonical_employee_id,
+    vpc.canonical_project_id                                 AS canonical_project_id,
+    COALESCE(vcc.canonical_company_id, c.id)                 AS canonical_company_id,
+    cp.project_name                                          AS project_display_name,
+    COALESCE(NULLIF(TRIM(cc.display_name), ''), cc.client_name) AS company_display_name,
+    et.work_date                                             AS work_date,
+    SUM(et.rounded_hours)::NUMERIC(10,2)                     AS rounded_hours
+FROM public.employee_totals et
+JOIN public.resource_user_associations rua
+    ON rua.user_id = et.user_id
+JOIN public.v_entity_canonical vec
+    ON vec.entity_id = rua.resource_id
+JOIN public.projects p
+    ON p.project_id = et.project_id
+JOIN public.v_project_canonical vpc
+    ON vpc.project_id = p.id
+JOIN public.projects cp
+    ON cp.id = vpc.canonical_project_id
+LEFT JOIN public.companies c
+    ON c.client_id = et.client_id
+LEFT JOIN public.v_company_canonical vcc
+    ON vcc.company_id = c.id
+LEFT JOIN public.companies cc
+    ON cc.id = COALESCE(vcc.canonical_company_id, c.id)
+WHERE vpc.role IN ('primary','unassociated')
+  AND vec.role IN ('primary','unassociated')
+GROUP BY
+    vec.canonical_entity_id,
+    vpc.canonical_project_id,
+    COALESCE(vcc.canonical_company_id, c.id),
+    cp.project_name,
+    COALESCE(NULLIF(TRIM(cc.display_name), ''), cc.client_name),
+    et.work_date;
+
+ALTER VIEW mcp_api.v_api_employee_project_daily OWNER TO mcp_owner;
+
+COMMENT ON VIEW mcp_api.v_api_employee_project_daily IS
+    'Per canonical-employee, canonical-project, canonical-company, work_date '
+    'totals for MCP. Hours only — minute-level fields, counts, raw ids, '
+    'task_name are intentionally excluded. Source: public.employee_totals '
+    '(Layer 2). Read surface for api_get_employee_projects.';
+
+-- ----------------------------------------------------------------------------
 -- 5. v_api_employee_time_off
 -- ----------------------------------------------------------------------------
 -- Approved-only time off, projected to the canonical employee. We never
@@ -199,11 +279,12 @@ COMMENT ON VIEW mcp_api.v_api_employee_time_off IS
 -- api_* SECURITY DEFINER functions in migration 106, which then SELECT from
 -- these views with mcp_owner privileges. We still REVOKE explicitly.
 
-REVOKE ALL ON mcp_api.v_api_employees         FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON mcp_api.v_api_companies         FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON mcp_api.v_api_projects          FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON mcp_api.v_api_employee_daily    FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON mcp_api.v_api_employee_time_off FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_employees             FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_companies             FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_projects              FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_employee_daily        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_employee_project_daily FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON mcp_api.v_api_employee_time_off     FROM PUBLIC, anon, authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 7. Verification
@@ -216,6 +297,7 @@ BEGIN
     RAISE NOTICE '  - mcp_api.v_api_companies';
     RAISE NOTICE '  - mcp_api.v_api_projects';
     RAISE NOTICE '  - mcp_api.v_api_employee_daily';
+    RAISE NOTICE '  - mcp_api.v_api_employee_project_daily';
     RAISE NOTICE '  - mcp_api.v_api_employee_time_off';
     RAISE NOTICE '  All owned by mcp_owner; no security_invoker; no wildcard SELECTs.';
 END $$;

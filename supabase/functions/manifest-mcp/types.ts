@@ -166,9 +166,14 @@ export interface GetEmployeeProjectsParams {
   end_date: string;
 }
 export interface EmployeeProjectsRow {
+  canonical_project_id: string;
+  project_name: string;
   canonical_company_id: string | null;
-  company_display_name: string | null;
+  company_name: string | null;
   hours: number;
+}
+export interface GetEmployeeProjectsData {
+  projects: EmployeeProjectsRow[];
 }
 
 export interface GetEmployeeTimeOffParams {

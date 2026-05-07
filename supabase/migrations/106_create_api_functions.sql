@@ -203,6 +203,104 @@ COMMENT ON FUNCTION mcp_api.api_consume_rate_limit(UUID, TEXT, INTEGER) IS
     'request is allowed.';
 
 -- ============================================================================
+-- HELPER 2b: _authenticate_and_consume
+-- ============================================================================
+-- Atomic auth + rate-limit consumption. Wraps both api_authenticate_key and
+-- api_consume_rate_limit (per-minute and per-hour) into a single function
+-- call that the Edge Function invokes once per request. Because the function
+-- runs inside an implicit transaction, a key revocation that races between
+-- our auth lookup and the rate-limit increment cannot let an in-flight
+-- request through (Fix H2). Failures short-circuit and DO NOT consume any
+-- bucket counters.
+--
+-- IMPORTANT: this helper must NOT distinguish revoked-vs-missing in its
+-- response surface — the wire-level message is collapsed to a single
+-- "Invalid API key." in the Edge Function (Fix H1). The internal status
+-- field below is preserved so api_log_request can still capture
+-- error_code='REVOKED' vs 'NOT_FOUND' for incident response.
+--
+-- Returns JSONB:
+--   { ok: true,  api_key_id, prefix, name }
+-- | { ok: false, reason: 'invalid'|'revoked'|'rate_limited',
+--                window_kind?, retry_after_ms? }
+--
+-- The mcp_reader role gets EXECUTE; the function body's privileged work
+-- runs under mcp_owner via SECURITY DEFINER.
+
+CREATE OR REPLACE FUNCTION mcp_api._authenticate_and_consume(
+    p_token_hash    TEXT,
+    p_per_minute    INTEGER,
+    p_per_hour      INTEGER
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = mcp_api, pg_temp
+AS $$
+DECLARE
+    v_key       RECORD;
+    v_rl        JSONB;
+BEGIN
+    -- 1. Auth lookup. The api_authenticate_key TABLE function can return up
+    --    to one row; we capture it here so the auth + rate-limit pair is
+    --    decided inside a single transaction.
+    SELECT api_key_id, status, prefix, name
+      INTO v_key
+      FROM mcp_api.api_authenticate_key(p_token_hash)
+     LIMIT 1;
+
+    IF v_key IS NULL OR v_key.api_key_id IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'reason', 'invalid');
+    END IF;
+
+    IF v_key.status <> 'active' THEN
+        -- Surface 'revoked' to the caller so the Edge Function can emit
+        -- error_code='REVOKED' to api_audit_log. The Edge Function's
+        -- public response message must NOT distinguish this from 'invalid'.
+        RETURN jsonb_build_object('ok', false, 'reason', 'revoked');
+    END IF;
+
+    -- 2. Per-minute window first (most aggressive abusers fail fastest).
+    v_rl := mcp_api.api_consume_rate_limit(v_key.api_key_id, 'minute', p_per_minute);
+    IF NOT (v_rl->>'allowed')::boolean THEN
+        RETURN jsonb_build_object(
+            'ok', false,
+            'reason', 'rate_limited',
+            'window_kind', 'minute',
+            'retry_after_ms', v_rl->'retry_after_ms'
+        );
+    END IF;
+
+    -- 3. Per-hour window.
+    v_rl := mcp_api.api_consume_rate_limit(v_key.api_key_id, 'hour', p_per_hour);
+    IF NOT (v_rl->>'allowed')::boolean THEN
+        RETURN jsonb_build_object(
+            'ok', false,
+            'reason', 'rate_limited',
+            'window_kind', 'hour',
+            'retry_after_ms', v_rl->'retry_after_ms'
+        );
+    END IF;
+
+    RETURN jsonb_build_object(
+        'ok', true,
+        'api_key_id', v_key.api_key_id,
+        'prefix',     v_key.prefix,
+        'name',       v_key.name
+    );
+END;
+$$;
+
+ALTER FUNCTION mcp_api._authenticate_and_consume(TEXT, INTEGER, INTEGER) OWNER TO mcp_owner;
+REVOKE ALL ON FUNCTION mcp_api._authenticate_and_consume(TEXT, INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION mcp_api._authenticate_and_consume(TEXT, INTEGER, INTEGER) TO mcp_reader;
+
+COMMENT ON FUNCTION mcp_api._authenticate_and_consume(TEXT, INTEGER, INTEGER) IS
+    'Atomic auth + per-minute/per-hour rate-limit consumption. Single round-trip '
+    'for the manifest-mcp Edge Function so a revocation cannot race between '
+    'lookup and counter increment.';
+
+-- ============================================================================
 -- HELPER 3: api_log_request
 -- ============================================================================
 -- Inserts an api_audit_log row. Always redacts params via _redact_jsonb_params.
@@ -520,10 +618,11 @@ SECURITY DEFINER
 SET search_path = mcp_api, pg_temp
 AS $$
 DECLARE
-    v_query     TEXT := TRIM(COALESCE(p_query, ''));
-    v_candidates JSONB;
-    v_count     INTEGER;
-    v_first     JSONB;
+    v_query         TEXT := TRIM(COALESCE(p_query, ''));
+    v_query_escaped TEXT;
+    v_candidates    JSONB;
+    v_count         INTEGER;
+    v_first         JSONB;
 BEGIN
     IF v_query = '' THEN
         RETURN jsonb_build_object(
@@ -535,37 +634,71 @@ BEGIN
         );
     END IF;
 
-    -- Pass 1: exact (case-insensitive) on display_name.
-    SELECT
-        COALESCE(jsonb_agg(c ORDER BY c->>'display_name'), '[]'::jsonb),
-        COUNT(*)::INTEGER
-      INTO v_candidates, v_count
-      FROM (
-        SELECT jsonb_build_object(
-            'canonical_employee_id', ve.canonical_employee_id,
-            'display_name',          ve.display_name
-        ) AS c
+    -- Escape ILIKE metacharacters so a caller passing '%' or '_' cannot
+    -- bypass intent and turn the substring search into a wildcard sweep
+    -- that surfaces every employee. Backslash is escaped first so the
+    -- subsequent escapes are not double-applied. Used with `ESCAPE '\'`
+    -- on every ILIKE pattern below.
+    v_query_escaped := REPLACE(REPLACE(REPLACE(v_query, '\', '\\'), '%', '\%'), '_', '\_');
+
+    -- Pass 1: exact (case-insensitive) on display_name. Equality is unaffected
+    -- by ILIKE wildcards, so we use the original query here.
+    WITH exact_match AS (
+        SELECT ve.canonical_employee_id, ve.display_name
           FROM mcp_api.v_api_employees ve
          WHERE LOWER(ve.display_name) = LOWER(v_query)
-         LIMIT 6
-      ) s;
+    )
+    SELECT
+        COUNT(*)::INTEGER,
+        COALESCE(jsonb_agg(jsonb_build_object(
+            'canonical_employee_id', em.canonical_employee_id,
+            'display_name',          em.display_name
+        ) ORDER BY em.display_name), '[]'::jsonb)
+      INTO v_count, v_candidates
+      FROM (
+        SELECT canonical_employee_id, display_name FROM exact_match
+      ) em;
 
-    IF v_count = 0 THEN
-        -- Pass 2: substring on display_name OR external_label.
-        SELECT
-            COALESCE(jsonb_agg(c ORDER BY c->>'display_name'), '[]'::jsonb),
-            COUNT(*)::INTEGER
-          INTO v_candidates, v_count
+    -- If exact_match had >1 row (rare but possible — two grouped employees
+    -- share a display string), trim candidates to 6 for the response.
+    IF v_count > 1 THEN
+        SELECT COALESCE(jsonb_agg(c ORDER BY c->>'display_name'), '[]'::jsonb)
+          INTO v_candidates
           FROM (
-            SELECT jsonb_build_object(
-                'canonical_employee_id', ve.canonical_employee_id,
-                'display_name',          ve.display_name
-            ) AS c
-              FROM mcp_api.v_api_employees ve
-             WHERE ve.display_name   ILIKE '%' || v_query || '%'
-                OR ve.external_label ILIKE '%' || v_query || '%'
+            SELECT v.value AS c
+              FROM jsonb_array_elements(v_candidates) WITH ORDINALITY AS v(value, ord)
+             ORDER BY v.value->>'display_name'
              LIMIT 6
           ) s;
+    END IF;
+
+    IF v_count = 0 THEN
+        -- Pass 2: substring on display_name OR external_label. CTE separates
+        -- the full match-set from the truncated candidates list so v_count
+        -- always reflects the true ambiguity (Fix H5 — the candidate cap
+        -- must not become the reported count).
+        WITH fuzzy AS (
+            SELECT ve.canonical_employee_id, ve.display_name
+              FROM mcp_api.v_api_employees ve
+             WHERE ve.display_name   ILIKE '%' || v_query_escaped || '%' ESCAPE '\'
+                OR ve.external_label ILIKE '%' || v_query_escaped || '%' ESCAPE '\'
+        ),
+        capped AS (
+            SELECT canonical_employee_id, display_name
+              FROM fuzzy
+             ORDER BY display_name
+             LIMIT 6
+        )
+        SELECT
+            (SELECT COUNT(*)::INTEGER FROM fuzzy),
+            COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                    'canonical_employee_id', c.canonical_employee_id,
+                    'display_name',          c.display_name
+                ) ORDER BY c.display_name)
+                  FROM capped c
+            ), '[]'::jsonb)
+          INTO v_count, v_candidates;
     END IF;
 
     IF v_count = 0 THEN
@@ -628,6 +761,8 @@ AS $$
 DECLARE
     v_query         TEXT := TRIM(COALESCE(p_query, ''));
     v_hint          TEXT := NULLIF(TRIM(COALESCE(p_client_hint, '')), '');
+    v_query_esc     TEXT;
+    v_hint_esc      TEXT;
     v_candidates    JSONB;
     v_count         INTEGER;
     v_first         JSONB;
@@ -642,22 +777,45 @@ BEGIN
         );
     END IF;
 
-    SELECT
-        COALESCE(jsonb_agg(c ORDER BY c->>'project_name'), '[]'::jsonb),
-        COUNT(*)::INTEGER
-      INTO v_candidates, v_count
-      FROM (
-        SELECT jsonb_build_object(
-            'canonical_project_id',  vp.canonical_project_id,
-            'project_name',          vp.project_name,
-            'canonical_company_id',  vp.canonical_company_id,
-            'company_display_name',  vp.company_display_name
-        ) AS c
+    -- Fix H4: escape ILIKE wildcards so a caller passing '%' or '_' cannot
+    -- bypass the search intent. Backslash escaped first so subsequent
+    -- escapes are not double-applied. Used with ESCAPE '\' on every ILIKE.
+    v_query_esc := REPLACE(REPLACE(REPLACE(v_query, '\', '\\'), '%', '\%'), '_', '\_');
+    v_hint_esc  := CASE WHEN v_hint IS NULL THEN NULL
+        ELSE REPLACE(REPLACE(REPLACE(v_hint, '\', '\\'), '%', '\%'), '_', '\_') END;
+
+    -- Fix H5: separate the full match-set from the truncated candidates so
+    -- v_count reflects true ambiguity (not the LIMIT cap).
+    WITH matches AS (
+        SELECT
+            vp.canonical_project_id,
+            vp.project_name,
+            vp.canonical_company_id,
+            vp.company_display_name
           FROM mcp_api.v_api_projects vp
-         WHERE vp.project_name ILIKE '%' || v_query || '%'
-           AND (v_hint IS NULL OR vp.company_display_name ILIKE '%' || v_hint || '%')
+         WHERE vp.project_name ILIKE '%' || v_query_esc || '%' ESCAPE '\'
+           AND (v_hint_esc IS NULL
+                OR vp.company_display_name ILIKE '%' || v_hint_esc || '%' ESCAPE '\')
+    ),
+    capped AS (
+        SELECT canonical_project_id, project_name,
+               canonical_company_id, company_display_name
+          FROM matches
+         ORDER BY project_name
          LIMIT 6
-      ) s;
+    )
+    SELECT
+        (SELECT COUNT(*)::INTEGER FROM matches),
+        COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                'canonical_project_id',  c.canonical_project_id,
+                'project_name',          c.project_name,
+                'canonical_company_id',  c.canonical_company_id,
+                'company_display_name',  c.company_display_name
+            ) ORDER BY c.project_name)
+              FROM capped c
+        ), '[]'::jsonb)
+      INTO v_count, v_candidates;
 
     IF v_count = 0 THEN
         RETURN jsonb_build_object(
@@ -952,8 +1110,11 @@ COMMENT ON FUNCTION mcp_api.api_get_employee_week_summary(UUID, DATE) IS
 -- ============================================================================
 -- TOOL 9: api_get_employee_projects
 -- ============================================================================
--- Returns the canonical projects an employee touched in the date range, with
--- per-project hours. We DO NOT surface entry_count or task_count.
+-- Returns the canonical PROJECTS an employee touched in the date range, with
+-- per-project hours. Reads from mcp_api.v_api_employee_project_daily, which
+-- projects Layer 2 (employee_totals) to canonical ids — Layer 3 has no
+-- project_id, so this view is the only correct source for per-project
+-- attribution. We DO NOT surface entry_count, task_count, or task_name.
 
 CREATE OR REPLACE FUNCTION mcp_api.api_get_employee_projects(
     p_canonical_employee_id UUID,
@@ -981,37 +1142,37 @@ BEGIN
         );
     END IF;
 
-    -- Joining v_api_employee_daily on canonical_company_id to v_api_projects
-    -- on canonical_company_id gives us the company-level breakdown. The MCP
-    -- semantics treat "projects an employee touched" as the canonical company
-    -- attribution — we deliberately do NOT join by project_id at this layer
-    -- because employee_daily_totals is at (user_id, client_id, work_date)
-    -- granularity, not project. We surface canonical_company_id alongside
-    -- the project list so consumers understand the grouping unit.
+    -- Aggregate per canonical_project_id over the requested window. Sort by
+    -- hours desc, then project_name asc for stable tie-break ordering.
     SELECT
-        COALESCE(jsonb_agg(p ORDER BY (p->>'hours')::numeric DESC), '[]'::jsonb),
+        COALESCE(jsonb_agg(p ORDER BY (p->>'hours')::numeric DESC, p->>'project_name'), '[]'::jsonb),
         COUNT(*)::INTEGER
       INTO v_data, v_count
       FROM (
         SELECT jsonb_build_object(
-            'canonical_company_id', vc.canonical_company_id,
-            'company_display_name', vc.display_name,
+            'canonical_project_id', d.canonical_project_id,
+            'project_name',         d.project_display_name,
+            'canonical_company_id', d.canonical_company_id,
+            'company_name',         d.company_display_name,
             'hours',                ROUND(SUM(d.rounded_hours)::numeric, 2)
         ) AS p
-          FROM mcp_api.v_api_employee_daily d
-          JOIN mcp_api.v_api_companies vc
-            ON vc.canonical_company_id = d.canonical_company_id
+          FROM mcp_api.v_api_employee_project_daily d
          WHERE d.canonical_employee_id = p_canonical_employee_id
            AND d.work_date BETWEEN p_start_date AND p_end_date
-         GROUP BY vc.canonical_company_id, vc.display_name
+         GROUP BY d.canonical_project_id,
+                  d.project_display_name,
+                  d.canonical_company_id,
+                  d.company_display_name
         HAVING SUM(d.rounded_hours) > 0
       ) s;
 
     RETURN jsonb_build_object(
         'ok', true,
-        'data', v_data,
+        'data', jsonb_build_object(
+            'projects', v_data
+        ),
         'provenance', jsonb_build_object(
-            'source',                'v_api_employee_daily',
+            'source',                'employee_totals_aggregated_via_canonical_project',
             'computed_at',           NOW(),
             'row_count',             v_count,
             'truncated',             false,
@@ -1027,7 +1188,8 @@ ALTER FUNCTION mcp_api.api_get_employee_projects(UUID, DATE, DATE) OWNER TO mcp_
 REVOKE ALL ON FUNCTION mcp_api.api_get_employee_projects(UUID, DATE, DATE) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mcp_api.api_get_employee_projects(UUID, DATE, DATE) TO mcp_reader;
 COMMENT ON FUNCTION mcp_api.api_get_employee_projects(UUID, DATE, DATE) IS
-    'List canonical companies the employee touched in the range, with hours.';
+    'List canonical projects the employee touched in the range, with hours. '
+    'Reads v_api_employee_project_daily (Layer 2) for true project granularity.';
 
 -- ============================================================================
 -- TOOL 10: api_get_employee_time_off
@@ -1153,11 +1315,15 @@ BEGIN
     v_week_start := date_trunc('week', p_week_start_date)::date;
     v_week_end   := v_week_start + 6;
 
-    SELECT COALESCE(SUM(d.rounded_hours), 0)
-      INTO v_actual
-      FROM mcp_api.v_api_employee_daily d
-     WHERE d.canonical_employee_id = p_canonical_employee_id
-       AND d.work_date BETWEEN v_week_start AND v_week_end;
+    -- Delegate to the shared aggregation kernel. This guarantees
+    -- api_verify_employee_week stays bit-for-bit consistent with
+    -- api_get_employee_hours/api_get_employee_week_summary, and any future
+    -- kernel change (e.g., a vacation-exclusion filter) propagates here
+    -- automatically. Per Condition 4.
+    SELECT COALESCE(((mcp_api._internal_aggregate_employee_hours(
+                p_canonical_employee_id, v_week_start, v_week_end, 'total'
+            ))->0->>'hours')::numeric, 0)
+      INTO v_actual;
 
     v_actual  := ROUND(v_actual, 2);
     v_delta   := ROUND(v_actual - p_expected_hours, 2);
@@ -1201,11 +1367,13 @@ COMMENT ON FUNCTION mcp_api.api_verify_employee_week(UUID, DATE, NUMERIC) IS
 DO $$
 BEGIN
     RAISE NOTICE '106 mcp_api functions migration complete:';
-    RAISE NOTICE '  - 3 helpers: api_authenticate_key, api_consume_rate_limit, api_log_request';
+    RAISE NOTICE '  - 4 helpers: api_authenticate_key, _authenticate_and_consume,';
+    RAISE NOTICE '               api_consume_rate_limit, api_log_request';
     RAISE NOTICE '  - 11 tools: list/resolve/get/verify all present';
     RAISE NOTICE '  - All SECURITY DEFINER, SET search_path = mcp_api, pg_temp';
     RAISE NOTICE '  - All owned by mcp_owner; EXECUTE granted to mcp_reader';
     RAISE NOTICE '  - api_verify_employee_week takes expected_hours from caller (Condition 12)';
+    RAISE NOTICE '  - api_get_employee_projects reads v_api_employee_project_daily (Layer 2)';
 END $$;
 
 COMMIT;

@@ -38,6 +38,10 @@ BEGIN
                 'canonical_employee_id,canonical_company_id,work_date,rounded_hours'
             ),
             (
+                'v_api_employee_project_daily',
+                'canonical_employee_id,canonical_project_id,canonical_company_id,project_display_name,company_display_name,work_date,rounded_hours'
+            ),
+            (
                 'v_api_employee_time_off',
                 'canonical_employee_id,start_date,end_date,total_days,time_off_type,status'
             )
@@ -62,5 +66,5 @@ BEGIN
         END IF;
     END LOOP;
 
-    RAISE NOTICE 'mcp-schema-snapshot: all 5 v_api_* views match the locked column list.';
+    RAISE NOTICE 'mcp-schema-snapshot: all 6 v_api_* views match the locked column list.';
 END $$;

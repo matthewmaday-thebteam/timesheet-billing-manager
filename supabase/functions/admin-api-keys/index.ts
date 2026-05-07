@@ -20,16 +20,64 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// -----------------------------------------------------------------------------
+// CORS allow-list (Fix M1 — defense-in-depth)
+// -----------------------------------------------------------------------------
+// This Edge Function is admin-only and is invoked from the Manifest browser
+// app with a Supabase JWT. There is NO third-party / cross-origin caller, so
+// `Access-Control-Allow-Origin: *` is unnecessarily broad. We pin to a
+// configured allow-list and echo only the matching origin back (or the
+// fallback) per CORS best practice.
+//
+// Configure via Supabase secrets:
+//   supabase secrets set ADMIN_API_KEYS_ALLOWED_ORIGINS=\
+//     "https://timesheet-billing-manager.vercel.app,https://<custom>.vercel.app"
+//
+// If the env var is missing we fall back to the production Vercel URL
+// (the project's documented prod surface — see /docs/CONNECTION_GUIDE.md).
+// Operators MUST set the secret before deploy when adding preview origins
+// or a custom domain; failure to do so causes the browser to block the
+// XHR with a CORS error (which is the safe failure mode).
 
-function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+const FALLBACK_ALLOWED_ORIGIN = 'https://timesheet-billing-manager.vercel.app';
+
+function parseAllowedOrigins(): string[] {
+  const raw = (Deno.env.get('ADMIN_API_KEYS_ALLOWED_ORIGINS') ?? '').trim();
+  if (!raw) return [FALLBACK_ALLOWED_ORIGIN];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+const ALLOWED_ORIGINS = parseAllowedOrigins();
+
+function pickAllowedOrigin(req: Request): string {
+  const origin = req.headers.get('Origin');
+  if (origin && ALLOWED_ORIGINS.includes(origin)) return origin;
+  // Default to the first configured origin so OPTIONS/echo behavior is stable
+  // (the browser will reject mismatches client-side anyway).
+  return ALLOWED_ORIGINS[0];
+}
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': pickAllowedOrigin(req),
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
+
+function jsonResponse(
+  req: Request,
+  body: Record<string, unknown>,
+  status = 200,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -96,10 +144,10 @@ function isAction(s: string): s is Action {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeadersFor(req) });
   }
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
+    return jsonResponse(req, { error: 'Method not allowed' }, 405);
   }
 
   try {
@@ -108,12 +156,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      return jsonResponse({ error: 'Server misconfigured' }, 500);
+      return jsonResponse(req, { error: 'Server misconfigured' }, 500);
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({ error: 'Missing authorization header' }, 401);
+      return jsonResponse(req, { error: 'Missing authorization header' }, 401);
     }
 
     // 1. Verify caller's JWT.
@@ -123,13 +171,13 @@ serve(async (req) => {
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !userData?.user) {
-      return jsonResponse({ error: 'Unauthorized' }, 401);
+      return jsonResponse(req, { error: 'Unauthorized' }, 401);
     }
 
     // 2. Defense-in-depth admin gate (the RPC re-checks).
     const { data: isAdmin, error: adminCheckError } = await supabaseAuth.rpc('is_admin');
     if (adminCheckError || !isAdmin) {
-      return jsonResponse({ error: 'Forbidden: admin access required' }, 403);
+      return jsonResponse(req, { error: 'Forbidden: admin access required' }, 403);
     }
 
     // 3. Parse body.
@@ -137,11 +185,15 @@ serve(async (req) => {
     try {
       const raw = await req.json();
       if (!raw || typeof raw.action !== 'string' || !isAction(raw.action)) {
-        return jsonResponse({ error: 'action must be "list" | "create" | "revoke"' }, 400);
+        return jsonResponse(
+          req,
+          { error: 'action must be "list" | "create" | "revoke"' },
+          400,
+        );
       }
       body = raw as RequestBody;
     } catch {
-      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+      return jsonResponse(req, { error: 'Invalid JSON body' }, 400);
     }
 
     // 4. Service-role client used to invoke the mcp_api.admin_* RPCs. We use
@@ -154,14 +206,17 @@ serve(async (req) => {
 
     if (body.action === 'list') {
       const { data, error } = await supabaseAsCaller.rpc('admin_list_api_keys');
-      if (error) return jsonResponse({ error: error.message }, 500);
+      if (error) return jsonResponse(req, { error: error.message }, 500);
       // RPC returns SETOF JSONB; the client surfaces this as an array of objects.
-      return jsonResponse({ success: true, keys: Array.isArray(data) ? data : [] });
+      return jsonResponse(req, {
+        success: true,
+        keys: Array.isArray(data) ? data : [],
+      });
     }
 
     if (body.action === 'create') {
       const name = (body.name ?? '').trim();
-      if (!name) return jsonResponse({ error: 'name is required' }, 400);
+      if (!name) return jsonResponse(req, { error: 'name is required' }, 400);
 
       const description =
         body.description == null ? null : String(body.description).trim() || null;
@@ -175,9 +230,9 @@ serve(async (req) => {
         p_prefix: prefix,
         p_key_hash: keyHash,
       });
-      if (error) return jsonResponse({ error: error.message }, 500);
+      if (error) return jsonResponse(req, { error: error.message }, 500);
 
-      return jsonResponse({
+      return jsonResponse(req, {
         success: true,
         api_key: data,
         plaintext,
@@ -186,16 +241,17 @@ serve(async (req) => {
 
     // revoke
     const keyId = (body.key_id ?? '').trim();
-    if (!keyId) return jsonResponse({ error: 'key_id is required' }, 400);
+    if (!keyId) return jsonResponse(req, { error: 'key_id is required' }, 400);
 
     const { data, error } = await supabaseAsCaller.rpc('admin_revoke_api_key', {
       p_key_id: keyId,
     });
-    if (error) return jsonResponse({ error: error.message }, 500);
-    return jsonResponse(data ?? { success: true });
+    if (error) return jsonResponse(req, { error: error.message }, 500);
+    return jsonResponse(req, (data as Record<string, unknown> | null) ?? { success: true });
   } catch (err) {
     console.error('admin-api-keys error:', err);
     return jsonResponse(
+      req,
       { error: err instanceof Error ? err.message : 'Internal error' },
       500,
     );

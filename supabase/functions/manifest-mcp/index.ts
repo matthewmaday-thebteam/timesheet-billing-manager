@@ -208,10 +208,12 @@ async function dispatch(
   const auth = await authenticateAndRateLimit(req.headers.get('Authorization'));
   if (auth.kind !== 'ok') {
     if (auth.kind === 'unauthorized') {
+      // Wire response is the uniform message (Fix H1); audit log captures
+      // the precise internal code (MISSING_BEARER / NOT_FOUND / REVOKED).
       return {
         body: errorEnvelope(id, MCP_UNAUTHORIZED, auth.message),
         statusCode: 401,
-        errorCode: 'UNAUTHORIZED',
+        errorCode: auth.internalErrorCode,
         errorMessage: auth.message,
         toolName: null,
         responseHash: null,
@@ -226,9 +228,10 @@ async function dispatch(
     return {
       body: errorEnvelope(id, MCP_RATE_LIMITED, auth.message, {
         retry_after_ms: auth.retryAfterMs,
+        window_kind: auth.windowKind,
       }),
       statusCode: 429,
-      errorCode: 'RATE_LIMITED',
+      errorCode: `RATE_LIMITED_${auth.windowKind.toUpperCase()}`,
       errorMessage: auth.message,
       toolName: null,
       responseHash: null,

@@ -211,8 +211,9 @@ export const TOOLS: ToolDefinition[] = [
 
   makeTool(
     'get_employee_projects',
-    'Canonical companies the employee touched in [start_date, end_date], ' +
-      'with hours per company.',
+    'Canonical projects the employee touched in [start_date, end_date], ' +
+      'with hours per project. Returns canonical_project_id, project_name, ' +
+      'canonical_company_id, company_name, and hours for each project.',
     {
       type: 'object',
       properties: {
