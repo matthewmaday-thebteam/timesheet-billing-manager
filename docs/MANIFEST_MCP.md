@@ -2,16 +2,39 @@
 
 System-to-system read API exposing Manifest's employee, project, company, hours, and time-off data to Butler (and future authorized consumers) via the Model Context Protocol.
 
-**Status**: Implemented locally, not yet deployed. Awaiting human review and explicit approval before any push, deploy, or migration apply.
+**Status**: **DEPLOYED to production 2026-05-07.** All migrations applied, edge functions deployed, frontend live at `https://manifest.yourbteam.com`. First Butler-production API key generated.
 
 **Commit chain** (most recent first):
-- `fadfacb` — reconciliation script uses canonical rounding path
-- `a591088` — security + financial review findings addressed
-- `23fc563` — frontend C1 fix (key creation routes through Edge Function)
-- `f80ea48` — backend implementation
-- `12b1e69` — frontend implementation
+- `6cf5824` — fix: rewrite admin_create_api_key to read JWT claim instead of auth.uid (mig 111)
+- `286b7d4` — fix: rewrite _internal_assert_admin to read JWT claim (mig 110)
+- `d5d1dba` — fix: grant USAGE on mcp_api to authenticated for admin RPC dispatch (mig 109)
+- `483139d` — fix: remove default_transaction_read_only flag from mcp_reader (mig 108)
+- `7b1bb7d` — fix: use explicit GRANT TO postgres instead of current_user
+- `0472ca1` — fix: grant mcp_owner membership to migration role
+- `d00e18f` — docs: comprehensive MANIFEST_MCP rollout documentation
+- `fadfacb` — fix: reconciliation script uses canonical rounding path
+- `a591088` — fix: security + financial review findings addressed
+- `23fc563` — fix: route API key creation through Edge Function
+- `f80ea48` — feat: implement Manifest MCP backend
+- `12b1e69` — feat: implement API Keys admin page (frontend)
 
 Built on top of `3206a73` (v1.0.0.107).
+
+## Deployment Record (2026-05-07)
+
+Deployment proceeded per Section 11 runbook with five in-flight fixes applied as new migrations 108-111:
+
+1. **Migration 103 first attempt failed**: `ALTER SCHEMA mcp_api OWNER TO mcp_owner` requires migration role to be a member of the target role. Fixed with `GRANT mcp_owner TO postgres` in 103 (commits `0472ca1`/`7b1bb7d`).
+2. **`current_user` form killed Supabase pooler connection**: switched to explicit `postgres` role name.
+3. **`manifest-mcp` Edge Function intercepted by default JWT verification**: redeployed with `--no-verify-jwt` so the bearer-token flow reaches our auth code.
+4. **`default_transaction_read_only = on` blocked SECURITY DEFINER writes**: that flag carries through SECURITY DEFINER, breaking audit-log inserts and rate-limit upserts. Removed via migration 108. The flag was illusory defense-in-depth; the real control is the privilege grant.
+5. **PostgREST didn't expose `mcp_api`**: needed `db_schema=public,graphql_public,mcp_api` (set via Supabase project settings) plus `GRANT USAGE ON SCHEMA mcp_api TO authenticated` (migration 109).
+6. **Auth-schema access denied for `mcp_owner`**: `_internal_assert_admin` and `admin_create_api_key` referenced `auth.uid()`, which is evaluated under `mcp_owner` privileges (SECURITY DEFINER). The auth schema is owned by `supabase_admin` and cannot be granted to `mcp_owner`. Both functions rewritten to extract the user id from `current_setting('request.jwt.claims', true)` directly, then call `public.is_admin(uuid)` (migrations 110, 111).
+
+Production state at deploy completion: 9 migrations applied (103-111), both edge functions deployed, secrets set (`MANIFEST_MCP_DB_URL` for `mcp_reader`, `ADMIN_API_KEYS_ALLOWED_ORIGINS=https://manifest.yourbteam.com,...`), frontend deployed at `https://manifest.yourbteam.com`, first API key generated via the admin UI. Pre-existing local edits in `supabase/.temp/cli-latest` and `supabase/functions/send-weekly-revenue-report/index.ts` preserved untouched throughout.
+
+**Production URL**: https://manifest.yourbteam.com/?route=api-keys (admin only)
+**MCP endpoint**: https://yptbnsegcfpizwhipeep.supabase.co/functions/v1/manifest-mcp
 
 ---
 
