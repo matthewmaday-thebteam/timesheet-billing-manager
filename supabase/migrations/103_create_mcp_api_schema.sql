@@ -78,6 +78,14 @@ COMMENT ON ROLE mcp_reader IS
 -- 3. Schema ownership and search-path
 -- ----------------------------------------------------------------------------
 
+-- Supabase's migration runner connects as a non-superuser role (postgres on
+-- managed instances). To transfer ownership of mcp_api objects to mcp_owner,
+-- the migration role must be a member of mcp_owner. Grant membership now;
+-- this lets every subsequent ALTER … OWNER TO mcp_owner statement (in
+-- migrations 103-107) succeed. Membership is harmless after rollout because
+-- mcp_owner is NOLOGIN and accessible only via SECURITY DEFINER functions.
+GRANT mcp_owner TO current_user;
+
 ALTER SCHEMA mcp_api OWNER TO mcp_owner;
 
 -- mcp_owner needs USAGE on the schema it owns (PG grants this implicitly,
