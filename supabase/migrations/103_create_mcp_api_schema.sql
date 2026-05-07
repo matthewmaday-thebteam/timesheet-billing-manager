@@ -84,7 +84,7 @@ COMMENT ON ROLE mcp_reader IS
 -- this lets every subsequent ALTER … OWNER TO mcp_owner statement (in
 -- migrations 103-107) succeed. Membership is harmless after rollout because
 -- mcp_owner is NOLOGIN and accessible only via SECURITY DEFINER functions.
-GRANT mcp_owner TO current_user;
+GRANT mcp_owner TO postgres;
 
 ALTER SCHEMA mcp_api OWNER TO mcp_owner;
 
