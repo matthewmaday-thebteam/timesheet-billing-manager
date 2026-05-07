@@ -17,6 +17,7 @@ import { RevenuePage } from './components/pages/RevenuePage';
 import { BillingsPage } from './components/pages/BillingsPage';
 import { EOMReportsPage } from './components/pages/EOMReportsPage';
 import { UsersPage } from './components/pages/UsersPage';
+import { ApiKeysPage } from './components/pages/ApiKeysPage';
 import { DiagnosticsPage } from './components/pages/DiagnosticsPage';
 import { FormulasPage } from './components/pages/FormulasPage';
 import { InvestorDashboardPage } from './components/pages/InvestorDashboardPage';
@@ -92,6 +93,8 @@ function AuthenticatedApp() {
         return <EOMReportsPage />;
       case 'users':
         return <UsersPage />;
+      case 'api-keys':
+        return <ApiKeysPage />;
       case 'employee-management':
         return <EmployeeManagementPage />;
       case 'project-management':

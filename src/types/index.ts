@@ -1150,3 +1150,49 @@ export interface EmployeeProjectProfit {
   employee_profit_cents: number | null;
   effective_cost_rate: number | null;
 }
+
+// ============================================================================
+// API Keys (mcp_api schema) Types
+// ============================================================================
+
+/**
+ * API Key record returned by mcp_api.admin_list_api_keys RPC.
+ * The plaintext key is NEVER returned here — only the prefix for display.
+ */
+export interface ApiKey {
+  id: string;
+  name: string;
+  description: string | null;
+  prefix: string;        // e.g. "mfst_live_AbCd"
+  status: 'active' | 'revoked';
+  created_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_by: string;
+}
+
+/**
+ * Parameters for creating a new API key via mcp_api.admin_create_api_key.
+ */
+export interface CreateApiKeyParams {
+  name: string;
+  description?: string | null;
+}
+
+/**
+ * Result from mcp_api.admin_create_api_key.
+ * The plaintext key is returned ONCE here and must be displayed to the user
+ * immediately — it cannot be retrieved again.
+ */
+export interface CreateApiKeyResult {
+  api_key: ApiKey;
+  plaintext: string;
+}
+
+/**
+ * Result from mcp_api.admin_revoke_api_key.
+ */
+export interface RevokeApiKeyResult {
+  success: boolean;
+  error?: string;
+}
