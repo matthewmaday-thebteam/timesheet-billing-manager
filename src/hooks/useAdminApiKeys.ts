@@ -93,20 +93,55 @@ export function useAdminApiKeys(): UseAdminApiKeysReturn {
     setIsOperating(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await supabase
-        .schema('mcp_api')
-        .rpc('admin_create_api_key', {
-          p_name: params.name,
-          p_description: params.description ?? null,
-        });
+      // Plaintext key generation MUST happen server-side. The Edge Function
+      // mints the plaintext (mfst_live_…) using crypto.getRandomValues, hashes
+      // it with SHA-256, persists only the prefix + hash, and returns the
+      // plaintext to the caller exactly once. Calling the SQL RPC directly
+      // from the browser would either fail (missing p_prefix/p_key_hash) or
+      // force plaintext generation in the browser — neither is acceptable.
+      const { data, error: fnError } = await supabase.functions.invoke(
+        'admin-api-keys',
+        {
+          body: {
+            action: 'create',
+            name: params.name,
+            description: params.description ?? null,
+          },
+        }
+      );
 
-      if (rpcError) throw rpcError;
-      if (!data) throw new Error('No data returned from admin_create_api_key');
+      // On non-2xx, supabase-js v2 sets data=null and error=FunctionsHttpError.
+      // The actual error message is in the Response object on error.context.
+      if (fnError) {
+        let message = fnError.message || 'Failed to create API key';
+        try {
+          const errorBody = await (
+            fnError as { context?: { json?: () => Promise<{ error?: string }> } }
+          ).context?.json?.();
+          if (errorBody?.error) {
+            message = errorBody.error;
+          }
+        } catch {
+          // If we can't parse the response body, fall back to the generic message
+        }
+        throw new Error(message);
+      }
+
+      const response = data as
+        | { success?: boolean; api_key?: ApiKey; plaintext?: string; error?: string }
+        | null;
+
+      if (!response || !response.api_key || !response.plaintext) {
+        throw new Error(response?.error || 'No data returned from admin-api-keys');
+      }
 
       // Refresh list so the new key appears in the table
       await fetchApiKeys();
 
-      return data as CreateApiKeyResult;
+      return {
+        api_key: response.api_key,
+        plaintext: response.plaintext,
+      };
     } catch (e) {
       const message = getErrorMessage(e, 'Failed to create API key');
       setError(message);
