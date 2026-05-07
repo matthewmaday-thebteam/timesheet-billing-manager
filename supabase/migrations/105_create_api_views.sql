@@ -240,7 +240,16 @@ COMMENT ON VIEW mcp_api.v_api_employee_project_daily IS
     'Per canonical-employee, canonical-project, canonical-company, work_date '
     'totals for MCP. Hours only — minute-level fields, counts, raw ids, '
     'task_name are intentionally excluded. Source: public.employee_totals '
-    '(Layer 2). Read surface for api_get_employee_projects.';
+    '(Layer 2). Read surface for api_get_employee_projects. '
+    'NOTE: per-day per-employee totals from this view may differ from '
+    'v_api_employee_daily (Layer 3) by up to ~0.005h × tasks/day because '
+    'Layer 2 rounds per (user, project, task, client, date) row before '
+    'summing while Layer 3 rounds per (user, client, date) row before '
+    'summing. Both are derived from the same canonical integer-minute '
+    'source (timesheet_daily_rollups.rounded_minutes); the difference is '
+    'pure rounding-then-summing vs summing-then-rounding asymmetry. CI '
+    'reconciliation (scripts/ci/mcp-employee-projects-reconciliation.sql) '
+    'compares integer-minute sums on each side to avoid this artifact.';
 
 -- ----------------------------------------------------------------------------
 -- 5. v_api_employee_time_off
