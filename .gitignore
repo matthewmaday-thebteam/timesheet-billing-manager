@@ -25,3 +25,6 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# editor temp swap copies
+*.tmp.*
