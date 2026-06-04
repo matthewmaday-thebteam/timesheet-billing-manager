@@ -23,7 +23,7 @@ import type { UnderHoursResource } from '../../utils/calculations';
 // Chart Data
 // ============================================================================
 
-export const mockBarChartData: BarChartDataPoint[] = [
+export const mockBarChartData: Array<BarChartDataPoint & { month: string }> = [
   { month: 'Jan', value: 12.5 },
   { month: 'Feb', value: -3.2 },
   { month: 'Mar', value: 8.1 },

@@ -14,6 +14,7 @@
  */
 
 import { forwardRef } from 'react';
+import type { ForwardedRef, ReactElement } from 'react';
 import {
   BarChart,
   Bar,
@@ -36,20 +37,23 @@ import {
 import type { HTMLAttributes } from 'react';
 
 /**
- * Data point for BarChartAtom
+ * Data point for BarChartAtom.
+ *
+ * Only `value` is required by the component; every other field (the category
+ * label such as `month` or a custom `categoryKey` like `company_name`) is
+ * supplied by the caller's own concrete type. The component is generic over the
+ * data point so callers can pass strongly-typed shapes (e.g. MoMGrowthDataPoint)
+ * WITHOUT having to declare an index signature on those types.
  */
 export interface BarChartDataPoint {
-  /** Month label (e.g., "Jan", "Feb") */
-  month: string;
   /** Value (can be positive or negative) */
   value: number | null;
-  /** Additional category fields (e.g. a company_name used as categoryKey) */
-  [key: string]: string | number | null | undefined;
 }
 
-export interface BarChartAtomProps extends HTMLAttributes<HTMLDivElement> {
+export interface BarChartAtomProps<T extends BarChartDataPoint = BarChartDataPoint>
+  extends HTMLAttributes<HTMLDivElement> {
   /** Array of data points to display */
-  data: BarChartDataPoint[];
+  data: ReadonlyArray<T>;
   /** Chart height in pixels */
   height?: number;
   /** Whether to show tooltip on hover */
@@ -83,24 +87,23 @@ const defaultYAxisFormatter = (value: number) => `${value}%`;
 // Chart margin configuration
 const chartMargin = { top: 5, right: 30, left: 20, bottom: 5 };
 
-export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
-  (
-    {
-      data,
-      height = CHART_HEIGHT,
-      showTooltip = true,
-      showGrid = true,
-      valueFormatter = defaultFormatter,
-      yAxisFormatter = defaultYAxisFormatter,
-      valueLabel = 'Growth',
-      fillColor,
-      layout = 'vertical',
-      categoryKey = 'month',
-      className = '',
-      ...props
-    },
-    ref
-  ) => {
+function BarChartAtomInner<T extends BarChartDataPoint>(
+  {
+    data,
+    height = CHART_HEIGHT,
+    showTooltip = true,
+    showGrid = true,
+    valueFormatter = defaultFormatter,
+    yAxisFormatter = defaultYAxisFormatter,
+    valueLabel = 'Growth',
+    fillColor,
+    layout = 'vertical',
+    categoryKey = 'month',
+    className = '',
+    ...props
+  }: BarChartAtomProps<T>,
+  ref: ForwardedRef<HTMLDivElement>
+) {
     // Custom tooltip formatter
     const tooltipFormatter = (value: number | undefined) => [
       valueFormatter(value ?? 0),
@@ -137,7 +140,7 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
       >
         <ResponsiveContainer width="100%" height={height}>
           <BarChart
-            data={data}
+            data={data as T[]}
             margin={chartMargin}
             layout={isHorizontal ? 'vertical' : 'horizontal'}
           >
@@ -196,9 +199,20 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
         </ResponsiveContainer>
       </div>
     );
-  }
-);
+}
 
-BarChartAtom.displayName = 'BarChartAtom';
+/**
+ * Generic forwardRef wrapper. `forwardRef` erases generics, so we cast the
+ * result back to a callable that preserves the `<T>` data-point type parameter.
+ * This lets callers pass strongly-typed data (e.g. MoMGrowthDataPoint[],
+ * concentration rank rows) without declaring an index signature on those types.
+ */
+export const BarChartAtom = forwardRef(BarChartAtomInner) as <
+  T extends BarChartDataPoint = BarChartDataPoint
+>(
+  props: BarChartAtomProps<T> & { ref?: ForwardedRef<HTMLDivElement> }
+) => ReactElement;
+
+(BarChartAtom as { displayName?: string }).displayName = 'BarChartAtom';
 
 export default BarChartAtom;
