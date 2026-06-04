@@ -216,6 +216,20 @@ export const atoms: DesignSystemEntry[] = [
     filePath: 'src/components/atoms/charts/DailyHoursChart.tsx',
     usedIn: ['Dashboard'],
   },
+  {
+    name: 'TrendLineAtom',
+    description: 'Generic multi-series line chart over time with an optional right Y axis for mixed percentage/currency series and per-series tooltip formatting.',
+    tier: 'atom',
+    filePath: 'src/components/atoms/charts/TrendLineAtom.tsx',
+    usedIn: ['InvestorDashboardPage'],
+  },
+  {
+    name: 'CompositionBarAtom',
+    description: 'Generic stacked bar chart over time showing how a total decomposes into its constituent segments per period.',
+    tier: 'atom',
+    filePath: 'src/components/atoms/charts/CompositionBarAtom.tsx',
+    usedIn: ['InvestorDashboardPage'],
+  },
 
   // ---------------------------------------------------------------------------
   // Overlays & popovers

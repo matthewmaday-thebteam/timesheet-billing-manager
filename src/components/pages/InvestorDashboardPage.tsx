@@ -9,6 +9,11 @@ import { useTimeOff } from '../../hooks/useTimeOff';
 import { useEmployeeTableEntities } from '../../hooks/useEmployeeTableEntities';
 import { useInvestorMetrics } from '../../hooks/useInvestorMetrics';
 import { useProjectedAnnualRevenue } from '../../hooks/useProjectedAnnualRevenue';
+import { useInvestorProfitEfficiency } from '../../hooks/useInvestorProfitEfficiency';
+import { useInvestorConcentration } from '../../hooks/useInvestorConcentration';
+import { useInvestorRevenueMix } from '../../hooks/useInvestorRevenueMix';
+import { useInvestorUtilization } from '../../hooks/useInvestorUtilization';
+import { useInvestorRealization } from '../../hooks/useInvestorRealization';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/billing';
 import {
@@ -30,6 +35,7 @@ import {
 } from 'recharts';
 import {
   chartColors,
+  pieChartColorSequence,
   formatChartCurrency,
   axisTickStyle,
   axisLineStyle,
@@ -40,10 +46,13 @@ import { MetricCard } from '../MetricCard';
 import { Card } from '../Card';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
+import { Alert } from '../Alert';
 import { RangeSelector } from '../RangeSelector';
 import { LineGraphAtom } from '../atoms/charts/LineGraphAtom';
 import { BarChartAtom } from '../atoms/charts/BarChartAtom';
 import { CAGRChartAtom } from '../atoms/charts/CAGRChartAtom';
+import { TrendLineAtom } from '../atoms/charts/TrendLineAtom';
+import { CompositionBarAtom } from '../atoms/charts/CompositionBarAtom';
 import { useDateFilter } from '../../contexts/DateFilterContext';
 import type { MonthSelection, BulgarianHoliday } from '../../types';
 import { HISTORICAL_MONTHS, CHART_HEIGHT } from '../../config/chartConfig';
@@ -94,6 +103,13 @@ export function InvestorDashboardPage() {
 
   // Projected annual revenue — client-side shared hook (single source of truth)
   const { projectedAnnualRevenue: hookProjectedAnnualRevenue } = useProjectedAnnualRevenue();
+
+  // ========== INVESTOR ANALYTICS (DB-COMPUTED — render only, no math) ==========
+  const profitEfficiency = useInvestorProfitEfficiency();
+  const concentration = useInvestorConcentration();
+  const revenueMix = useInvestorRevenueMix();
+  const utilization = useInvestorUtilization();
+  const realization = useInvestorRealization();
 
   // Revenue metrics from DB (investor metrics RPC)
   const combinedTotalRevenue = (investorMetrics?.combined_total_revenue_cents ?? 0) / 100;
@@ -432,6 +448,99 @@ export function InvestorDashboardPage() {
 
   const isLoading = loading || combinedRevenueLoading || investorMetricsLoading;
 
+  // ===========================================================================
+  // INVESTOR ANALYTICS — PRESENTATION SHAPING ONLY (no business math)
+  // All values below are DB-computed; we only divide cents→dollars for display,
+  // rename keys to the chart contract, and pick the latest completed row.
+  // ===========================================================================
+  const centsToNum = (cents: number | null | undefined) => (cents ?? 0) / 100;
+
+  // --- Profitability & efficiency ---
+  const profitTrendData = useMemo(
+    () =>
+      profitEfficiency.rows.map((r) => ({
+        month: r.month,
+        all_in_profit: centsToNum(r.all_in_profit_cents),
+        all_in_margin_pct: r.all_in_margin_pct,
+        ts_margin_pct: r.ts_margin_pct,
+        cost_coverage_pct: r.cost_coverage_pct,
+      })),
+    [profitEfficiency.rows]
+  );
+  const latestProfit = profitEfficiency.rows.at(-1) ?? null;
+  // Any month not fully cost-verified (coverage < 100%) gets a caption, per spec.
+  const hasUnverifiedCoverage = useMemo(
+    () => profitEfficiency.rows.some((r) => (r.cost_coverage_pct ?? 0) < 100),
+    [profitEfficiency.rows]
+  );
+
+  // --- Revenue mix + run-rate ---
+  const revenueMixData = useMemo(
+    () =>
+      revenueMix.byMonth.map((r) => ({
+        month: r.month,
+        recurring: centsToNum(r.recurring_cents),
+        project: centsToNum(r.project_cents),
+        one_time: centsToNum(r.one_time_cents),
+        reimbursement: centsToNum(r.reimbursement_cents),
+      })),
+    [revenueMix.byMonth]
+  );
+  const latestMix = revenueMix.byMonth.at(-1) ?? null;
+  const latestRecurringPct = useMemo(() => {
+    if (!latestMix || !latestMix.combined_cents) return null;
+    return (latestMix.recurring_cents / latestMix.combined_cents) * 100;
+  }, [latestMix]);
+
+  // --- Client concentration ---
+  const concentrationRankData = useMemo(
+    () =>
+      concentration.latest.map((c) => ({
+        // BarChartAtom horizontal mode uses categoryKey for the label + value for length
+        month: c.company_name,
+        company_name: c.company_name,
+        value: centsToNum(c.revenue_cents),
+        pct: c.pct,
+      })),
+    [concentration.latest]
+  );
+  const concentrationTrendData = useMemo(
+    () =>
+      concentration.byMonth.map((r) => ({
+        month: r.month,
+        top1_pct: r.top1_pct,
+        top5_pct: r.top5_pct,
+      })),
+    [concentration.byMonth]
+  );
+  const latestConcentration = concentration.byMonth.at(-1) ?? null;
+
+  // --- Utilization ---
+  const utilizationTrendData = useMemo(
+    () =>
+      utilization.rows.map((r) => ({
+        month: r.month,
+        utilization_pct: r.utilization_pct,
+      })),
+    [utilization.rows]
+  );
+
+  // --- Realization & effective rate ---
+  const realizationTrendData = useMemo(
+    () =>
+      realization.rows.map((r) => ({
+        month: r.month,
+        realization_pct: r.realization_pct,
+        effective_rate: centsToNum(r.effective_rate_cents),
+      })),
+    [realization.rows]
+  );
+  const latestRealization = realization.rows.at(-1) ?? null;
+
+  // Shared display formatters (presentation only)
+  const formatPct = (value: number) => `${value.toFixed(1)}%`;
+  const formatPerHead = (cents: number) => formatCurrency(centsToNum(cents));
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
@@ -709,6 +818,275 @@ export function InvestorDashboardPage() {
               )}
             </Card>
           </div>
+
+          {/* ================================================================ */}
+          {/* INVESTOR ANALYTICS — DB-COMPUTED CHARTS                          */}
+          {/* ================================================================ */}
+
+          {/* --- Profitability & Efficiency --- */}
+          <Card variant="default" padding="lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-vercel-gray-600">
+                  Profitability &amp; Efficiency
+                </h3>
+                {hasUnverifiedCoverage && (
+                  <p className="text-xs text-warning font-mono mt-0.5">
+                    Months with labor-cost coverage &lt; 100% are not fully cost-verified.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {profitEfficiency.error ? (
+              <Alert message={profitEfficiency.error} icon="error" variant="error" />
+            ) : profitEfficiency.loading ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="md" />
+              </div>
+            ) : profitTrendData.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <MetricCard
+                    title="All-In Margin"
+                    value={latestProfit ? formatPct(latestProfit.all_in_margin_pct) : '—'}
+                  />
+                  <MetricCard
+                    title="Timesheet Margin"
+                    value={latestProfit ? formatPct(latestProfit.ts_margin_pct) : '—'}
+                  />
+                  <MetricCard
+                    title="Revenue / Resource"
+                    value={latestProfit ? formatPerHead(latestProfit.revenue_per_resource_cents) : '—'}
+                  />
+                  <MetricCard
+                    title="Profit / Resource"
+                    value={latestProfit ? formatPerHead(latestProfit.profit_per_resource_cents) : '—'}
+                  />
+                </div>
+                <TrendLineAtom
+                  data={profitTrendData}
+                  series={[
+                    { dataKey: 'all_in_profit', name: 'All-In Profit', color: chartColors.bteamBrand, yAxisId: 'right' },
+                    { dataKey: 'all_in_margin_pct', name: 'All-In Margin', color: chartColors.brandIndigo, yAxisId: 'left' },
+                    { dataKey: 'ts_margin_pct', name: 'Timesheet Margin', color: chartColors.brandPurple, strokeDasharray: '5 5', yAxisId: 'left' },
+                  ]}
+                  leftFormatter={(v) => `${v}%`}
+                  rightFormatter={formatChartCurrency}
+                />
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No profitability data available
+              </div>
+            )}
+          </Card>
+
+          {/* --- Revenue Mix + Run-Rate --- */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
+            <Card variant="default" padding="lg">
+              <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+                Revenue Mix
+              </h3>
+              {revenueMix.error ? (
+                <Alert message={revenueMix.error} icon="error" variant="error" />
+              ) : revenueMix.loading ? (
+                <div className="flex items-center justify-center h-[250px]">
+                  <Spinner size="md" />
+                </div>
+              ) : revenueMixData.length > 0 ? (
+                <CompositionBarAtom
+                  data={revenueMixData}
+                  series={[
+                    { dataKey: 'recurring', name: 'Recurring', color: pieChartColorSequence[0] },
+                    { dataKey: 'project', name: 'Project', color: pieChartColorSequence[1] },
+                    { dataKey: 'one_time', name: 'One-Time', color: pieChartColorSequence[2] },
+                    { dataKey: 'reimbursement', name: 'Reimbursement', color: pieChartColorSequence[3] },
+                  ]}
+                  yAxisFormatter={formatChartCurrency}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                  No revenue mix data available
+                </div>
+              )}
+            </Card>
+
+            <Card variant="default" padding="lg">
+              <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+                Committed Run-Rate
+              </h3>
+              {revenueMix.error ? (
+                <Alert message={revenueMix.error} icon="error" variant="error" />
+              ) : revenueMix.loading ? (
+                <div className="flex items-center justify-center h-[120px]">
+                  <Spinner size="md" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  <MetricCard
+                    title="Committed Monthly Run-Rate"
+                    value={formatCurrency(centsToNum(revenueMix.committed_monthly_run_rate_cents))}
+                  />
+                  <MetricCard
+                    title="Recurring % (latest month)"
+                    value={latestRecurringPct != null ? formatPct(latestRecurringPct) : '—'}
+                  />
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* --- Client Concentration --- */}
+          <Card variant="default" padding="lg">
+            <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
+              Client Concentration
+            </h3>
+            {concentration.error ? (
+              <Alert message={concentration.error} icon="error" variant="error" />
+            ) : concentration.loading ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="md" />
+              </div>
+            ) : concentrationRankData.length > 0 || concentrationTrendData.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <MetricCard
+                    title="Top Client %"
+                    value={latestConcentration ? formatPct(latestConcentration.top1_pct) : '—'}
+                  />
+                  <MetricCard
+                    title="Top 5 Clients %"
+                    value={latestConcentration ? formatPct(latestConcentration.top5_pct) : '—'}
+                  />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs text-vercel-gray-400 font-mono mb-2">
+                      Latest month revenue by client
+                    </p>
+                    {concentrationRankData.length > 0 ? (
+                      <BarChartAtom
+                        data={concentrationRankData}
+                        layout="horizontal"
+                        categoryKey="company_name"
+                        fillColor={chartColors.brandIndigo}
+                        valueFormatter={formatChartCurrency}
+                        yAxisFormatter={formatChartCurrency}
+                        valueLabel="Revenue"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                        No client revenue for latest month
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-vercel-gray-400 font-mono mb-2">
+                      Concentration over time
+                    </p>
+                    {concentrationTrendData.length > 0 ? (
+                      <TrendLineAtom
+                        data={concentrationTrendData}
+                        series={[
+                          { dataKey: 'top1_pct', name: 'Top Client', color: chartColors.bteamBrand },
+                          { dataKey: 'top5_pct', name: 'Top 5 Clients', color: chartColors.brandIndigo },
+                        ]}
+                        leftFormatter={(v) => `${v}%`}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                        No concentration trend available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No client concentration data available
+              </div>
+            )}
+          </Card>
+
+          {/* --- Efficiency / Utilization --- */}
+          <Card variant="default" padding="lg">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-vercel-gray-600">
+                Utilization Trend
+              </h3>
+              <p className="text-xs text-vercel-gray-400 font-mono mt-0.5">
+                Include-contractors basis.
+              </p>
+            </div>
+            {utilization.error ? (
+              <Alert message={utilization.error} icon="error" variant="error" />
+            ) : utilization.loading ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="md" />
+              </div>
+            ) : utilizationTrendData.length > 0 ? (
+              <TrendLineAtom
+                data={utilizationTrendData}
+                series={[
+                  { dataKey: 'utilization_pct', name: 'Utilization', color: chartColors.success },
+                ]}
+                leftFormatter={(v) => `${v}%`}
+                showLegend={false}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No utilization data available
+              </div>
+            )}
+          </Card>
+
+          {/* --- Realization & Effective Rate --- */}
+          <Card variant="default" padding="lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-vercel-gray-600">
+                  Realization &amp; Effective Rate
+                </h3>
+                <p className="text-xs text-vercel-gray-400 font-mono mt-0.5">
+                  &gt;100% = minimum-floor padding; &lt;100% = carryover / unbillable hours.
+                </p>
+              </div>
+            </div>
+            {realization.error ? (
+              <Alert message={realization.error} icon="error" variant="error" />
+            ) : realization.loading ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <Spinner size="md" />
+              </div>
+            ) : realizationTrendData.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <MetricCard
+                    title="Realization (latest)"
+                    value={latestRealization ? formatPct(latestRealization.realization_pct) : '—'}
+                  />
+                  <MetricCard
+                    title="Effective Rate (latest)"
+                    value={latestRealization ? `$${centsToNum(latestRealization.effective_rate_cents).toFixed(2)}` : '—'}
+                  />
+                </div>
+                <TrendLineAtom
+                  data={realizationTrendData}
+                  series={[
+                    { dataKey: 'realization_pct', name: 'Realization', color: chartColors.brandPurple, yAxisId: 'left' },
+                    { dataKey: 'effective_rate', name: 'Effective Rate', color: chartColors.bteamBrand, yAxisId: 'right' },
+                  ]}
+                  leftFormatter={(v) => `${v}%`}
+                  rightFormatter={formatChartCurrency}
+                />
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
+                No realization data available
+              </div>
+            )}
+          </Card>
         </>
       )}
     </div>

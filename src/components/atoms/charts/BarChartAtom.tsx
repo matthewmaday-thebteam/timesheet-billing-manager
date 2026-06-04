@@ -43,6 +43,8 @@ export interface BarChartDataPoint {
   month: string;
   /** Value (can be positive or negative) */
   value: number | null;
+  /** Additional category fields (e.g. a company_name used as categoryKey) */
+  [key: string]: string | number | null | undefined;
 }
 
 export interface BarChartAtomProps extends HTMLAttributes<HTMLDivElement> {
@@ -62,6 +64,14 @@ export interface BarChartAtomProps extends HTMLAttributes<HTMLDivElement> {
   valueLabel?: string;
   /** Single fill color for all bars (overrides positive/negative coloring) */
   fillColor?: string;
+  /**
+   * Bar orientation. 'vertical' (default) keeps the original month-on-X behavior.
+   * 'horizontal' renders ranked bars with the category on the Y axis — useful for
+   * top-N rankings.
+   */
+  layout?: 'vertical' | 'horizontal';
+  /** Key in each data point used for the category axis label (default: 'month') */
+  categoryKey?: string;
 }
 
 // Default formatter for percentage values
@@ -84,6 +94,8 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
       yAxisFormatter = defaultYAxisFormatter,
       valueLabel = 'Growth',
       fillColor,
+      layout = 'vertical',
+      categoryKey = 'month',
       className = '',
       ...props
     },
@@ -95,37 +107,65 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
       valueLabel,
     ];
 
+    const isHorizontal = layout === 'horizontal';
+
+    // Category axis renders the labels (month or a custom key); value axis is
+    // formatted numerically. In horizontal mode these swap orientation so the
+    // category sits on the Y axis and values extend along the X axis.
+    const categoryAxisProps = {
+      type: (isHorizontal ? 'category' : undefined) as 'category' | undefined,
+      dataKey: categoryKey,
+      tick: axisTickStyle,
+      axisLine: axisLineStyle,
+      tickLine: axisLineStyle,
+    };
+    const valueAxisProps = {
+      type: (isHorizontal ? 'number' : undefined) as 'number' | undefined,
+      tick: axisTickStyle,
+      axisLine: axisLineStyle,
+      tickLine: axisLineStyle,
+      tickFormatter: yAxisFormatter,
+    };
+
     return (
       <div
         ref={ref}
         className={`w-full ${className}`}
         role="img"
-        aria-label={`Bar chart showing ${data.length} months of data`}
+        aria-label={`Bar chart showing ${data.length} ${isHorizontal ? 'ranked categories' : 'months'} of data`}
         {...props}
       >
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} margin={chartMargin}>
+          <BarChart
+            data={data}
+            margin={chartMargin}
+            layout={isHorizontal ? 'vertical' : 'horizontal'}
+          >
             {showGrid && (
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke={chartColors.gridLine}
-                vertical={false}
+                vertical={isHorizontal}
+                horizontal={!isHorizontal}
               />
             )}
-            <XAxis
-              dataKey="month"
-              tick={axisTickStyle}
-              axisLine={axisLineStyle}
-              tickLine={axisLineStyle}
-            />
-            <YAxis
-              tick={axisTickStyle}
-              axisLine={axisLineStyle}
-              tickLine={axisLineStyle}
-              tickFormatter={yAxisFormatter}
-            />
-            {/* Zero reference line */}
-            <ReferenceLine y={0} stroke={chartColors.axisLine} strokeWidth={1} />
+            {isHorizontal ? (
+              <>
+                <XAxis {...valueAxisProps} />
+                <YAxis width={120} {...categoryAxisProps} />
+              </>
+            ) : (
+              <>
+                <XAxis {...categoryAxisProps} />
+                <YAxis {...valueAxisProps} />
+              </>
+            )}
+            {/* Zero reference line (value axis) */}
+            {isHorizontal ? (
+              <ReferenceLine x={0} stroke={chartColors.axisLine} strokeWidth={1} />
+            ) : (
+              <ReferenceLine y={0} stroke={chartColors.axisLine} strokeWidth={1} />
+            )}
             {showTooltip && (
               <Tooltip
                 contentStyle={tooltipStyle}
@@ -133,7 +173,10 @@ export const BarChartAtom = forwardRef<HTMLDivElement, BarChartAtomProps>(
                 labelStyle={{ fontFamily: chartFontFamily }}
               />
             )}
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="value"
+              radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+            >
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
