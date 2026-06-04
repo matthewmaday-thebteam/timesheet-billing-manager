@@ -965,7 +965,7 @@ export function InvestorDashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <p className="text-xs text-vercel-gray-400 font-mono mb-2">
-                      Latest month revenue by client
+                      Revenue by Client (YTD)
                     </p>
                     {concentrationRankData.length > 0 ? (
                       <BarChartAtom
@@ -979,7 +979,7 @@ export function InvestorDashboardPage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-[250px] text-vercel-gray-400 font-mono text-sm">
-                        No client revenue for latest month
+                        No client revenue for YTD
                       </div>
                     )}
                   </div>
