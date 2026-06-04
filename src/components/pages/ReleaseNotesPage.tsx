@@ -91,8 +91,8 @@ export function ReleaseNotesPage() {
                     {note.title}
                   </h2>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-vercel-gray-400">
-                    {note.highlights.map((item) => (
-                      <li key={item}>{item}</li>
+                    {note.highlights.map((item, idx) => (
+                      <li key={`${note.version}-${idx}`}>{item}</li>
                     ))}
                   </ul>
                 </div>
