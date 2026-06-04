@@ -11,6 +11,18 @@ const BASE_BUILD = 97;
 export const releaseNotes: ReleaseNote[] = [
   {
     version: '',  // computed below
+    date: '2026-06-04',
+    title: 'QuickBooks Invoice Fix & Always-On SLA/Milestone Revenue',
+    highlights: [
+      'Fixed: QuickBooks invoices now send for customers with very large task lists. When a project\'s task breakdown exceeded QuickBooks’ 4,000-character description limit, the invoice was rejected (first hit by Neocurrency at 4,968 characters). The breakdown is now safely summarized with a "…(+N more tasks, X.X hrs)" line so the invoice always sends. Billed amounts, quantities, and rates are unchanged.',
+      'Fixed: fixed-rate / minimum-hours (SLA) projects now show their committed monthly revenue on reports and invoices even in months with zero logged hours. Previously a zero-activity month produced no revenue row, so the monthly amount silently disappeared (surfaced on a $9,600/mo SLA).',
+      'Added: automatic month-start materialization of SLA/floor revenue so a future zero-activity month can never silently drop the committed amount again.',
+      'Fixed: recovered a recorded milestone payment that was missing from a current-month total — a $7,500 June milestone that had not been applied to the monthly summary.',
+      'Internal: began foundational work to resolve revenue at read time so contractual revenue (floor, fixed, and milestone) is always represented consistently across every screen and report. This groundwork is not yet active in the UI — no user-facing display changed in this release.',
+    ],
+  },
+  {
+    version: '',  // computed below
     date: '2026-05-06',
     title: 'Revenue Report Task Row Math Fix',
     highlights: [
