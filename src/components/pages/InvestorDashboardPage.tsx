@@ -480,8 +480,7 @@ export function InvestorDashboardPage() {
       revenueMix.byMonth.map((r) => ({
         month: r.month,
         recurring: centsToNum(r.recurring_cents),
-        project: centsToNum(r.project_cents),
-        one_time: centsToNum(r.one_time_cents),
+        one_off: centsToNum(r.one_off_cents),
         reimbursement: centsToNum(r.reimbursement_cents),
       })),
     [revenueMix.byMonth]
@@ -513,7 +512,6 @@ export function InvestorDashboardPage() {
       })),
     [concentration.byMonth]
   );
-  const latestConcentration = concentration.byMonth.at(-1) ?? null;
 
   // --- Utilization ---
   const utilizationTrendData = useMemo(
@@ -899,9 +897,8 @@ export function InvestorDashboardPage() {
                   data={revenueMixData}
                   series={[
                     { dataKey: 'recurring', name: 'Recurring', color: pieChartColorSequence[0] },
-                    { dataKey: 'project', name: 'Project', color: pieChartColorSequence[1] },
-                    { dataKey: 'one_time', name: 'One-Time', color: pieChartColorSequence[2] },
-                    { dataKey: 'reimbursement', name: 'Reimbursement', color: pieChartColorSequence[3] },
+                    { dataKey: 'one_off', name: 'One-off / Project-based', color: pieChartColorSequence[1] },
+                    { dataKey: 'reimbursement', name: 'Reimbursement', color: pieChartColorSequence[2] },
                   ]}
                   yAxisFormatter={formatChartCurrency}
                 />
@@ -914,7 +911,7 @@ export function InvestorDashboardPage() {
 
             <Card variant="default" padding="lg">
               <h3 className="text-lg font-semibold text-vercel-gray-600 mb-4">
-                Committed Run-Rate
+                Recurring Run-Rate
               </h3>
               {revenueMix.error ? (
                 <Alert message={revenueMix.error} icon="error" variant="error" />
@@ -924,10 +921,15 @@ export function InvestorDashboardPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  <MetricCard
-                    title="Committed Monthly Run-Rate"
-                    value={formatCurrency(centsToNum(revenueMix.committed_monthly_run_rate_cents))}
-                  />
+                  <div>
+                    <MetricCard
+                      title="Recurring Run-Rate"
+                      value={formatCurrency(centsToNum(revenueMix.recurring_run_rate_cents))}
+                    />
+                    <p className="text-xs text-vercel-gray-400 font-mono mt-1.5">
+                      Trailing 3-mo avg of recurring revenue (forward estimate, not booked).
+                    </p>
+                  </div>
                   <MetricCard
                     title="Recurring % (latest month)"
                     value={latestRecurringPct != null ? formatPct(latestRecurringPct) : '—'}
@@ -952,12 +954,12 @@ export function InvestorDashboardPage() {
               <>
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <MetricCard
-                    title="Top Client %"
-                    value={latestConcentration ? formatPct(latestConcentration.top1_pct) : '—'}
+                    title="Top Client % (YTD)"
+                    value={concentration.ytd ? formatPct(concentration.ytd.top1_pct) : '—'}
                   />
                   <MetricCard
-                    title="Top 5 Clients %"
-                    value={latestConcentration ? formatPct(latestConcentration.top5_pct) : '—'}
+                    title="Top 5 Clients % (YTD)"
+                    value={concentration.ytd ? formatPct(concentration.ytd.top5_pct) : '—'}
                   />
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

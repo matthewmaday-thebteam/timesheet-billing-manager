@@ -3,9 +3,9 @@
  * Dashboard, computed entirely in the database.
  *
  * Calls get_investor_concentration(p_start, p_end, p_top_n). The RPC returns a
- * single result set discriminated by row_kind ('trend' | 'breakdown'); this
- * hook splits it into the agreed contract shape { byMonth, latest } and maps
- * Postgres numerics to numbers. No arithmetic beyond that mapping.
+ * single result set discriminated by row_kind ('trend' | 'breakdown' | 'ytd');
+ * this hook splits it into the agreed contract shape { byMonth, latest, ytd }
+ * and maps Postgres numerics to numbers. No arithmetic beyond that mapping.
  *
  * Return shape is the agreed FRONTEND/BACKEND CONTRACT and must not change.
  *
@@ -27,9 +27,15 @@ export interface InvestorConcentrationCompany {
   pct: number;
 }
 
+export interface InvestorConcentrationYtd {
+  top1_pct: number;
+  top5_pct: number;
+}
+
 export interface UseInvestorConcentrationReturn {
   byMonth: InvestorConcentrationMonth[];
   latest: InvestorConcentrationCompany[];
+  ytd: InvestorConcentrationYtd;
   loading: boolean;
   error: string | null;
 }
@@ -55,6 +61,7 @@ interface ConcentrationRpcRow {
 export function useInvestorConcentration(): UseInvestorConcentrationReturn {
   const [byMonth, setByMonth] = useState<InvestorConcentrationMonth[]>([]);
   const [latest, setLatest] = useState<InvestorConcentrationCompany[]>([]);
+  const [ytd, setYtd] = useState<InvestorConcentrationYtd>({ top1_pct: 0, top5_pct: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +79,7 @@ export function useInvestorConcentration(): UseInvestorConcentrationReturn {
         setError(rpcError.message);
         setByMonth([]);
         setLatest([]);
+        setYtd({ top1_pct: 0, top5_pct: 0 });
       } else {
         const rows = (Array.isArray(data) ? data : []) as ConcentrationRpcRow[];
         setByMonth(
@@ -92,6 +100,11 @@ export function useInvestorConcentration(): UseInvestorConcentrationReturn {
               pct: num(r.pct),
             })),
         );
+        const ytdRow = rows.find((r) => r.row_kind === 'ytd');
+        setYtd({
+          top1_pct: num(ytdRow?.top1_pct),
+          top5_pct: num(ytdRow?.top5_pct),
+        });
       }
       setLoading(false);
     })();
@@ -100,7 +113,7 @@ export function useInvestorConcentration(): UseInvestorConcentrationReturn {
     };
   }, []);
 
-  return { byMonth, latest, loading, error };
+  return { byMonth, latest, ytd, loading, error };
 }
 
 export default useInvestorConcentration;

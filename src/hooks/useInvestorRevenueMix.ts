@@ -1,11 +1,21 @@
 /**
- * useInvestorRevenueMix — Revenue-mix and committed run-rate series for the
- * Investor Dashboard, computed entirely in the database.
+ * useInvestorRevenueMix — Revenue-mix (SLA model) and trailing recurring
+ * run-rate for the Investor Dashboard, computed entirely in the database.
  *
  * Calls get_investor_revenue_mix(p_start, p_end). ALL calculations happen in
- * SQL; this hook splits the per-month rows into the agreed contract shape and
- * maps Postgres bigint/numeric (string|number) to numbers. The committed run
- * rate is identical on every row, so it is read off the first row.
+ * SQL; this hook maps the per-month rows into the agreed contract shape and
+ * coerces Postgres bigint/numeric (string|number) to numbers — no browser math
+ * beyond that cents→number coercion.
+ *
+ * SLA buckets (per migration 123): recurring = SLA/timesheet hourly revenue +
+ * recurring fixed billings (subscription/service_fee/license); one_off =
+ * milestone overrides (delivery) + unlinked revenue_milestone billings;
+ * reimbursement = pass-through. By construction
+ * recurring + one_off + reimbursement == combined per month.
+ *
+ * recurring_run_rate_cents is a trailing-average estimate of the ongoing
+ * recurring base (AVG of recurring_cents over the last 3 completed months);
+ * it is identical on every row, so it is read off the first row.
  *
  * Return shape is the agreed FRONTEND/BACKEND CONTRACT and must not change.
  *
@@ -18,23 +28,19 @@ import { supabase } from '../lib/supabase';
 export interface InvestorRevenueMixMonth {
   month: string;
   recurring_cents: number;
-  project_cents: number;
-  one_time_cents: number;
+  one_off_cents: number;
   reimbursement_cents: number;
   combined_cents: number;
-  /**
-   * F1 reconciliation residual = combined − (project+recurring+one_time+
-   * reimbursement). Expected 0 when buckets are sourced consistently; surfaced
-   * (never folded into project_cents) so a non-zero delta is observable. Additive
-   * field — the page contract (month/recurring/project/one_time/reimbursement/
-   * combined + run rate) is unchanged.
-   */
-  reconciliation_delta_cents: number;
 }
 
 export interface UseInvestorRevenueMixReturn {
   byMonth: InvestorRevenueMixMonth[];
-  committed_monthly_run_rate_cents: number;
+  /**
+   * Trailing-average estimate of the ongoing recurring base = AVG of
+   * recurring_cents over the last 3 completed months (fewer if less data).
+   * Identical on every RPC row; read off the first row.
+   */
+  recurring_run_rate_cents: number;
   loading: boolean;
   error: string | null;
 }
@@ -44,6 +50,16 @@ function num(value: unknown): number {
   if (value === null || value === undefined) return 0;
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isNaN(n) ? 0 : n;
+}
+
+interface RevenueMixRpcRow {
+  summary_month: string;
+  recurring_cents: number | string | null;
+  one_off_cents: number | string | null;
+  reimbursement_cents: number | string | null;
+  combined_cents: number | string | null;
+  reconciliation_delta_cents: number | string | null;
+  recurring_run_rate_cents: number | string | null;
 }
 
 export function useInvestorRevenueMix(): UseInvestorRevenueMixReturn {
@@ -67,19 +83,17 @@ export function useInvestorRevenueMix(): UseInvestorRevenueMixReturn {
         setByMonth([]);
         setRunRate(0);
       } else {
-        const rows = Array.isArray(data) ? data : [];
+        const rows = (Array.isArray(data) ? data : []) as RevenueMixRpcRow[];
         setByMonth(
           rows.map((r) => ({
             month: String(r.summary_month),
             recurring_cents: num(r.recurring_cents),
-            project_cents: num(r.project_cents),
-            one_time_cents: num(r.one_time_cents),
+            one_off_cents: num(r.one_off_cents),
             reimbursement_cents: num(r.reimbursement_cents),
             combined_cents: num(r.combined_cents),
-            reconciliation_delta_cents: num(r.reconciliation_delta_cents),
           })),
         );
-        setRunRate(rows.length > 0 ? num(rows[0].committed_monthly_run_rate_cents) : 0);
+        setRunRate(rows.length > 0 ? num(rows[0].recurring_run_rate_cents) : 0);
       }
       setLoading(false);
     })();
@@ -88,7 +102,7 @@ export function useInvestorRevenueMix(): UseInvestorRevenueMixReturn {
     };
   }, []);
 
-  return { byMonth, committed_monthly_run_rate_cents: runRate, loading, error };
+  return { byMonth, recurring_run_rate_cents: runRate, loading, error };
 }
 
 export default useInvestorRevenueMix;
