@@ -140,6 +140,18 @@ export const organisms: DesignSystemEntry[] = [
   },
 
   // ---------------------------------------------------------------------------
+  // Release notes organisms
+  // ---------------------------------------------------------------------------
+  {
+    name: 'ReleaseNoteTable',
+    description: 'Table of all release notes with version, date, title, status badge, and edit/publish/delete actions.',
+    tier: 'organism',
+    filePath: 'src/components/ReleaseNoteTable.tsx',
+    composedOf: ['Badge', 'Spinner', 'DropdownMenu'],
+    usedIn: ['ReleaseNotesAdminPage'],
+  },
+
+  // ---------------------------------------------------------------------------
   // User organisms
   // ---------------------------------------------------------------------------
   {
@@ -209,6 +221,14 @@ export const organisms: DesignSystemEntry[] = [
     filePath: 'src/components/HolidayEditorModal.tsx',
     composedOf: ['Modal', 'Input', 'Select', 'DatePicker', 'Button', 'Spinner'],
     usedIn: ['HolidaysPage'],
+  },
+  {
+    name: 'ReleaseNoteEditorModal',
+    description: 'Modal for creating/editing release notes with title, version label, date picker, highlights textarea, and published toggle.',
+    tier: 'organism',
+    filePath: 'src/components/ReleaseNoteEditorModal.tsx',
+    composedOf: ['Modal', 'Input', 'DatePicker', 'Toggle', 'Button', 'Spinner'],
+    usedIn: ['ReleaseNotesAdminPage'],
   },
   {
     name: 'CompanyEditorModal',

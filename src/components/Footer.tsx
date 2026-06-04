@@ -17,7 +17,7 @@ import { useState } from 'react';
 import type { NavRoute } from './MainHeader';
 import { LegalModal } from './LegalModal';
 import { useActiveLegalDocuments } from '../hooks/useLegalDocuments';
-import { MANIFEST_VERSION } from '../data/releaseNotes';
+import { MANIFEST_VERSION } from '../lib/appVersion';
 
 interface FooterProps {
   onNavigate?: (route: NavRoute) => void;

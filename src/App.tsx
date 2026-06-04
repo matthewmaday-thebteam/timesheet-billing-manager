@@ -23,6 +23,7 @@ import { FormulasPage } from './components/pages/FormulasPage';
 import { InvestorDashboardPage } from './components/pages/InvestorDashboardPage';
 import { LegalPage } from './components/pages/LegalPage';
 import { ReleaseNotesPage } from './components/pages/ReleaseNotesPage';
+import { ReleaseNotesAdminPage } from './components/pages/ReleaseNotesAdminPage';
 import { BurnPage } from './components/pages/BurnPage';
 import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
@@ -109,6 +110,8 @@ function AuthenticatedApp() {
         return <LegalPage />;
       case 'release-notes':
         return <ReleaseNotesPage />;
+      case 'release-notes-admin':
+        return <ReleaseNotesAdminPage />;
       default:
         return <Dashboard syncAlerts={syncAlerts} syncAlertsLoading={syncAlertsLoading} onDismissAlert={dismissSyncAlert} />;
     }
