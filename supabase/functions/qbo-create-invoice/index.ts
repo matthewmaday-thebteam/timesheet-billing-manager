@@ -231,6 +231,62 @@ function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * Build the task-breakdown string for a QBO line Description under a character
+ * budget. QBO enforces a hard 4,000-char limit on Line.Description; an unbounded
+ * one-line-per-task concatenation can overflow it (e.g. Neocurrency at 4,968).
+ *
+ * Emits `\n{name}: {hrs} hrs` lines in the supplied (already-sorted, highest
+ * minutes first) order, using the same rounding as the rest of the function
+ * (`Math.round((mins/60)*100)/100`). Stops before exceeding `charBudget`; if any
+ * tasks are omitted, appends `\n…(+{N} more tasks, {X.X} hrs)` so the disclosed
+ * hours plus omitted hours still reconcile to the line Qty.
+ *
+ * Pure: does NOT compute the rounding-integrity sum — that is summed over the
+ * FULL task set independently of this (possibly truncated) display string.
+ */
+function buildTaskBreakdownText(
+  sortedTasks: [string, number][],
+  charBudget: number,
+): string {
+  let text = '';
+  let omittedCount = 0;
+  let omittedMinutes = 0;
+
+  for (let i = 0; i < sortedTasks.length; i++) {
+    const [name, mins] = sortedTasks[i];
+    const hrs = Math.round((mins / 60) * 100) / 100;
+    const line = `\n${name}: ${hrs} hrs`;
+
+    if (omittedCount > 0) {
+      // Once we've started omitting, omit the rest (preserve sorted priority).
+      omittedCount += 1;
+      omittedMinutes += mins;
+      continue;
+    }
+
+    const remaining = sortedTasks.length - 1 - i;
+    // Reserve room for a potential overflow footer if more tasks remain.
+    const footerReserve = remaining > 0
+      ? `\n…(+${remaining} more tasks, ${(omittedMinutes / 60).toFixed(1)} hrs)`.length
+      : 0;
+
+    if (text.length + line.length + footerReserve <= charBudget) {
+      text += line;
+    } else {
+      omittedCount += 1;
+      omittedMinutes += mins;
+    }
+  }
+
+  if (omittedCount > 0) {
+    const omittedHrs = Math.round((omittedMinutes / 60) * 10) / 10;
+    text += `\n…(+${omittedCount} more tasks, ${omittedHrs.toFixed(1)} hrs)`;
+  }
+
+  return text;
+}
+
 // =============================================================================
 // Main handler
 // =============================================================================
@@ -716,16 +772,19 @@ serve(async (req) => {
       // rounding mode and increment — same source recalculate_project_month
       // consumed when populating project_monthly_summary.
       const projectTasks = tasksByCanonicalProject.get(canonicalProjectId);
-      let taskLines = '';
-      let taskRoundedMinutesSum = 0;
 
-      if (projectTasks && projectTasks.size > 0) {
-        const sorted = [...projectTasks.entries()].sort((a, b) => b[1] - a[1]);
-        taskLines = '\n' + sorted.map(([name, mins]) => {
-          taskRoundedMinutesSum += mins;
-          const hrs = Math.round((mins / 60) * 100) / 100;
-          return `${name}: ${hrs} hrs`;
-        }).join('\n');
+      // Sort once (highest minutes first) — reused for both the integrity sum
+      // (over ALL tasks) and the (possibly truncated) display string.
+      const sortedTasks: [string, number][] = projectTasks && projectTasks.size > 0
+        ? [...projectTasks.entries()].sort((a, b) => b[1] - a[1])
+        : [];
+
+      // Integrity sum is computed over the FULL task set, independent of the
+      // (budget-truncated) display string built below. This MUST stay byte-exact
+      // with the prior behavior so the rounding assertion is unchanged.
+      let taskRoundedMinutesSum = 0;
+      for (const [, mins] of sortedTasks) {
+        taskRoundedMinutesSum += mins;
       }
 
       // Round-trip integrity (only meaningful for non-milestone projects since
@@ -756,15 +815,27 @@ serve(async (req) => {
         }
       }
 
+      // Build the header first so the task breakdown can be budgeted against
+      // QBO's hard 4,000-char Line.Description limit (header + breakdown ≤ 4000).
+      let header: string;
       if (milestoneCents !== undefined) {
-        description = `${projectName} - ${monthLabel} (Fixed Bid)${taskLines}`;
+        header = `${projectName} - ${monthLabel} (Fixed Bid)`;
         qty = 1;
         unitPrice = amount;
       } else {
-        description = `${projectName} - ${monthLabel} - ${billedHours} hrs @ $${rate}/hr${taskLines}`;
+        header = `${projectName} - ${monthLabel} - ${billedHours} hrs @ $${rate}/hr`;
         qty = billedHours;
         unitPrice = rate;
       }
+
+      // Budget leaves headroom for the header plus a small safety margin.
+      const taskLines = sortedTasks.length > 0
+        ? buildTaskBreakdownText(sortedTasks, 4000 - header.length - 40)
+        : '';
+      description = `${header}${taskLines}`;
+
+      // Defense-in-depth: hard-clamp to QBO's 4,000-char Line.Description limit.
+      description = description.slice(0, 4000);
 
       const itemRefId = milestoneCents !== undefined ? fixedBidId : timeAndMaterialsId;
 
@@ -830,8 +901,10 @@ serve(async (req) => {
       EmailStatus: 'NotSet',
       ...(billEmail ? { BillEmail: { Address: billEmail } } : {}),
       GlobalTaxCalculation: 'NotApplicable',
-      PrivateNote: `Manifest EOM Report - ${monthLabel}`,
+      // QBO documented limit: PrivateNote 4,000 chars. Guard defensively.
+      PrivateNote: `Manifest EOM Report - ${monthLabel}`.slice(0, 4000),
       CustomerMemo: {
+        // QBO documented limit: CustomerMemo.value 1,000 chars. Guard defensively.
         value: [
           'Wise Wire and Credit Card Information',
           '',
@@ -840,7 +913,7 @@ serve(async (req) => {
           'Account Number:            BG51UNCR70001522532201   (NEW)',
           'BIC/Swift:                          UNCRBGSF',
           'Currency:                             Select USD to BGN',
-        ].join('\n'),
+        ].join('\n').slice(0, 1000),
       },
       Line: lineItems,
     };
