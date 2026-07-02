@@ -105,6 +105,81 @@ test('parseBankExport: month boundary — value_date month, not booking_date mon
   assert.equal(assignMonth(f.valueDate), '2026-01');
 });
 
+// Build an HTML-<table> "bank export" from a 2-D grid, mirroring the real
+// UniCredit English-UI export (an HTML file misnamed .xls). Empty cells are
+// emitted as empty <td> so the grid keeps fixed positions for this fixture.
+function gridToHtmlXls(grid: string[][]): string {
+  const rowsHtml = grid
+    .map((row) => `<tr>${row.map((c) => `<td>${c}</td>`).join('')}</tr>`)
+    .join('');
+  return `<html><head></head><body><table>${rowsHtml}</table></body></html>`;
+}
+
+test('parseBankExport: English-UI export — Latin DR/CR marks + English header parse', () => {
+  // English header (Latin markers "Account" + "Value date"; Type column = "Type")
+  // and Latin DR/CR entry-type marks, exactly as the English eBank UI exports.
+  const header = [
+    'Account', 'Date/Time', 'Process date', 'Reference', 'Value date',
+    'Amount in currency of the account', 'Amount in currency of the transaction', 'Exchange rate',
+    'Type', 'Beneficiary IBAN', 'Beneficiary', 'IBAN Sender', 'Sender',
+    'Description of the operation', 'Details of Payment', 'Additional Details',
+  ];
+  const debitRow = ['1522532201EUR', '30.06.2026 15:48:52', '30.06.2026 15:48:52', 'ENG-DR-1', '30.06.2026',
+    '164.95', '164.95', '1.000000 EUR / EUR', 'DR', 'BG00BENEF', 'ACME LTD', 'BG51SENDER', 'THE FIRM',
+    'POS payment', 'Card operation', ''];
+  const creditRow = ['Main Assembly BGN', '30.06.2026 12:51:19', '30.06.2026 12:51:20', 'ENG-CR-1', '30.06.2026',
+    '3347.86', '3347.86', '1.000000 EUR / EUR', 'CR', 'BG75PAYER', 'MAIN ASSEMBLY', 'BG51SENDER', 'THE FIRM',
+    'Incoming transfer', 'Reimbursement', ''];
+
+  const { sourceFormat, rows } = parseBankExport(gridToHtmlXls([header, debitRow, creditRow]));
+  assert.equal(sourceFormat, 'html_xls');
+  assert.equal(rows.length, 2);
+
+  const dr = byRef(rows, 'ENG-DR-1');
+  assert.equal(dr.entryType, 'Debit'); // DR → Debit
+  assert.equal(dr.account, '1522532201EUR');
+  assert.equal(dr.accountCurrency, 'EUR');
+  assert.equal(dr.originalAmount, 164.95);
+  assert.equal(dr.beneficiary, 'ACME LTD');
+
+  const cr = byRef(rows, 'ENG-CR-1');
+  assert.equal(cr.entryType, 'Credit'); // CR → Credit
+  assert.equal(cr.originalAmount, 3347.86);
+});
+
+test('parseBankExport: English-UI export — POS row with EMPTY reference + "0.000000 EUR / EUR" rate', () => {
+  // Mirrors the real edge row: empty reference is allowed, and the SECOND rate
+  // token (EUR) resolves the account currency even at a 0.000000 rate.
+  const header = [
+    'Account', 'Date/Time', 'Process date', 'Reference', 'Value date',
+    'Amount in currency of the account', 'Amount in currency of the transaction', 'Exchange rate',
+    'Type', 'Beneficiary IBAN', 'Beneficiary', 'IBAN Sender', 'Sender',
+    'Description of the operation', 'Details of Payment', 'Additional Details',
+  ];
+  const posRow = ['1522532201EUR', '30.06.2026 15:48:52', '30.06.2026 15:48:52', '', '30.06.2026',
+    '164.95', '164.95', '0.000000 EUR / EUR', 'DR', '', '', '', '',
+    'POS 164.95 EUR www.a1.bg Sofia BGR 762720', '', ''];
+  // A dropped-cell English fee row: operation-amount and rate cells omitted so
+  // the DR mark lands at column 6 (exercises the same left-shift as the real file).
+  const feeRow = ['1522532201EUR', '25.06.2026 21:38:30', '25.06.2026 21:38:34', 'ENG-FEE-1', '26.06.2026',
+    '14.83', 'DR', '', '', '', '', 'Periodic fee'];
+
+  const { rows } = parseBankExport(gridToHtmlXls([header, posRow, feeRow]));
+  assert.equal(rows.length, 2);
+
+  const pos = rows.find((r) => r.reference === null && r.originalAmount === 164.95);
+  assert.ok(pos, 'POS row with empty reference should parse');
+  assert.equal(pos!.reference, null); // empty reference allowed
+  assert.equal(pos!.accountCurrency, 'EUR'); // second rate token resolves currency
+  assert.equal(pos!.entryType, 'Debit');
+
+  const fee = byRef(rows, 'ENG-FEE-1');
+  assert.equal(fee.entryType, 'Debit'); // DR at the left-shifted column 6
+  assert.equal(fee.originalAmount, 14.83);
+  assert.equal(fee.operationAmount, null);
+  assert.equal(fee.exchangeRateRaw, null);
+});
+
 test('parseBankExport: real .xlsx (OOXML) via SheetJS', () => {
   const header = [
     'Сметка', 'Дата/Час', 'Дата на плащане', 'Референция', 'Вальор',

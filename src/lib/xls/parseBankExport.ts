@@ -185,15 +185,31 @@ function workbookToRows(input: ArrayBuffer | Uint8Array): string[][] {
 // Header detection + ТИП-anchored row mapping
 // ---------------------------------------------------------------------------
 
-const HEADER_MARKERS = ['сметка', 'вальор'];
-const DEBIT_MARK = 'ДТ';
-const CREDIT_MARK = 'КТ';
+// Header marker PAIRS, one per UI language. A row is a header only when BOTH
+// markers of the SAME pair are present, so a mixed row (e.g. a description
+// containing "account") cannot false-match across languages.
+//   - Cyrillic UI: "Сметка" (account) + "Вальор" (value date)
+//   - English  UI: "Account"          + "Value date"
+const HEADER_MARKER_SETS: readonly (readonly [string, string])[] = [
+  ['сметка', 'вальор'],
+  ['account', 'value date'],
+];
+
+// Entry-type ("Тип"/"Type") anchor marks, keyed by direction. UniCredit prints
+// Cyrillic ДТ/КТ from the Bulgarian UI and Latin DR/CR from the English UI.
+// Matching is EXACT equality on the trimmed cell, so these bare tokens cannot be
+// confused with descriptions (verified: the real export never carries a bare
+// 'DR'/'CR'/'ДТ'/'КТ' cell outside the Type column).
+const DEBIT_MARKS = new Set(['ДТ', 'DR']);
+const CREDIT_MARKS = new Set(['КТ', 'CR']);
 
 function findHeaderIndex(rows: string[][]): number {
   for (let i = 0; i < rows.length; i++) {
     const lowered = rows[i].map((c) => c.toLowerCase());
-    if (HEADER_MARKERS.every((marker) => lowered.some((c) => c.includes(marker)))) {
-      return i;
+    for (const markers of HEADER_MARKER_SETS) {
+      if (markers.every((marker) => lowered.some((c) => c.includes(marker)))) {
+        return i;
+      }
     }
   }
   return -1;
@@ -225,7 +241,7 @@ function mapRow(cells: string[]): MappedRow | null {
   let t = -1;
   for (let k = 5; k < cells.length; k++) {
     const v = cells[k].trim();
-    if (v === DEBIT_MARK || v === CREDIT_MARK) {
+    if (DEBIT_MARKS.has(v) || CREDIT_MARKS.has(v)) {
       t = k;
       break;
     }
@@ -253,7 +269,7 @@ function mapRow(cells: string[]): MappedRow | null {
     exchangeRateRaw = (cells[7] ?? '').trim() || null;
   }
 
-  const entryType: EntryType = cells[t].trim() === DEBIT_MARK ? 'Debit' : 'Credit';
+  const entryType: EntryType = DEBIT_MARKS.has(cells[t].trim()) ? 'Debit' : 'Credit';
 
   // After Тип: [IBAN benef][benef][IBAN payer][payer]
   //            [Описание на операцията][Основание за плащане][Още пояснения]
