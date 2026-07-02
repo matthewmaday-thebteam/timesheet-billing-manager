@@ -16,6 +16,14 @@ export type EntryType = 'Debit' | 'Credit';
 /** Where the EUR conversion rate came from (matches expenses.rate_source enum). */
 export type RateSource = 'identity' | 'peg' | 'ecb_monthly' | 'ecb_daily' | 'manual';
 
+/**
+ * Where a monthly EUR→USD REPORTING rate came from (matches
+ * expense_fx_rates.source, and expenses.usd_rate_source). 'workbook_seed' = mined
+ * from the historical books (precedent-authority for its month); 'ecb_monthly' /
+ * 'ecb_daily_avg' = fetched at ingest via the documented ECB convention.
+ */
+export type FxRateSource = 'workbook_seed' | 'ecb_monthly' | 'ecb_daily_avg' | 'manual';
+
 /** How a description was translated (matches expenses.translation_source enum). */
 export type TranslationSource = 'dictionary' | 'passthrough' | 'manual' | 'ai' | 'none';
 
@@ -93,6 +101,26 @@ export interface EurConversion {
   conversionRate: number;
   rateSource: RateSource;
   rateDate: string | null;
+}
+
+/**
+ * Result of the USD REPORTING-layer conversion (see convertToUsd). Additive over
+ * the EUR normalization layer — usdAmount is derived from the already-normalized
+ * eur_amount and a MONTH-DEPENDENT EUR→USD rate; it never re-reads bank amounts.
+ */
+export interface UsdConversion {
+  usdAmount: number;
+  usdRate: number;
+}
+
+/**
+ * A monthly EUR→USD reporting rate (one row of expense_fx_rates). `month` is the
+ * 'YYYY-MM' bucket; `eurUsd` is USD per 1 EUR (ECB SP00 convention).
+ */
+export interface FxRate {
+  month: string;
+  eurUsd: number;
+  source: FxRateSource;
 }
 
 /** Result of categorization. */

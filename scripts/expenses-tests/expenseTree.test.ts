@@ -116,22 +116,23 @@ test('single-computation-path invariant holds over included rows (children sum t
   }
 });
 
-test('Owner Payments (31) debits are ORDINARY expenses — fully included in every total, never category-excluded', () => {
+test('Owner Payments (43) debits are ORDINARY expenses — fully included in every total, never category-excluded', () => {
   // CONTRACT (user, verbatim): "for ownerpayments, they are still an expense and
   // should be listed as such. We will just use that later when updating investor
-  // reports." Owner Payments (workbook-native category id 31) is only a LABEL for
-  // downstream investor-report separation — the ONLY exclusion in this domain is
-  // entry_type='Credit'. This is an anti-drift guard so nobody ever special-cases
-  // category-based exclusion the way credits are excluded.
+  // reports." Owner Payments (section-level category id 43, 'Business Expenses-
+  // Owner Payments' in migration 132) is only a LABEL for downstream investor-
+  // report separation — the ONLY exclusion in this domain is entry_type='Credit'.
+  // This is an anti-drift guard so nobody ever special-cases category-based
+  // exclusion the way credits are excluded.
   const cats: ExpenseCategoryRecord[] = [
     ...categories,
-    { id: 31, name: 'Owner Payments', overhead_type: null, sort_order: 12, is_fallback: false },
+    { id: 43, name: 'Business Expenses-Owner Payments', overhead_type: null, sort_order: 4, is_fallback: false },
   ];
   const expenses = [
-    makeExpense({ id: 'owner', eur_amount: 250, entry_type: 'Debit', category_id: 31, assigned_month: '2025-04', value_date: '2025-04-10' }),
+    makeExpense({ id: 'owner', eur_amount: 250, entry_type: 'Debit', category_id: 43, assigned_month: '2025-04', value_date: '2025-04-10' }),
     makeExpense({ id: 'normal', eur_amount: 50, entry_type: 'Debit', category_id: 1, assigned_month: '2025-04', value_date: '2025-04-11' }),
     // A large credit that must still be the ONLY thing excluded.
-    makeExpense({ id: 'credit', eur_amount: 9000, entry_type: 'Credit', category_id: 31, assigned_month: '2025-04', value_date: '2025-04-12' }),
+    makeExpense({ id: 'credit', eur_amount: 9000, entry_type: 'Credit', category_id: 43, assigned_month: '2025-04', value_date: '2025-04-12' }),
   ];
 
   const tree = buildExpenseTree(expenses, cats);
@@ -148,7 +149,7 @@ test('Owner Payments (31) debits are ORDINARY expenses — fully included in eve
   assert.ok(month, '2025-04 month node must exist');
   assert.equal(month.totalCents, 30000, 'Owner Payments debit is in the month total');
 
-  const ownerCat = month.categories.find((c) => c.categoryId === 31);
+  const ownerCat = month.categories.find((c) => c.categoryId === 43);
   assert.ok(ownerCat, 'Owner Payments category node must exist');
   assert.equal(ownerCat.totalCents, 25000, 'Owner Payments category total reflects its debit');
   assert.equal(ownerCat.expenses.length, 1);

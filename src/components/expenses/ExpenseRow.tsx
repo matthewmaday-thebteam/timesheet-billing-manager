@@ -3,16 +3,18 @@
  *
  * A system-of-record row: it always keeps the numbers visible. Non-EUR rows
  * show the original account-currency amount alongside the converted EUR value
- * (e.g. "195.58 BGN → €100.00"); EUR-native rows show just the EUR amount. The
- * displayed EUR value is derived through the same `toCents` path used by the
- * accordion totals, so a row can never disagree with its parent to the cent.
+ * (e.g. "195.58 BGN → €100.00"); EUR-native rows show just the EUR amount. Below
+ * that, the USD reporting value is shown (muted), or a subtle "USD pending" flag
+ * when the month rate was not yet known at ingest. All displayed money values are
+ * derived through the same `toCents` path used by the accordion totals, so a row
+ * can never disagree with its parent to the cent.
  *
  * @category Expenses (page-local)
  */
 
 import { Badge } from '../Badge';
 import type { ExpenseRecord } from './expenseTypes';
-import { formatEurCents, formatOriginalAmount, toCents } from './expenseTree';
+import { formatEurCents, formatOriginalAmount, formatUsdCents, toCents } from './expenseTree';
 
 interface ExpenseRowProps {
   expense: ExpenseRecord;
@@ -48,6 +50,15 @@ export function ExpenseRow({ expense }: ExpenseRowProps) {
           {isEurNative
             ? eur
             : `${formatOriginalAmount(expense.original_amount, expense.account_currency)} → ${eur}`}
+        </div>
+        <div className="text-xs font-mono text-vercel-gray-400 mt-0.5">
+          {expense.usd_amount != null ? (
+            formatUsdCents(toCents(expense.usd_amount))
+          ) : (
+            <span className="text-vercel-gray-300" title="USD rate pending for this month">
+              USD pending
+            </span>
+          )}
         </div>
         <div className="text-xs font-mono text-vercel-gray-400 mt-0.5">
           {expense.value_date}

@@ -45,6 +45,10 @@ function normalizeExpense(raw: RawRow): ExpenseRecord {
     operation_amount: toNumberOrNull(raw.operation_amount),
     eur_amount: toNumber(raw.eur_amount),
     conversion_rate: toNumber(raw.conversion_rate),
+    // USD reporting layer: null preserved as null (pending), so the tree can
+    // exclude pending rows from USD totals rather than treating them as $0.
+    usd_amount: toNumberOrNull(raw.usd_amount),
+    usd_rate: toNumberOrNull(raw.usd_rate),
     category_id: toNumber(raw.category_id),
     needs_review: Boolean(raw.needs_review),
   };

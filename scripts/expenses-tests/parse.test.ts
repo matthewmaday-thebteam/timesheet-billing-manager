@@ -190,7 +190,9 @@ test('parseBankExport: real .xlsx (OOXML) via SheetJS', () => {
   const r1 = ['AC9EUR', '10.03.2026 08:00:00', '10.03.2026 08:01:00', 'RX1', '10.03.2026',
     '50.00', '50.00', '1.000000 EUR / EUR', 'ДТ', 'B', 'Вендор ЕООД', 'P', 'ФИРМА',
     'Операция с карта', 'Плащане', ''];
-  const r2 = ['AC9BGN', '11.03.2026 08:00:00', '11.03.2026 08:01:00', 'RX2', '11.03.2026',
+  // RX2 is a BGN-denominated row; BGN existed pre-2026, so it is dated 2025 to
+  // exercise the pre-boundary 2nd-token BGN + peg path (post-2026 → EUR identity).
+  const r2 = ['AC9BGN', '11.03.2025 08:00:00', '11.03.2025 08:01:00', 'RX2', '11.03.2025',
     '2030.00', '2030.00', '1.000000 BGN / BGN', 'КТ', 'B', 'Пейър', 'P', 'ФИРМА',
     'Депозит', '', ''];
 
@@ -214,4 +216,46 @@ test('parseBankExport: real .xlsx (OOXML) via SheetJS', () => {
   assert.equal(bgn.originalAmount, 2030);
   assert.equal(bgn.entryType, 'Credit');
   assert.equal(convertToEur(bgn.accountCurrency!, bgn.originalAmount).eurAmount, 1037.92);
+});
+
+// ---------------------------------------------------------------------------
+// Euro-transition date-aware currency resolution (parseBankExport).
+// Bulgaria adopted the euro 2026-01-01; BGN ceased to exist. Post-boundary rows
+// never resolve BGN (EUR identity, no peg); pre-boundary rows keep BGN+peg.
+// Boundary verified from data (last BGN row 2025-12-30; all 2026 rows EUR).
+// ---------------------------------------------------------------------------
+function boundaryHtml(): string {
+  const H = ['Account','Date/Time','Process date','Reference','Value date','Amount','Op amount','Exchange rate','Type','Ben IBAN','Beneficiary','Payer IBAN','Payer','Op desc','Reason','More'];
+  // rate-less rows: Type sits right after Amount (no op-amount/rate cells).
+  const rateless = (acc: string, ref: string, vdate: string) =>
+    `<tr><td>${acc}</td><td>${vdate} 10:00:00</td><td>${vdate}</td><td>${ref}</td><td>${vdate}</td><td>195.583</td><td>ДТ</td><td>BENIBAN</td><td>BEN</td><td>PAYIBAN</td><td>PAYER</td><td>op</td><td>reason</td><td>more</td></tr>`;
+  const rated = (acc: string, ref: string, vdate: string, rate: string) =>
+    `<tr><td>${acc}</td><td>${vdate} 10:00:00</td><td>${vdate}</td><td>${ref}</td><td>${vdate}</td><td>100.00</td><td>100.00</td><td>${rate}</td><td>ДТ</td><td>BENIBAN</td><td>BEN</td><td>PAYIBAN</td><td>PAYER</td><td>op</td><td>reason</td><td>more</td></tr>`;
+  return '<html><body><table>' +
+    `<tr>${H.map((h) => `<td>${h}</td>`).join('')}</tr>` +
+    rateless('Main Assembly BGN', 'POST2026', '10.02.2026') +   // post-boundary, BGN suffix, rate-less
+    rated('1522532201EUR', 'PRE2025', '15.06.2025', '1.000000 BGN / BGN') + // pre-boundary same-currency BGN
+    rated('1522532201EUR', 'X2026', '10.03.2026', '0.5 BGN / EUR') +        // post-boundary cross-currency
+    rateless('LegacyBGN', 'BOUNDARY', '01.01.2026') +           // exactly on the boundary
+    '</table></body></html>';
+}
+
+test('currency date-aware: post-2026 BGN-suffix rate-less row -> EUR identity (not peg)', () => {
+  const { rows } = parseBankExport(boundaryHtml());
+  const r = byRef(rows, 'POST2026');
+  assert.equal(r.accountCurrency, 'EUR');
+  assert.equal(convertToEur(r.accountCurrency!, r.originalAmount).eurAmount, 195.58); // identity, NOT /1.95583
+});
+
+test('currency date-aware: pre-2026 same-currency BGN/BGN row -> BGN + peg (regression)', () => {
+  const { rows } = parseBankExport(boundaryHtml());
+  const r = byRef(rows, 'PRE2025');
+  assert.equal(r.accountCurrency, 'BGN');
+  assert.equal(convertToEur(r.accountCurrency!, r.originalAmount).eurAmount, 51.13); // 100 / 1.95583
+});
+
+test('currency date-aware: boundary date 2026-01-01 resolves EUR; post-boundary cross-currency stays EUR', () => {
+  const { rows } = parseBankExport(boundaryHtml());
+  assert.equal(byRef(rows, 'BOUNDARY').accountCurrency, 'EUR');
+  assert.equal(byRef(rows, 'X2026').accountCurrency, 'EUR');
 });

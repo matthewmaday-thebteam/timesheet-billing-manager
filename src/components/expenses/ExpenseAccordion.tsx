@@ -14,18 +14,29 @@ import { Badge } from '../Badge';
 import { ExpenseRow } from './ExpenseRow';
 import {
   formatEurCents,
+  formatUsdCents,
   type ExpenseCategoryNode,
   type ExpenseMonthNode,
   type ExpenseYearNode,
 } from './expenseTree';
 
-/** Right-aligned header content shared by every accordion level. */
+/**
+ * Right-aligned header content shared by every accordion level: the EUR total,
+ * the USD reporting total (muted), and honesty flags. When a level has rows whose
+ * USD is pending (rate not yet known), those rows are EXCLUDED from usdTotalCents,
+ * so the USD figure would be understated — we surface a "N pending USD" badge so a
+ * partial total is never shown as if it were complete.
+ */
 function LevelTotal({
   totalCents,
   needsReviewCount,
+  usdTotalCents,
+  usdPendingCount,
 }: {
   totalCents: number;
   needsReviewCount: number;
+  usdTotalCents: number;
+  usdPendingCount: number;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -34,6 +45,14 @@ function LevelTotal({
           {needsReviewCount} to review
         </Badge>
       )}
+      {usdPendingCount > 0 && (
+        <Badge variant="default" size="sm">
+          {usdPendingCount} pending USD
+        </Badge>
+      )}
+      <span className="text-sm font-mono text-vercel-gray-400">
+        {formatUsdCents(usdTotalCents)}
+      </span>
       <span className="text-sm font-mono text-vercel-gray-600">
         {formatEurCents(totalCents)}
       </span>
@@ -55,7 +74,12 @@ function CategoryAccordion({ category }: { category: ExpenseCategoryNode }) {
         </div>
       }
       headerRight={
-        <LevelTotal totalCents={category.totalCents} needsReviewCount={category.needsReviewCount} />
+        <LevelTotal
+          totalCents={category.totalCents}
+          needsReviewCount={category.needsReviewCount}
+          usdTotalCents={category.usdTotalCents}
+          usdPendingCount={category.usdPendingCount}
+        />
       }
     >
       <div className="divide-y divide-vercel-gray-100">
@@ -72,7 +96,12 @@ function MonthAccordion({ month }: { month: ExpenseMonthNode }) {
     <Accordion
       header={<span className="text-sm font-medium text-vercel-gray-600">{month.label}</span>}
       headerRight={
-        <LevelTotal totalCents={month.totalCents} needsReviewCount={month.needsReviewCount} />
+        <LevelTotal
+          totalCents={month.totalCents}
+          needsReviewCount={month.needsReviewCount}
+          usdTotalCents={month.usdTotalCents}
+          usdPendingCount={month.usdPendingCount}
+        />
       }
     >
       <div className="p-3 space-y-3">
@@ -96,7 +125,12 @@ function YearAccordion({
       defaultExpanded={defaultExpanded}
       header={<span className="text-lg font-semibold text-vercel-gray-600">{year.year}</span>}
       headerRight={
-        <LevelTotal totalCents={year.totalCents} needsReviewCount={year.needsReviewCount} />
+        <LevelTotal
+          totalCents={year.totalCents}
+          needsReviewCount={year.needsReviewCount}
+          usdTotalCents={year.usdTotalCents}
+          usdPendingCount={year.usdPendingCount}
+        />
       }
     >
       <div className="p-3 space-y-3">

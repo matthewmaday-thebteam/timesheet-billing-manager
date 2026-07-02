@@ -27,6 +27,11 @@ const eurFormatter = new Intl.NumberFormat('en-IE', {
   currency: 'EUR',
 });
 
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
+
 const plainAmountFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -35,6 +40,11 @@ const plainAmountFormatter = new Intl.NumberFormat('en-US', {
 /** Format integer cents as a EUR currency string, e.g. 10000 → "€100.00". */
 export function formatEurCents(cents: number): string {
   return eurFormatter.format(cents / 100);
+}
+
+/** Format integer USD cents as a USD currency string, e.g. 10000 → "$100.00". */
+export function formatUsdCents(cents: number): string {
+  return usdFormatter.format(cents / 100);
 }
 
 /** Format an account-currency amount with its code, e.g. "195.58 BGN". */
@@ -48,8 +58,21 @@ export function formatOriginalAmount(amount: number, currency: string): string {
 
 export type OverheadType = 'Fixed' | 'Variable';
 
+/**
+ * USD REPORTING accumulators carried at every level, alongside the EUR totals.
+ * `usdTotalCents` sums ONLY rows with a known USD value (same one pass, same cents
+ * discipline as EUR). `usdPendingCount` counts included rows whose USD is pending
+ * (rate not yet known) — those are EXCLUDED from usdTotalCents, so any level with
+ * pending > 0 has a total that would be understated if shown alone. The UI marks
+ * such totals; a total is only "complete" when usdPendingCount === 0.
+ */
+export interface UsdRollup {
+  usdTotalCents: number;
+  usdPendingCount: number;
+}
+
 /** Leaf grouping: a single category within a single month. */
-export interface ExpenseCategoryNode {
+export interface ExpenseCategoryNode extends UsdRollup {
   /** Stable key: `${monthKey}-${categoryId}`. */
   key: string;
   categoryId: number;
@@ -63,7 +86,7 @@ export interface ExpenseCategoryNode {
 }
 
 /** A single month (YYYY-MM) containing its categories. */
-export interface ExpenseMonthNode {
+export interface ExpenseMonthNode extends UsdRollup {
   /** Stable key: `YYYY-MM`. */
   key: string;
   label: string;
@@ -73,7 +96,7 @@ export interface ExpenseMonthNode {
 }
 
 /** A single year containing its months. */
-export interface ExpenseYearNode {
+export interface ExpenseYearNode extends UsdRollup {
   /** Stable key: the numeric year. */
   key: number;
   year: number;
@@ -85,6 +108,10 @@ export interface ExpenseYearNode {
 export interface ExpenseTree {
   years: ExpenseYearNode[];
   grandTotalCents: number;
+  /** USD grand total (pending rows excluded — see grandUsdPendingCount). */
+  grandUsdTotalCents: number;
+  /** Included rows whose USD is pending across the whole tree. */
+  grandUsdPendingCount: number;
   /**
    * Count of expenses actually included in the tree (i.e. after credits are
    * excluded). Summary tiles derive from this so they match the accordion.
@@ -135,6 +162,8 @@ export function buildExpenseTree(
 
   const yearMap = new Map<number, YearAcc>();
   let grandTotalCents = 0;
+  let grandUsdTotalCents = 0;
+  let grandUsdPendingCount = 0;
   let expenseCount = 0;
 
   for (const expense of expenses) {
@@ -147,7 +176,14 @@ export function buildExpenseTree(
 
     const cents = toCents(expense.eur_amount);
     const flagged = expense.needs_review ? 1 : 0;
+    // USD reporting: pending rows (usd_amount null) contribute 0 to the total and
+    // 1 to the pending count at every level — the same one pass as EUR, so USD
+    // totals and pending counts always reconcile with the tree by construction.
+    const usdCents = expense.usd_amount != null ? toCents(expense.usd_amount) : 0;
+    const usdPending = expense.usd_amount == null ? 1 : 0;
     grandTotalCents += cents;
+    grandUsdTotalCents += usdCents;
+    grandUsdPendingCount += usdPending;
 
     const monthKey = monthKeyOf(expense);
     const year = Number(monthKey.slice(0, 4));
@@ -161,12 +197,16 @@ export function buildExpenseTree(
         year,
         totalCents: 0,
         needsReviewCount: 0,
+        usdTotalCents: 0,
+        usdPendingCount: 0,
         monthMap: new Map(),
       };
       yearMap.set(year, yearAcc);
     }
     yearAcc.totalCents += cents;
     yearAcc.needsReviewCount += flagged;
+    yearAcc.usdTotalCents += usdCents;
+    yearAcc.usdPendingCount += usdPending;
 
     // ---- Month ----
     let monthAcc = yearAcc.monthMap.get(monthKey);
@@ -179,12 +219,16 @@ export function buildExpenseTree(
         label,
         totalCents: 0,
         needsReviewCount: 0,
+        usdTotalCents: 0,
+        usdPendingCount: 0,
         catMap: new Map(),
       };
       yearAcc.monthMap.set(monthKey, monthAcc);
     }
     monthAcc.totalCents += cents;
     monthAcc.needsReviewCount += flagged;
+    monthAcc.usdTotalCents += usdCents;
+    monthAcc.usdPendingCount += usdPending;
 
     // ---- Category (within this month) ----
     let categoryNode = monthAcc.catMap.get(expense.category_id);
@@ -198,12 +242,16 @@ export function buildExpenseTree(
         sortOrder: record?.sort_order ?? Number.MAX_SAFE_INTEGER,
         totalCents: 0,
         needsReviewCount: 0,
+        usdTotalCents: 0,
+        usdPendingCount: 0,
         expenses: [],
       };
       monthAcc.catMap.set(expense.category_id, categoryNode);
     }
     categoryNode.totalCents += cents;
     categoryNode.needsReviewCount += flagged;
+    categoryNode.usdTotalCents += usdCents;
+    categoryNode.usdPendingCount += usdPending;
     categoryNode.expenses.push(expense);
   }
 
@@ -222,6 +270,8 @@ export function buildExpenseTree(
             label: monthAcc.label,
             totalCents: monthAcc.totalCents,
             needsReviewCount: monthAcc.needsReviewCount,
+            usdTotalCents: monthAcc.usdTotalCents,
+            usdPendingCount: monthAcc.usdPendingCount,
             categories,
           };
         });
@@ -230,9 +280,17 @@ export function buildExpenseTree(
         year: yearAcc.year,
         totalCents: yearAcc.totalCents,
         needsReviewCount: yearAcc.needsReviewCount,
+        usdTotalCents: yearAcc.usdTotalCents,
+        usdPendingCount: yearAcc.usdPendingCount,
         months,
       };
     });
 
-  return { years, grandTotalCents, expenseCount };
+  return {
+    years,
+    grandTotalCents,
+    grandUsdTotalCents,
+    grandUsdPendingCount,
+    expenseCount,
+  };
 }

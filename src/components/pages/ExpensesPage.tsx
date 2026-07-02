@@ -74,6 +74,7 @@ export function ExpensesPage() {
   );
 
   const totalEur = tree.grandTotalCents / 100;
+  const totalUsd = tree.grandUsdTotalCents / 100;
 
   const handleTranslatePending = useCallback(async () => {
     setIsTranslating(true);
@@ -147,9 +148,11 @@ export function ExpensesPage() {
       ) : (
         <>
           <ExpensesSummary
+            totalUsd={totalUsd}
             totalEur={totalEur}
             expenseCount={tree.expenseCount}
             needsReviewCount={needsReviewExpenses.length}
+            usdPendingCount={tree.grandUsdPendingCount}
           />
 
           {(pendingTranslationCount > 0 || translateError || translateSummary) && (

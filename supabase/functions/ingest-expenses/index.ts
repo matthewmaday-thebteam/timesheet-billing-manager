@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type {
   AccountCurrency,
   EurConversion,
+  FxRate,
   KeywordRule,
   RawBankRow,
   VendorRule,
@@ -11,7 +12,9 @@ import type {
 import { normalizeDescription } from './_lib/normalizeDescription.ts';
 import { rowHash } from './_lib/rowHash.ts';
 import { convertToEur } from './_lib/convertToEur.ts';
+import { convertToUsd } from './_lib/convertToUsd.ts';
 import { assignMonth } from './_lib/assignMonth.ts';
+import { fetchEcbRate } from './_lib/fetchEcbRate.ts';
 import { categorize } from './_lib/categorize.ts';
 import { translate, type TranslationDict } from './_lib/translate.ts';
 import { translateKeys } from './_lib/anthropicTranslate.ts';
@@ -194,12 +197,33 @@ serve(async (req) => {
       sourceFileId = existing.id as string;
     }
 
-    // --- (b) Load rules + dictionary ---
-    const [vendorRes, keywordRes, dictRes] = await Promise.all([
+    // --- (b0) USD self-healing: complete any previously-pending USD rows whose
+    //          month rate is now known (cheap, set-based, idempotent). Runs at the
+    //          start of every ingest so the USD layer converges without reprocessing
+    //          bank files. Never blocks ingest — a failure only logs. ---
+    {
+      const { data: filled, error: fillError } = await supabase.rpc('fill_pending_usd');
+      if (fillError) {
+        console.error('ingest-expenses: fill_pending_usd failed', fillError);
+      } else if (typeof filled === 'number' && filled > 0) {
+        console.log(`ingest-expenses: back-filled ${filled} pending USD rows`);
+      }
+    }
+
+    // --- (b) Load rules + dictionary + FX rates ---
+    const [vendorRes, keywordRes, dictRes, fxRes] = await Promise.all([
       supabase.from('expense_vendor_rules').select('match_type, pattern, category_id, priority'),
       supabase.from('expense_keyword_rules').select('keyword, category_id, priority, force_review'),
       supabase.from('expense_translation_dict').select('normalized_key, en_translation'),
+      supabase.from('expense_fx_rates').select('month, eur_usd, source'),
     ]);
+
+    // Month → EUR/USD rate, memoized for this run. Missing months are fetched on
+    // demand below (edge only) and appended here.
+    const fxMap = new Map<string, FxRate>();
+    for (const r of (fxRes.data ?? []) as { month: string; eur_usd: number | string; source: string }[]) {
+      fxMap.set(r.month, { month: r.month, eurUsd: Number(r.eur_usd), source: r.source as FxRate['source'] });
+    }
 
     const vendorRules = (vendorRes.data ?? []) as VendorRule[];
     const keywordRules = (keywordRes.data ?? []) as KeywordRule[];
@@ -309,9 +333,33 @@ serve(async (req) => {
       }
     }
 
+    // --- (c2) USD reporting layer: ensure a rate exists for every month present
+    //          in this upload. Missing months are fetched (edge only) via the
+    //          documented ECB convention and stored ON CONFLICT DO NOTHING (never
+    //          overwrites a workbook_seed). A fetch failure leaves the month
+    //          unmapped → those rows ingest with USD pending (graceful). ---
+    const todayISO = new Date().toISOString();
+    const neededMonths = new Set(computed.map((c) => assignMonth(c.raw.valueDate)));
+    for (const month of neededMonths) {
+      if (fxMap.has(month)) continue;
+      const fetched = await fetchEcbRate(month, todayISO);
+      if (!fetched) continue; // rate unavailable → rows stay pending, ingest proceeds
+      const { error: fxErr } = await supabase.from('expense_fx_rates').upsert(
+        { month, eur_usd: fetched.eurUsd, source: fetched.source, fetched_at: new Date().toISOString() },
+        { onConflict: 'month', ignoreDuplicates: true },
+      );
+      if (fxErr) console.error('ingest-expenses: fx rate store failed', { month, fxErr });
+      fxMap.set(month, { month, eurUsd: fetched.eurUsd, source: fetched.source });
+    }
+
     // --- (d) Build expense rows ---
     const expenseRows = computed.map((c) => {
       const needsReview = c.categoryNeedsReview || c.translationSource === 'none';
+      const month = assignMonth(c.raw.valueDate);
+      // USD REPORTING layer (additive; derives from the normalized eur_amount and
+      // the month rate — never re-reads bank amounts). No rate → pending (null).
+      const fx = fxMap.get(month);
+      const usd = fx ? convertToUsd(c.conversion.eurAmount, fx.eurUsd) : null;
       return {
         source_file_id: sourceFileId,
         row_hash: c.rowHashHex,
@@ -324,6 +372,9 @@ serve(async (req) => {
         conversion_rate: c.conversion.conversionRate,
         rate_source: c.conversion.rateSource,
         rate_date: c.conversion.rateDate,
+        usd_amount: usd ? usd.usdAmount : null,
+        usd_rate: fx ? fx.eurUsd : null,
+        usd_rate_source: fx ? fx.source : null,
         entry_type: c.raw.entryType,
         description_original: c.raw.descriptionOriginal ?? '',
         description_translated: c.translated,
@@ -336,7 +387,7 @@ serve(async (req) => {
         value_date: c.raw.valueDate,
         booking_date: c.raw.bookingDate,
         txn_datetime: c.raw.txnDatetime,
-        assigned_month: assignMonth(c.raw.valueDate),
+        assigned_month: month,
         needs_review: needsReview,
         created_by: user.id,
       };
@@ -429,6 +480,12 @@ serve(async (req) => {
     }
     for (const r of expenseRows) if (r.needs_review) needsReviewCount++;
 
+    // USD pending = rows whose month had no known/fetchable rate at ingest. They
+    // are NOT lost: fill_pending_usd() completes them on a later run once the rate
+    // exists (self-healing). Surfaced so a partial USD picture is never silent.
+    let usdPendingCount = 0;
+    for (const r of expenseRows) if (r.usd_amount === null) usdPendingCount++;
+
     return jsonResponse({
       status: 'ok',
       persisted,
@@ -439,6 +496,7 @@ serve(async (req) => {
       skipped_duplicates: skippedCount,
       rejected_rows: rejectedRows,
       needs_review_count: needsReviewCount,
+      usd_pending: usdPendingCount,
       translation: translationSummary,
       categories: categorySummary,
       observed_from: observedFrom,

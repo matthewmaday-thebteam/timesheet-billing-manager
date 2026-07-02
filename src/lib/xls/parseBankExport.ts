@@ -139,6 +139,23 @@ function suffixCurrency(account: string): AccountCurrency | null {
   return m[1].toUpperCase() as AccountCurrency;
 }
 
+// Bulgaria adopted the euro on 2026-01-01; BGN ceased to be a currency. Any BGN
+// suffix or same-currency "BGN / BGN" rate label on a row dated ON/AFTER this
+// boundary is legacy naming (e.g. an account redenominated to EUR that kept a
+// 'BGN' nickname), so currency resolution must NEVER yield BGN post-boundary —
+// it resolves EUR identity (no peg). Rows dated BEFORE the boundary keep the
+// existing BGN handling (rate 2nd-token + peg), required for 2025-history
+// backfills. Boundary verified from the data (report(3) 2025 + the 2026 upload):
+// the last BGN-labeled row is 2025-12-30 and 100% of 2026 rows are EUR-labeled
+// across both accounts, so a 2026-01-01 cutover is provably regression-free.
+// Provenance: user instruction ("BGN is no longer a currency. Bulgaria switched
+// to the EURO."). Keyed on value_date — the month-bucketing authority.
+// NOTE for historical backfill: if pre-2026 BGN history of a redenominated
+// account is ever loaded, this stays correct (pre-boundary rows keep BGN), but a
+// future account-specific redenomination date may need to replace the flat 2026
+// boundary — see project notes.
+const EURO_ADOPTION_DATE = '2026-01-01';
+
 // ---------------------------------------------------------------------------
 // HTML <table> extraction
 // ---------------------------------------------------------------------------
@@ -350,7 +367,11 @@ export function parseBankExport(input: ArrayBuffer | Uint8Array | string): Parse
   // the same account number is proven to book in BOTH currencies, so any such
   // map propagates wrong currencies onto rate-less rows.
   const rows: RawBankRow[] = mapped.map((row) => {
-    const accountCurrency: AccountCurrency | null = row.rateAccountCur ?? suffixCurrency(row.account);
+    // Pre-boundary: rate 2nd-token, else account-number suffix. Post-euro-
+    // boundary (value_date >= 2026-01-01): never BGN — resolve EUR identity.
+    const rawAccountCurrency: AccountCurrency | null = row.rateAccountCur ?? suffixCurrency(row.account);
+    const accountCurrency: AccountCurrency | null =
+      row.valueDate && row.valueDate >= EURO_ADOPTION_DATE ? 'EUR' : rawAccountCurrency;
     return {
       account: row.account,
       accountCurrency,
