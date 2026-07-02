@@ -108,6 +108,57 @@ OVERHEAD_DOMINANCE = 0.90
 FORCE_REVIEW_KEYWORDS = {"UNICREDIT BULBANK", "UNICREDIT BULBANK AD"}
 
 # ---------------------------------------------------------------------------
+# DELTA (migration 128) — additive keyword hardening. 127 is ALREADY APPLIED to
+# prod and MUST NOT be regenerated; run `mine_expenses.py --delta` to emit ONLY
+# the new rules (idempotent ON CONFLICT). Root cause these fix: the seed derives
+# merchant keywords from the *clean romanized Vendor name* (e.g. "HIGHLEVEL INC.",
+# "KAFFEKAPSLEN", "EPAY OFFICE1.BG"), but real card/POS description lines carry a
+# shorter merchant *descriptor* variant ("HIGHLEVEL AGENCY SUB", "KaffeK/...",
+# "office1.bg") that the longer seeded keyword is not a substring of — so the row
+# falls through to Miscellaneous even though the same vendor is categorized
+# elsewhere. Each token below is a shorter, still-unambiguous substring of that
+# vendor's POS variant. All are re-validated against the reference corpus by the
+# SAME validator as the seed (>=3 hits, >=90% dominance, non-15 dominant).
+DELTA_KEYWORD_CANDIDATES = [
+    ("KAFFEK", 6, 15),       # Office Supplies & Food — POS "KaffeK/Hasselager/DNK"
+    ("HIGHLEVEL", 3, 15),    # Software & AI Tools — POS "HIGHLEVEL AGENCY SUB", "HIGHLEVEL * TRIAL OVER"
+    ("OFFICE1.BG", 9, 15),   # Office Operations — POS "office1.bg" (seed had only "EPAY OFFICE1.BG")
+    # --- User-mandated (business owner), each independently reference-backed ---
+    # These match the CYRILLIC description_original (what categorize() actually
+    # reads); they are the effective form of the owner's English directives. All
+    # are anchored on a fee-specific prefix so they cannot over-match: the bare
+    # "ИЗХ.ПРЕВОД SEPA" marker also appears on salary/tax/insurance transfers
+    # (145 already-categorized rows) — only rows PREFIXED with "ТАКСА ЗА" (fee
+    # for) are the bank fees.
+    ("ТАКСА ЗА ИЗХ.ПРЕВОД SEPA", 4, 20),  # Bank & Transfer Fees — "TAKSA ZA OUTGOING SEPA TRANSFER"; ref 23/23
+    ("ПЕРИОДИЧНА ТАКСА", 4, 20),          # Bank & Transfer Fees — "RECURRING FEE DUE" (Дължима периодична такса); ref 25/25
+    ("DROPBOX", 3, 10),                    # Software & AI Tools (owner: office software = Software, NOT Office Supplies); ref 79/79. Already seeded in 127 — idempotent no-op re-affirming the mapping.
+]
+
+# Documented exceptions to the >=3-reference-hit bar. The reference corpus never
+# contained the POS *domain* form of these merchants (their bank rows were
+# card/POS lines with no counterparty column in report(2), and report(3)'s HTML
+# romanized the vendor to its legal name), so the token scores 0 direct hits even
+# though the vendor itself is unambiguously and dominantly categorized in the
+# reference. Justification is recorded per row for the audit trail.
+DELTA_KEYWORD_EXCEPTIONS = [
+    # ("A1.BG", 11, 15, justification)  vendor "A1" -> Telecom & Internet 27/27 (100%)
+    #   in the reference; POS variant "www.a1.bg" is the same A1 Bulgaria telecom.
+    ("A1.BG", 11, 15, "vendor A1 -> Telecom & Internet 27/27 in reference; POS domain variant of seeded 'A1 BULGARIA LTD'"),
+    # English-literal forms the owner named. They match the English
+    # description_TRANSLATED, but categorize() only reads description_ORIGINAL,
+    # which in the current UniCredit English-UI export is still Cyrillic — so
+    # these are INERT on current prod (0 reference hits, 0 prod matches, hence 0
+    # over-match) and are seeded purely as future-proofing should the bank ever
+    # emit fully-Latin narrative text. The Cyrillic anchors above are what
+    # actually recategorize today's rows.
+    ("TAKSA ZA OUTGOING SEPA TRANSFER", 4, 20, "owner-named English literal; matches description_translated only; inert on current Cyrillic prod (future-proof)"),
+    ("RECURRING FEE DUE", 4, 20, "owner-named English literal; matches description_translated only; inert on current Cyrillic prod (future-proof)"),
+]
+
+DELTA_SQL_PATH = os.path.join(MIGRATIONS_DIR, "128_expense_mapping_delta.sql")
+
+# ---------------------------------------------------------------------------
 # Shared normalization contract (MUST match the ingestion agent's implementation)
 # ---------------------------------------------------------------------------
 
@@ -695,15 +746,128 @@ def emit_seed_sql(result):
         fh.write("\n".join(L))
 
 
-def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    reference_dir = None
+# ---------------------------------------------------------------------------
+# DELTA mining (migration 128) — validate additive keyword rules only.
+# ---------------------------------------------------------------------------
+
+def mine_delta(reference_dir):
+    """Validate DELTA_KEYWORD_CANDIDATES against the reference corpus using the
+    exact same bar as the seed, and attach the documented exceptions. Returns
+    (rows, report). Does NOT regenerate any seed artifact."""
+    raw = {
+        1: parse_report1(os.path.join(reference_dir, "report(1).xls.xlsx")),
+        2: parse_report2(os.path.join(reference_dir, "report(2).xls.xlsx")),
+        3: parse_report3_html(os.path.join(reference_dir, "report(3).xls")),
+    }
+    english = {n: load_english(os.path.join(reference_dir, f"report({n})_english.xlsx")) for n in REPORTS}
+    aligned = {n: align(raw[n], english[n])[0] for n in REPORTS}
+
+    def raw_canonical(rr):
+        return (rr["osnovanie"] + " " + rr["opisanie"]).strip()
+
+    rows, report = [], {}
+    for kw, cat_id, priority in DELTA_KEYWORD_CANDIDATES:
+        kw_l = kw.lower()
+        cc = Counter()
+        for n in REPORTS:
+            for rr, e in zip(raw[n], aligned[n]):
+                if kw_l in raw_canonical(rr).lower():
+                    cc[eng_category(e)] += 1
+        total = sum(cc.values())
+        assigned = ID_TO_NAME[cat_id]
+        if total == 0:
+            report[kw] = "SKIP no-hits"
+            continue
+        dom_cat, dom_n = cc.most_common(1)[0]
+        dominance = dom_n / total
+        if total >= MIN_KEYWORD_HITS and dominance >= MIN_KEYWORD_DOMINANCE \
+           and dom_cat == assigned and cat_id != FALLBACK_CATEGORY_ID:
+            rows.append({"keyword": kw, "category_id": cat_id, "category_name": assigned,
+                         "priority": priority, "hits_in_reference": total,
+                         "note": "validated (>=3 hits, >=90% dominance)"})
+            report[kw] = f"OK dom={dominance:.0%} n={total}"
+        else:
+            report[kw] = f"SKIP dom_cat={dom_cat!r} dom={dominance:.0%} n={total}"
+
+    for kw, cat_id, priority, justification in DELTA_KEYWORD_EXCEPTIONS:
+        rows.append({"keyword": kw, "category_id": cat_id, "category_name": ID_TO_NAME[cat_id],
+                     "priority": priority, "hits_in_reference": 0,
+                     "note": f"EXCEPTION: {justification}"})
+        report[kw] = "EXCEPTION (documented, bypasses reference bar)"
+
+    rows.sort(key=lambda r: (r["priority"], r["keyword"]))
+    return rows, report
+
+
+def emit_delta_sql(rows):
+    L = []
+    a = L.append
+    a("-- ============================================================================")
+    a("-- Migration 128: Expense Mapping DELTA (GENERATED — do not hand-edit)")
+    a("-- ============================================================================")
+    a("-- Generated by `scripts/expenses/mine_expenses.py --delta`. Additive-only:")
+    a("-- migration 127 is already applied to prod and is NOT regenerated; this file")
+    a("-- is a strict idempotent SUPERSET (any already-applied row is a no-op via ON")
+    a("-- CONFLICT). Two root causes are addressed, plus business-owner directives:")
+    a("--   (1) merchant-descriptor variants: the seed's clean-vendor-name keywords")
+    a("--       ('HIGHLEVEL INC.', 'KAFFEKAPSLEN', 'EPAY OFFICE1.BG') are not")
+    a("--       substrings of the shorter POS descriptors that appear in real card")
+    a("--       lines, so those rows fell through to Miscellaneous.")
+    a("--   (2) English keyword candidates ('RECURRING FEE') were mined against")
+    a("--       CYRILLIC raw text -> 0 hits -> dropped; and categorize() matches")
+    a("--       description_original (Cyrillic), never the English translation. The")
+    a("--       reference-backed CYRILLIC anchors below are the effective fee rules")
+    a("--       ('ТАКСА ЗА ИЗХ.ПРЕВОД SEPA' 23/23, 'ПЕРИОДИЧНА ТАКСА' 25/25 Bank Fees).")
+    a("--       Anchored on the 'ТАКСА ЗА' (fee-for) prefix so they do NOT touch the")
+    a("--       145 salary/tax/insurance rows that share the bare 'ИЗХ.ПРЕВОД SEPA'.")
+    a("-- Validated rows meet the seed bar (>=3 reference hits, >=90% dominance, a")
+    a("-- non-15 dominant category); exception rows carry an inline justification")
+    a("-- (owner-named English literals are inert on Cyrillic prod, future-proofing).")
+    a("-- Idempotent: ON CONFLICT (keyword) DO NOTHING. No vendor->category-15 rules.")
+    a("-- ============================================================================")
+    a("")
+    a("BEGIN;")
+    a("")
+    a("INSERT INTO public.expense_keyword_rules")
+    a("    (keyword, category_id, priority, hits_in_reference, force_review)")
+    a("VALUES")
+    last = len(rows) - 1
+    for i, r in enumerate(rows):
+        sep = "" if i == last else ","
+        a(f"    ({q(r['keyword'])}, {q(r['category_id'])}, {q(r['priority'])}, "
+          f"{q(r['hits_in_reference'])}, FALSE){sep}  -- {r['category_name']} :: {r['note']}")
+    a("ON CONFLICT (keyword) DO NOTHING;")
+    a("")
+    a("COMMIT;")
+    a("")
+    with open(DELTA_SQL_PATH, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(L))
+
+
+def run_delta():
+    reference_dir = _resolve_reference_dir()
+    print(f"Reference dir: {reference_dir}")
+    rows, report = mine_delta(reference_dir)
+    emit_delta_sql(rows)
+    print("\n=== DELTA KEYWORD VALIDATION ===")
+    for kw, status in report.items():
+        print(f"  {kw:<14} {status}")
+    print(f"\nEmitted {len(rows)} delta keyword rule(s) -> {DELTA_SQL_PATH}")
+
+
+def _resolve_reference_dir():
     for d in CANDIDATE_REFERENCE_DIRS:
         if os.path.isdir(d):
-            reference_dir = d
-            break
-    if not reference_dir:
-        sys.exit("ERROR: reference folder not found in any known Dropbox mount.")
+            return d
+    sys.exit("ERROR: reference folder not found in any known Dropbox mount.")
+
+
+def main():
+    if "--delta" in sys.argv:
+        run_delta()
+        return
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    reference_dir = _resolve_reference_dir()
     print(f"Reference dir: {reference_dir}")
 
     result = mine(reference_dir)

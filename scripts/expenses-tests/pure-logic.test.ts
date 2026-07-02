@@ -129,6 +129,98 @@ test('categorize: keyword rule with force_review=true flags needs_review despite
   assert.equal(notForced.needsReview, false); // real category, not forced
 });
 
+// ---------------------------------------------------------------------------
+// Regression: real POS/card description lines from the user's English-UI export
+// that fell to Miscellaneous because the seeded keyword was the CLEAN romanized
+// vendor name, which is not a substring of the shorter POS merchant descriptor.
+// Migration 128 adds the shorter, still-unambiguous substrings. These fixtures
+// are the exact strings observed in prod (category_source='fallback', cat 15).
+// ---------------------------------------------------------------------------
+test('categorize: seed clean-vendor keyword misses POS descriptor; 128 delta recovers it', () => {
+  const seedOnly: KeywordRule[] = [
+    { keyword: 'HIGHLEVEL INC.', category_id: 3, priority: 15 },
+    { keyword: 'KAFFEKAPSLEN', category_id: 6, priority: 15 },
+    { keyword: 'A1 BULGARIA LTD', category_id: 11, priority: 15 },
+    { keyword: 'EPAY OFFICE1.BG', category_id: 9, priority: 15 },
+  ];
+  const withDelta: KeywordRule[] = [
+    ...seedOnly,
+    { keyword: 'HIGHLEVEL', category_id: 3, priority: 15 },
+    { keyword: 'KAFFEK', category_id: 6, priority: 15 },
+    { keyword: 'A1.BG', category_id: 11, priority: 15 },
+    { keyword: 'OFFICE1.BG', category_id: 9, priority: 15 },
+  ];
+
+  // Exact prod description_original strings (vendor field null/company for POS).
+  const observed: Array<[string, number]> = [
+    ['ПОС 84.00 EUR авт.код:504410-HIGHLEVEL AGENCY SUB/DALLAS/USA', 3],
+    ['ПОС 83.53 EUR авт.код:112233-HIGHLEVEL * TRIAL OVER/DALLAS/USA', 3],
+    ['ПОС 63.96 EUR авт.код:470548-KaffeK/Hasselager/DNK/PAN:5408*', 6],
+    ['POS 164.95 EUR www.a1.bg Sofia BGR 762720', 11],
+    ['ПОС 66.39 EUR авт.код:112244-office1.bg/Sofia/BGR/PAN:5408*', 9],
+  ];
+
+  for (const [desc, expected] of observed) {
+    // Seed-only: no substring match → Miscellaneous (the production symptom).
+    assert.equal(categorize(null, desc, [], seedOnly).categoryId, 15, `seed-only should miss: ${desc}`);
+    // With the 128 delta: recovered to the correct category via keyword_rule.
+    const r = categorize(null, desc, [], withDelta);
+    assert.equal(r.categoryId, expected, `delta should recover: ${desc}`);
+    assert.equal(r.categorySource, 'keyword_rule');
+  }
+});
+
+test('categorize: business-owner mandated rules — the four acceptance cases (match description_original)', () => {
+  // categorize() reads description_ORIGINAL, which in the UniCredit English-UI
+  // export is still Cyrillic. The owner named English phrases; the effective
+  // rules are the reference-backed Cyrillic anchors. Fee rules are anchored on
+  // the "ТАКСА ЗА" (fee-for) prefix to avoid over-matching salary/tax transfers.
+  const rules: KeywordRule[] = [
+    { keyword: 'ТАКСА ЗА ИЗХ.ПРЕВОД SEPA', category_id: 4, priority: 20 }, // "TAKSA ZA OUTGOING SEPA TRANSFER"
+    { keyword: 'ПЕРИОДИЧНА ТАКСА', category_id: 4, priority: 20 },          // "RECURRING FEE DUE"
+    { keyword: 'DROPBOX', category_id: 3, priority: 10 },                    // owner: office software = Software
+    { keyword: 'A1.BG', category_id: 11, priority: 15 },                     // A1 telecom, POS domain variant
+  ];
+
+  // 1. SEPA outgoing transfer fee → Bank & Transfer Fees (4)
+  assert.equal(categorize(null, 'Такса за изх.превод SEPA в ЕИП', [], rules).categoryId, 4);
+  // 2. Recurring/periodic fee due → Bank & Transfer Fees (4)
+  assert.equal(categorize(null, 'Дължима периодична такса', [], rules).categoryId, 4);
+  // 3. Dropbox → Software & AI Tools (3), NOT Office Supplies
+  assert.equal(categorize(null, 'ПОС 9.99 EUR DROPBOX*123/DUBLIN/IRL', [], rules).categoryId, 3);
+  // 4. A1 / www.a1.bg → Telecom & Internet (11)
+  assert.equal(categorize(null, 'POS 164.95 EUR www.a1.bg Sofia BGR 762720', [], rules).categoryId, 11);
+});
+
+test('categorize: fee anchor must NOT over-match salary/tax SEPA transfers (bare marker shared)', () => {
+  // The bare "Изх.превод SEPA" marker also rides on salary/tax/insurance
+  // transfers (145 already-correct prod rows). The fee rule is anchored on the
+  // "Такса за" prefix, so these must fall through and NOT become Bank Fees.
+  const rules: KeywordRule[] = [{ keyword: 'ТАКСА ЗА ИЗХ.ПРЕВОД SEPA', category_id: 4, priority: 20 }];
+  for (const desc of [
+    'Health insurance 03 + 04 2026 Изх.превод SEPA в ЕИП',
+    'social contributions Изх.превод SEPA в ЕИП 01+02 2026',
+    'VAT 04 2026 Изх.превод SEPA в ЕИП',
+    'Additional pension contributions Изх.превод SEPA в ЕИП',
+  ]) {
+    const r = categorize(null, desc, [], rules);
+    assert.equal(r.categoryId, 15, `must not over-match: ${desc}`);
+    assert.equal(r.categorySource, 'fallback');
+  }
+});
+
+test('categorize: no-rule beneficiaries (new/reference-Misc vendors) correctly stay 15', () => {
+  // These prod beneficiaries have NO vendor rule (truncated NAP tax authority,
+  // or vendors the 2025 reference itself left Miscellaneous). Matcher hardening
+  // (case/whitespace/punctuation) cannot and MUST NOT invent a category for them.
+  const noRules: VendorRule[] = [];
+  for (const ben of ['НАП - Данъци (приходи на централния', 'Тилтит ДС ООД', 'С И Р КЪМПАНИ ООД']) {
+    const r = categorize(ben, 'превод', noRules, []);
+    assert.equal(r.categoryId, 15);
+    assert.equal(r.categorySource, 'fallback');
+  }
+});
+
 test('hasCyrillic / translate: passthrough, dictionary, none', () => {
   assert.equal(hasCyrillic('CARD PAYMENT'), false);
   assert.equal(hasCyrillic('Плащане'), true);
