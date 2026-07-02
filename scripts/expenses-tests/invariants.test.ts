@@ -55,7 +55,9 @@ test('every parsed row is categorized (fallback 15 when nothing matches), never 
   assert.equal(rows.length, 6);
   for (const r of rows) {
     const c = categorize(r.beneficiary, r.descriptionOriginal, vendorRules, keywordRules);
-    assert.ok(c.categoryId >= 1 && c.categoryId <= 15);
+    // Synthetic rules above can only yield 3, 4, or the fallback 15 (id 15 is
+    // preserved as the technical fallback in the workbook-native taxonomy).
+    assert.ok([3, 4, 15].includes(c.categoryId));
     if (c.categorySource === 'fallback') {
       assert.equal(c.categoryId, 15);
       assert.equal(c.needsReview, true);

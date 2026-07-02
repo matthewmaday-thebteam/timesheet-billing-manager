@@ -115,3 +115,47 @@ test('single-computation-path invariant holds over included rows (children sum t
     }
   }
 });
+
+test('Owner Payments (31) debits are ORDINARY expenses — fully included in every total, never category-excluded', () => {
+  // CONTRACT (user, verbatim): "for ownerpayments, they are still an expense and
+  // should be listed as such. We will just use that later when updating investor
+  // reports." Owner Payments (workbook-native category id 31) is only a LABEL for
+  // downstream investor-report separation — the ONLY exclusion in this domain is
+  // entry_type='Credit'. This is an anti-drift guard so nobody ever special-cases
+  // category-based exclusion the way credits are excluded.
+  const cats: ExpenseCategoryRecord[] = [
+    ...categories,
+    { id: 31, name: 'Owner Payments', overhead_type: null, sort_order: 12, is_fallback: false },
+  ];
+  const expenses = [
+    makeExpense({ id: 'owner', eur_amount: 250, entry_type: 'Debit', category_id: 31, assigned_month: '2025-04', value_date: '2025-04-10' }),
+    makeExpense({ id: 'normal', eur_amount: 50, entry_type: 'Debit', category_id: 1, assigned_month: '2025-04', value_date: '2025-04-11' }),
+    // A large credit that must still be the ONLY thing excluded.
+    makeExpense({ id: 'credit', eur_amount: 9000, entry_type: 'Credit', category_id: 31, assigned_month: '2025-04', value_date: '2025-04-12' }),
+  ];
+
+  const tree = buildExpenseTree(expenses, cats);
+
+  // The Owner Payments debit counts exactly like the normal debit: 250 + 50 = 300.
+  assert.equal(tree.grandTotalCents, 30000);
+  assert.equal(tree.expenseCount, 2);
+
+  const year = tree.years.find((y) => y.year === 2025);
+  assert.ok(year, '2025 year node must exist');
+  assert.equal(year.totalCents, 30000, 'Owner Payments debit is in the year total');
+
+  const month = year.months.find((m) => m.key === '2025-04');
+  assert.ok(month, '2025-04 month node must exist');
+  assert.equal(month.totalCents, 30000, 'Owner Payments debit is in the month total');
+
+  const ownerCat = month.categories.find((c) => c.categoryId === 31);
+  assert.ok(ownerCat, 'Owner Payments category node must exist');
+  assert.equal(ownerCat.totalCents, 25000, 'Owner Payments category total reflects its debit');
+  assert.equal(ownerCat.expenses.length, 1);
+
+  // The Owner Payments debit is listed; only the credit is excluded.
+  const ids = listedRows(tree).map((r) => r.id);
+  assert.equal(ids.includes('owner'), true, 'Owner Payments debit must be listed like any expense');
+  assert.equal(ids.includes('normal'), true);
+  assert.equal(ids.includes('credit'), false, 'credit is still the ONLY exclusion');
+});
