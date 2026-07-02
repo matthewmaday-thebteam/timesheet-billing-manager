@@ -14,6 +14,8 @@ import { convertToEur } from './_lib/convertToEur.ts';
 import { assignMonth } from './_lib/assignMonth.ts';
 import { categorize } from './_lib/categorize.ts';
 import { translate, type TranslationDict } from './_lib/translate.ts';
+import { translateKeys } from './_lib/anthropicTranslate.ts';
+import { EXPENSES_TRANSLATE_FALLBACK_MODEL, INGEST_MAX_AI_BATCHES } from './_lib/translateBatch.ts';
 
 // =============================================================================
 // Edge Function: ingest-expenses
@@ -54,9 +56,14 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-const FALLBACK_MODEL = 'claude-haiku-4-5';
-const AI_BATCH_SIZE = 50;
 const DB_BATCH_SIZE = 500;
+
+// In-ingest AI translation is best-effort and STRICTLY BOUNDED: at most
+// INGEST_MAX_AI_BATCHES Anthropic calls, under a wall-clock budget, so the
+// translate step can never threaten the function's execution limit on a large
+// upload. Anything not translated here stays 'none' + needs_review and is
+// finished by the translate-expense-descriptions backlog processor.
+const INGEST_AI_TIME_BUDGET_MS = 30_000;
 
 interface IngestBody {
   file_name?: string;
@@ -84,58 +91,6 @@ interface ComputedRow {
   translated: string | null;
   translationSource: string;
   vendor: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// AI fallback (dormant until a key is set)
-// ---------------------------------------------------------------------------
-
-function extractJsonObject(text: string): string {
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start < 0 || end < start) return '{}';
-  return text.slice(start, end + 1);
-}
-
-async function aiTranslate(keys: string[], apiKey: string, model: string): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  for (let i = 0; i < keys.length; i += AI_BATCH_SIZE) {
-    const batch = keys.slice(i, i + AI_BATCH_SIZE);
-    try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          system:
-            'You translate Bulgarian bank-transaction descriptions into concise English. ' +
-            'The input is a JSON array of strings (digits already masked as "#"). ' +
-            'Return ONLY a JSON object mapping each input string verbatim to its English ' +
-            'translation. Preserve the "#" placeholders. No commentary.',
-          messages: [{ role: 'user', content: JSON.stringify(batch) }],
-        }),
-      });
-      if (!resp.ok) continue; // degrade — leave these as 'none'
-      const data = await resp.json();
-      const text = (data.content ?? [])
-        .filter((b: { type?: string }) => b.type === 'text')
-        .map((b: { text?: string }) => b.text ?? '')
-        .join('');
-      const parsed = JSON.parse(extractJsonObject(text)) as Record<string, unknown>;
-      for (const [k, v] of Object.entries(parsed)) {
-        if (typeof v === 'string' && v.trim()) out.set(k, v);
-      }
-    } catch (err) {
-      console.error('ingest-expenses: AI translate batch failed', err);
-      continue; // never fail ingestion because of the AI path
-    }
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -307,14 +262,21 @@ serve(async (req) => {
     // --- AI fallback for dictionary misses (carve-out), keyed by translationKey ---
     const aiKey =
       Deno.env.get('EXPENSES_TRANSLATE_ANTHROPIC_KEY') ?? Deno.env.get('ANTHROPIC_API_KEY') ?? '';
-    const aiModel = Deno.env.get('EXPENSES_TRANSLATE_MODEL') ?? FALLBACK_MODEL;
+    const aiModel = Deno.env.get('EXPENSES_TRANSLATE_MODEL') ?? EXPENSES_TRANSLATE_FALLBACK_MODEL;
 
     const missKeys = Array.from(
       new Set(computed.filter((c) => c.translationSource === 'none').map((c) => c.translationKey)),
     );
 
     if (aiKey && missKeys.length > 0) {
-      const aiMap = await aiTranslate(missKeys, aiKey, aiModel);
+      // Bounded best-effort pass (see INGEST_MAX_AI_BATCHES / time budget). Any
+      // keys left untranslated stay 'none' for the backlog processor.
+      const { translations: aiMap } = await translateKeys(missKeys, {
+        apiKey: aiKey,
+        model: aiModel,
+        maxBatches: INGEST_MAX_AI_BATCHES,
+        timeBudgetMs: INGEST_AI_TIME_BUDGET_MS,
+      });
       if (aiMap.size > 0) {
         const bgSampleByKey = new Map<string, string>();
         const occurrences = new Map<string, number>();

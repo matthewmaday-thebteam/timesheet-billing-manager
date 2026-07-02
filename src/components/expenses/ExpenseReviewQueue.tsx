@@ -174,8 +174,8 @@ function ExpenseReviewRow({ row, categoryOptions, onUpdated }: ExpenseReviewRowP
         </td>
 
         <td className="px-4 py-3">
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-vercel-gray-600">
+          <div className="flex items-start gap-2 max-w-sm">
+            <span className="text-sm text-vercel-gray-600 whitespace-normal break-words min-w-0">
               {isUntranslated ? row.description_original || '—' : originalTranslation}
             </span>
             {isUntranslated && (
@@ -208,7 +208,7 @@ function ExpenseReviewRow({ row, categoryOptions, onUpdated }: ExpenseReviewRowP
           />
         </td>
 
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 max-w-xs">
           <Input
             value={translation}
             onChange={(event) => setTranslation(event.target.value)}
