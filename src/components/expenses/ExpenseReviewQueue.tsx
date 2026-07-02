@@ -20,6 +20,7 @@ import { Select, type SelectOption } from '../Select';
 import { Input } from '../Input';
 import { Badge } from '../Badge';
 import { Alert } from '../Alert';
+import { ExpenseDetailsModal } from './ExpenseDetailsModal';
 import { supabase } from '../../lib/supabase';
 import type { ExpenseCategoryRecord, ExpenseRecord } from './expenseTypes';
 
@@ -120,10 +121,17 @@ function ExpenseReviewRow({ row, categoryOptions, onUpdated }: ExpenseReviewRowP
   const [translation, setTranslation] = useState(originalTranslation);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const isUntranslated = originalTranslation.trim().length === 0;
   const categoryChanged = categoryValue !== String(row.category_id);
   const translationChanged = translation.trim() !== originalTranslation.trim();
+
+  // Read-only details view shows the STORED category (row.category_id), never the
+  // possibly-unsaved Select draft.
+  const storedCategoryName =
+    categoryOptions.find((option) => option.value === String(row.category_id))?.label ??
+    `Category ${row.category_id}`;
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -218,12 +226,38 @@ function ExpenseReviewRow({ row, categoryOptions, onUpdated }: ExpenseReviewRowP
           />
         </td>
 
-        <td className="px-4 py-3 text-right">
-          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
+        <td className="px-4 py-3">
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setDetailsOpen(true)}
+              disabled={saving}
+            >
+              Details
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
         </td>
       </tr>
+
+      {detailsOpen && (
+        <tr>
+          {/* The Modal is a fixed-position overlay, so its DOM location is
+              irrelevant; wrapping it in a row (like the error row) keeps the
+              table markup valid. */}
+          <td colSpan={7}>
+            <ExpenseDetailsModal
+              expense={row}
+              categoryName={storedCategoryName}
+              isOpen={detailsOpen}
+              onClose={() => setDetailsOpen(false)}
+            />
+          </td>
+        </tr>
+      )}
 
       {error && (
         <tr>

@@ -39,8 +39,12 @@ function toNumberOrNull(value: unknown): number | null {
 
 /** Coerce a raw expenses row into a typed record with numeric money fields. */
 function normalizeExpense(raw: RawRow): ExpenseRecord {
+  // The source-file name arrives as an embedded to-one object (see the select
+  // below). Pull it off and flatten to a scalar so ExpenseRecord stays flat and
+  // the nested object doesn't leak onto every record.
+  const { expense_source_files: sourceFile, ...rest } = raw;
   return {
-    ...(raw as ExpenseRecord),
+    ...(rest as ExpenseRecord),
     original_amount: toNumber(raw.original_amount),
     operation_amount: toNumberOrNull(raw.operation_amount),
     eur_amount: toNumber(raw.eur_amount),
@@ -51,6 +55,7 @@ function normalizeExpense(raw: RawRow): ExpenseRecord {
     usd_rate: toNumberOrNull(raw.usd_rate),
     category_id: toNumber(raw.category_id),
     needs_review: Boolean(raw.needs_review),
+    source_file_name: sourceFile?.file_name ?? null,
   };
 }
 
@@ -82,7 +87,10 @@ export function useExpenses(): UseExpensesResult {
         fetchAllRows<RawRow>(
           supabase
             .from('expenses')
-            .select('*')
+            // Embed the source file's human-readable name (to-one via
+            // source_file_id) alongside every column; flattened in
+            // normalizeExpense so the details view can show it.
+            .select('*, expense_source_files(file_name)')
             .order('value_date', { ascending: false }),
         ),
         supabase
