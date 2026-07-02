@@ -28,3 +28,7 @@ dist-ssr
 
 # editor temp swap copies
 *.tmp.*
+
+# agent harness worktrees + supabase CLI temp
+.claude/worktrees/
+supabase/.temp/

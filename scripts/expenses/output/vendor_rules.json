@@ -1,0 +1,1568 @@
+[
+  {
+    "match_type": "exact",
+    "pattern": "Национална Агенция за Приходите",
+    "category_id": 2,
+    "category_name": "Payroll Taxes",
+    "priority": 100,
+    "hits_in_reference": 64,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "СТАНИСЛАВ ВАСИЛЕВ ПЕЙКОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 38,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Милен Димитров Анастасов",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 36,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "АСПАРУХ РУМЕНОВ МАНЧЕВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 34,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ДИМАНА БОЖИДАРОВА ТРОЕВА",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 32,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Теодора Дилинска",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 32,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Таня Иванова Ангелинова",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 31,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ТОШИТОМО БГ ООД",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 100,
+    "hits_in_reference": 31,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "АТАНАС МАРИОВ МАРИНОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 30,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Валери Николаев Стоянов",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 30,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КАЛИН ЕМИЛОВ ТОМАНОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 30,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "UNICREDIT BULBANK",
+    "category_id": 14,
+    "category_name": "Debt Service",
+    "priority": 100,
+    "hits_in_reference": 28,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "МЕЙН АСЕМБЛИ ЕООД",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 100,
+    "hits_in_reference": 27,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ЗАСТРАХОВАТЕЛНА КОМПАНИЯ УНИКА ЖИВОТ АД",
+    "category_id": 8,
+    "category_name": "Employee Benefits",
+    "priority": 100,
+    "hits_in_reference": 26,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ТЕОДОР МАРИАНОВ ДИМИТРОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 26,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Надя Бориславова Василева",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 25,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ФРАНК ШЕПАЦ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 25,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ДОБРОМИР ВАСИЛЕВ ПЕТРЕВСКИ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 23,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Станимир Христов Димитров",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 21,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ТОДОР ЦВЕТКОВ ТОДОРОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 20,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ЕЛЕКТРОХОЛД ПРОДАЖБИ ЕАД",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 100,
+    "hits_in_reference": 15,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КАМЕН БОРИСЛАВОВ КАМЕНОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 15,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "МАТЮ ДЖИ МАДЕЙ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 15,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ОРБИН ЕООД",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 100,
+    "hits_in_reference": 15,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Тошитомо БГ ООД",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 100,
+    "hits_in_reference": 15,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "БЕНЕФИТ СИСТЕМС БЪЛГАРИЯ ООД",
+    "category_id": 8,
+    "category_name": "Employee Benefits",
+    "priority": 100,
+    "hits_in_reference": 14,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КАТАЛИСТ ЕООД",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 100,
+    "hits_in_reference": 14,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КАТАЛИСТ ИНТЕРАКТИВ ЕООД",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 100,
+    "hits_in_reference": 14,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Оптимум Акаунтинг ЕООД",
+    "category_id": 13,
+    "category_name": "Accounting & Compliance",
+    "priority": 100,
+    "hits_in_reference": 14,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "РАДОСЛАВ ТОНЕВ ВАРТАНЯНОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 13,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "УниКредит Булбанк АД",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 100,
+    "hits_in_reference": 13,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Wise Europe SA",
+    "category_id": 12,
+    "category_name": "Treasury & Wallet Transfers",
+    "priority": 100,
+    "hits_in_reference": 11,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "АЛЕКСАНДЪР АЛЕКСАНДРОВ КЕРЕМИДАРОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 10,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Интра Бизнес Сървисиз ЕООД",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 100,
+    "hits_in_reference": 10,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Столична Община Р-н Лозенец",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 100,
+    "hits_in_reference": 10,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Иван Стоянов Статев",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 7,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Пейпър Конвъртинг ЕООД",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 100,
+    "hits_in_reference": 6,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Wise Europe SA/NV",
+    "category_id": 12,
+    "category_name": "Treasury & Wallet Transfers",
+    "priority": 100,
+    "hits_in_reference": 5,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Ивайло Станимиров Колев",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 5,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ВИМАКС КЛИМА ООД",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 100,
+    "hits_in_reference": 4,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Димитър Димитров Парпулов",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 4,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Мартин Русев",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 4,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ХРИСТО ПАВЛОВ ДЖАМБОВ",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 100,
+    "hits_in_reference": 4,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КООПЕРАЦИЯ ПАНДА",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 100,
+    "hits_in_reference": 2,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "АБИС АЛБА ЕООД",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КлаудСорс ООД",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "КОНСУЛТАНТСКА КЪЩА АМРИТА ООД",
+    "category_id": 13,
+    "category_name": "Accounting & Compliance",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Мит фрукт 2020 ЕООД",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ТД на НОИ София-окръг",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Хот Колор ЕООД",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 100,
+    "hits_in_reference": 1,
+    "provenance": "raw_cyrillic"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Natsionalna Agentsiya za Prihodite",
+    "category_id": 2,
+    "category_name": "Payroll Taxes",
+    "priority": 200,
+    "hits_in_reference": 64,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "OPENAI *CHATGPT SUBSCR",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 59,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "EMAILOCTOPUS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 53,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "TAGGABLE PHOTOS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 46,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "CLAUDE.AI SUBSCRIPTION",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 41,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "FIGMA",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 39,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "STANISLAV VASILEV PEYKOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 38,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Milen Dimitrov Anastasov",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 36,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ASPARUH RUMENOV MANChEV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 34,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DIMANA BOZhIDAROVA TROEVA",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 32,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Teodora Dilinska",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 32,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Tanya Ivanova Angelinova",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 31,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "TOShITOMO BG OOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 31,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ATANAS MARIOV MARINOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 30,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KALIN EMILOV TOMANOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 30,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Valeri Nikolaev Stoyanov",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 30,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "A1 BULGARIA LTD",
+    "category_id": 11,
+    "category_name": "Telecom & Internet",
+    "priority": 200,
+    "hits_in_reference": 27,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MEYN ASEMBLI EOOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 27,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MIDJOURNEY INC.",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 27,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "WWW.TWILIO.COM",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 27,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "APR*APPRIVER",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 26,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "BAMBOOHR HRIS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 26,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "INTUIT *QBOOKS ONLINE",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 26,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "TEODOR MARIANOV DIMITROV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 26,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ZASTRAHOVATELNA KOMPANIYa UNIKA ZhIVOT AD",
+    "category_id": 8,
+    "category_name": "Employee Benefits",
+    "priority": 200,
+    "hits_in_reference": 26,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "FRANK ShEPATs",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 25,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Nadya Borislavova Vasileva",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 25,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "SUPERHOSTING.BG BGN",
+    "category_id": 11,
+    "category_name": "Telecom & Internet",
+    "priority": 200,
+    "hits_in_reference": 24,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DOBROMIR VASILEV PETREVSKI",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 23,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "EPAY OFFICE1.BG",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 22,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KAFFEKAPSLEN",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 21,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Stanimir Hristov Dimitrov",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 21,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 20,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "INVEST - BG EOOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 20,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "TODOR TsVETKOV TODOROV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 20,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ELEKTROHOLD PRODAZhBI EAD",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 200,
+    "hits_in_reference": 15,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KAMEN BORISLAVOV KAMENOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 15,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MATYu DZhI MADEY",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 15,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ORBIN EOOD",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 200,
+    "hits_in_reference": 15,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Toshitomo BG OOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 15,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "BENEFIT SISTEMS BALGARIYa OOD",
+    "category_id": 8,
+    "category_name": "Employee Benefits",
+    "priority": 200,
+    "hits_in_reference": 14,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KATALIST EOOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 14,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KATALIST INTERAKTIV EOOD",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 200,
+    "hits_in_reference": 14,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Optimum Akaunting EOOD",
+    "category_id": 13,
+    "category_name": "Accounting & Compliance",
+    "priority": 200,
+    "hits_in_reference": 14,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "RADOSLAV TONEV VARTANYaNOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 13,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "UniKredit Bulbank AD",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 200,
+    "hits_in_reference": 13,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "CLICKUP",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 11,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ALEKSANDAR ALEKSANDROV KEREMIDAROV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 10,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Intra Biznes Sarvisiz EOOD",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 10,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Stolichna Obshtina R-n Lozenets",
+    "category_id": 10,
+    "category_name": "Utilities & Facilities",
+    "priority": 200,
+    "hits_in_reference": 10,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "UNICREDIT BULBANK AD",
+    "category_id": 14,
+    "category_name": "Debt Service",
+    "priority": 200,
+    "hits_in_reference": 10,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "FIGMA MONTHLY RENEWAL",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 8,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "OPENAI",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 8,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Ivan Stoyanov Statev",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 7,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Peypar Konvarting EOOD",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 6,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "IKEA BULGARIA",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 5,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Ivaylo Stanimirov Kolev",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 5,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Dimitar Dimitrov Parpulov",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 4,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "HRISTO PAVLOV DZhAMBOV",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 4,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Martin Rusev",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 200,
+    "hits_in_reference": 4,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "S PLYUS S-S. TIMEVA EOO",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 4,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "VIMAKS KLIMA OOD",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 4,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "HIGHLEVEL INC.",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 3,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "RELUME.IO",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 3,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ANTHROPIC",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*151WMP267V1K",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*195YPL8VNXYG",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*2K6LZV4LDK81",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*44CTPN732ZMY",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*5XYYCLN86W1F",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*77FK5B3998XF",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*7L462D8N84TH",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*7N6GYM1HBPDD",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*85LXG4R6VN8Q",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*91FND589SXKW",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*9L7964HZKC89",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*BBMBQGVTVBWV",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*CSF9GNLSB92Y",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*D17Y7ZQBXSK5",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*FCRH7W37L8TY",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*H24JXYJCLZD8",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*H2DDRM6Y74P8",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*HVNFS5HLXS24",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*JKG32PN2S7X6",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*LV71DZFC7H16",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*MVQ1N3R19H4G",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*N9N97BTRMT3T",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*T9V1F26PZKBG",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*VXV7VD69H81H",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*W1N1F2MD5WWM",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*XC2P789Q2VHV",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ISTYLE.BG",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KOOPERATsIYa PANDA",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G082412259",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G086826006",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G091453138",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G095987214",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G101135623",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G106515158",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G112474622",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G117933017",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G123023626",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 2,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ABIS ALBA EOOD",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "ANTHROPIC SAN FRANCISCO USA 710472",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "BORICA AD",
+    "category_id": 4,
+    "category_name": "Bank & Transfer Fees",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*2GYWV9D1B4NN",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*3N2VFZLNNDFV",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*C2B6GZ32DQZ9",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*CQVNVTSF5B4L",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*FHGWH1J4WQVG",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*KN2LZ7VXBHZN",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "DROPBOX*KY219T357P5Y",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "HIGHLEVEL * TRIAL OVER",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Hot Kolor EOOD",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KlaudSors OOD",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "KONSULTANTSKA KAShtA AMRITA OOD",
+    "category_id": 13,
+    "category_name": "Accounting & Compliance",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G134242947",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G139754016",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "MICROSOFT-G145720617",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "Mit frukt 2020 EOOD",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "OMNIA PHARM",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "SUMUP *EBAG.BG",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "SUMUP *EBAG.BG SOFIIA BGR 010066",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  },
+  {
+    "match_type": "exact",
+    "pattern": "TD na NOI Sofiya-okrag",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 200,
+    "hits_in_reference": 1,
+    "provenance": "romanized_en"
+  }
+]

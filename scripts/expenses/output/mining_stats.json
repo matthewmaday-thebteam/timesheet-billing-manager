@@ -1,0 +1,343 @@
+{
+  "align_stats": {
+    "1": {
+      "raw": 254,
+      "english": 254,
+      "by_key": 254,
+      "by_pos": 0,
+      "unaligned": 0
+    },
+    "2": {
+      "raw": 1474,
+      "english": 1474,
+      "by_key": 1474,
+      "by_pos": 0,
+      "unaligned": 0
+    },
+    "3": {
+      "raw": 1314,
+      "english": 1314,
+      "by_key": 1314,
+      "by_pos": 0,
+      "unaligned": 0
+    }
+  },
+  "orderer_names_excluded": [
+    "da bi tijm ood",
+    "дъ би тийм оод"
+  ],
+  "vendor_rules_raw": 50,
+  "vendor_rules_romanized": 124,
+  "vendor_dropped_fallback_raw": 34,
+  "vendor_dropped_fallback_romanized": 68,
+  "keyword_validation": {
+    "CURSOR": "OK dom=100% n=28",
+    "GITHUB": "OK dom=100% n=22",
+    "GODADDY": "OK dom=100% n=9",
+    "CLAUDE.AI": "OK dom=100% n=43",
+    "OPENAI": "OK dom=100% n=67",
+    "CHATGPT": "OK dom=100% n=59",
+    "FIGMA": "OK dom=100% n=47",
+    "MICROSOFT": "OK dom=100% n=27",
+    "BROWSERSTACK": "SKIP dom_cat='Miscellaneous' dom=100% n=6",
+    "TWILIO": "OK dom=100% n=27",
+    "VERCEL": "SKIP no-hits",
+    "NETLIFY": "SKIP no-hits",
+    "AGENT SERVIC": "OK dom=100% n=26",
+    "MAIN ASSEMBLY": "OK dom=100% n=26",
+    "ТАКСИ ПОЛУЧЕНИ ВАЛУТНИ": "OK dom=100% n=64",
+    "ТАКСИ ПЛАТЕНИ ВАЛУТНИ": "SKIP no-hits",
+    "ТАКСА ПРЕВОД": "SKIP no-hits",
+    "RECURRING FEE": "SKIP no-hits",
+    "AZV-COMMISSION": "OK dom=100% n=92",
+    "ЗАПЛАТА": "OK dom=100% n=390",
+    "SALARY": "OK dom=100% n=754",
+    "ОСИГУРОВКИ": "SKIP no-hits",
+    "ОСИГУРОВК": "SKIP no-hits",
+    "A1 БЪЛГАРИЯ": "SKIP no-hits",
+    "ТЕЛЕНОР": "SKIP no-hits",
+    "VIVACOM": "SKIP no-hits",
+    "ГОРИВО": "SKIP dom_cat='Miscellaneous' dom=100% n=12",
+    "ЛИЗИНГ": "SKIP no-hits",
+    "ПАРКИНГ": "SKIP no-hits",
+    "ЕЛЕКТРО": "SKIP no-hits",
+    "ТОПЛОФИКАЦИЯ": "SKIP no-hits",
+    "ВОДОСНАБДЯВАНЕ": "SKIP no-hits",
+    "CLAUDE.AI SUBSCRIPTION": "OK dom=100% n=43",
+    "TAGGABLE PHOTOS": "OK dom=100% n=46",
+    "A1 BULGARIA LTD": "OK dom=100% n=27",
+    "EMAILOCTOPUS": "OK dom=100% n=53",
+    "DROPBOX*C2B6GZ32DQZ9": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "INVEST - BG EOOD": "OK dom=100% n=20",
+    "WWW.TWILIO.COM": "OK dom=100% n=27",
+    "ASPARUH RUMENOV MANChEV": "SKIP no-hits",
+    "KALIN EMILOV TOMANOV": "SKIP no-hits",
+    "KAMEN BORISLAVOV KAMENOV": "SKIP no-hits",
+    "MATYu DZhI MADEY": "SKIP no-hits",
+    "TODOR TsVETKOV TODOROV": "SKIP no-hits",
+    "TOShITOMO BG OOD": "SKIP no-hits",
+    "ATANAS MARIOV MARINOV": "SKIP no-hits",
+    "Valeri Nikolaev Stoyanov": "SKIP no-hits",
+    "DIMANA BOZhIDAROVA TROEVA": "SKIP no-hits",
+    "DOBROMIR VASILEV PETREVSKI": "SKIP no-hits",
+    "Milen Dimitrov Anastasov": "SKIP no-hits",
+    "ORBIN EOOD": "SKIP no-hits",
+    "Optimum Akaunting EOOD": "SKIP no-hits",
+    "STANISLAV VASILEV PEYKOV": "SKIP no-hits",
+    "Stanimir Hristov Dimitrov": "SKIP no-hits",
+    "TEODOR MARIANOV DIMITROV": "SKIP no-hits",
+    "Tanya Ivanova Angelinova": "SKIP no-hits",
+    "Teodora Dilinska": "SKIP no-hits",
+    "FRANK ShEPATs": "SKIP no-hits",
+    "S PLYUS S-S. TIMEVA EOO": "OK dom=100% n=4",
+    "Wise Europe SA/NV": "SKIP no-hits",
+    "KAFFEKAPSLEN": "OK dom=100% n=21",
+    "ZASTRAHOVATELNA KOMPANIYa UNIKA ZhIVOT AD": "SKIP no-hits",
+    "KOOPERATsIYa PANDA": "SKIP no-hits",
+    "IKEA BULGARIA": "OK dom=100% n=5",
+    "MICROSOFT-G134242947": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "RELUME.IO": "OK dom=100% n=3",
+    "OPENAI *CHATGPT SUBSCR": "OK dom=100% n=59",
+    "ISTYLE.BG": "SKIP dom_cat='Vehicle & Mobility' dom=100% n=2",
+    "SUPERHOSTING.BG BGN": "OK dom=100% n=24",
+    "CLICKUP": "OK dom=100% n=11",
+    "OMNIA PHARM": "SKIP dom_cat='Office Operations' dom=100% n=1",
+    "DROPBOX*KY219T357P5Y": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "KATALIST EOOD": "SKIP no-hits",
+    "MEYN ASEMBLI EOOD": "SKIP no-hits",
+    "BAMBOOHR HRIS": "OK dom=100% n=26",
+    "BENEFIT SISTEMS BALGARIYa OOD": "SKIP no-hits",
+    "INTUIT *QBOOKS ONLINE": "OK dom=100% n=26",
+    "APR*APPRIVER": "OK dom=100% n=26",
+    "DROPBOX*FHGWH1J4WQVG": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "MIDJOURNEY INC.": "OK dom=100% n=27",
+    "KONSULTANTSKA KAShtA AMRITA OOD": "SKIP no-hits",
+    "UNICREDIT BULBANK": "OK dom=100% n=10",
+    "Natsionalna Agentsiya za Prihodite": "SKIP no-hits",
+    "Peypar Konvarting EOOD": "SKIP no-hits",
+    "Stolichna Obshtina R-n Lozenets": "SKIP no-hits",
+    "KATALIST INTERAKTIV EOOD": "SKIP no-hits",
+    "VIMAKS KLIMA OOD": "SKIP no-hits",
+    "ELEKTROHOLD PRODAZhBI EAD": "SKIP no-hits",
+    "Intra Biznes Sarvisiz EOOD": "SKIP no-hits",
+    "UniKredit Bulbank AD": "SKIP no-hits",
+    "Hot Kolor EOOD": "SKIP no-hits",
+    "DROPBOX*CQVNVTSF5B4L": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "EPAY OFFICE1.BG": "OK dom=100% n=22",
+    "BORICA AD": "SKIP dom_cat='Bank & Transfer Fees' dom=100% n=1",
+    "MICROSOFT-G139754016": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "DROPBOX*2GYWV9D1B4NN": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "DROPBOX*KN2LZ7VXBHZN": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "HIGHLEVEL * TRIAL OVER": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "TD na NOI Sofiya-okrag": "SKIP no-hits",
+    "ABIS ALBA EOOD": "SKIP no-hits",
+    "HIGHLEVEL INC.": "OK dom=100% n=3",
+    "KlaudSors OOD": "SKIP no-hits",
+    "DROPBOX*3N2VFZLNNDFV": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "SUMUP *EBAG.BG": "SKIP dom_cat='Office Supplies & Food' dom=100% n=2",
+    "ANTHROPIC": "OK dom=100% n=3",
+    "ANTHROPIC SAN FRANCISCO USA 710472": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "MICROSOFT-G145720617": "SKIP dom_cat='Software & AI Tools' dom=100% n=1",
+    "Mit frukt 2020 EOOD": "SKIP no-hits",
+    "SUMUP *EBAG.BG SOFIIA BGR 010066": "SKIP dom_cat='Office Supplies & Food' dom=100% n=1",
+    "DROPBOX": "OK dom=100% n=79",
+    "FIGMA MONTHLY RENEWAL": "OK dom=100% n=8",
+    "UNICREDIT BULBANK AD": "OK dom=100% n=10",
+    "MICROSOFT-G082412259": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G086826006": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*85LXG4R6VN8Q": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*7L462D8N84TH": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*N9N97BTRMT3T": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G091453138": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*195YPL8VNXYG": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*2K6LZV4LDK81": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*VXV7VD69H81H": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G095987214": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*HVNFS5HLXS24": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*7N6GYM1HBPDD": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*D17Y7ZQBXSK5": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G101135623": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*5XYYCLN86W1F": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*JKG32PN2S7X6": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*MVQ1N3R19H4G": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G106515158": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*H24JXYJCLZD8": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*LV71DZFC7H16": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*CSF9GNLSB92Y": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G112474622": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*151WMP267V1K": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*77FK5B3998XF": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*BBMBQGVTVBWV": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G117933017": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*FCRH7W37L8TY": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*44CTPN732ZMY": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*H2DDRM6Y74P8": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "MICROSOFT-G123023626": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*W1N1F2MD5WWM": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*9L7964HZKC89": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*XC2P789Q2VHV": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*T9V1F26PZKBG": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "DROPBOX*91FND589SXKW": "SKIP dom_cat='Software & AI Tools' dom=100% n=2",
+    "ALEKSANDAR ALEKSANDROV KEREMIDAROV": "SKIP no-hits",
+    "Dimitar Dimitrov Parpulov": "SKIP no-hits",
+    "Ivan Stoyanov Statev": "SKIP no-hits",
+    "Martin Rusev": "SKIP no-hits",
+    "Nadya Borislavova Vasileva": "SKIP no-hits",
+    "RADOSLAV TONEV VARTANYaNOV": "SKIP no-hits",
+    "HRISTO PAVLOV DZhAMBOV": "SKIP no-hits",
+    "Wise Europe SA": "SKIP no-hits",
+    "Ivaylo Stanimirov Kolev": "SKIP no-hits"
+  },
+  "unknown_categories": {},
+  "overhead_detail": {
+    "Payroll": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 424
+      },
+      "total": 424
+    },
+    "Payroll Taxes": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 56
+      },
+      "total": 56
+    },
+    "Software & AI Tools": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 257
+      },
+      "total": 257
+    },
+    "Bank & Transfer Fees": {
+      "chosen": "Variable",
+      "counts": {
+        "Variable": 52
+      },
+      "total": 52
+    },
+    "Vehicle & Mobility": {
+      "chosen": null,
+      "counts": {
+        "Fixed": 63,
+        "Variable": 9
+      },
+      "total": 72
+    },
+    "Office Supplies & Food": {
+      "chosen": "Variable",
+      "counts": {
+        "Variable": 17
+      },
+      "total": 17
+    },
+    "Contractors & Agency Fees": {
+      "chosen": "Variable",
+      "counts": {
+        "Variable": 47
+      },
+      "total": 47
+    },
+    "Employee Benefits": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 32
+      },
+      "total": 32
+    },
+    "Office Operations": {
+      "chosen": "Variable",
+      "counts": {
+        "Variable": 22
+      },
+      "total": 22
+    },
+    "Utilities & Facilities": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 31
+      },
+      "total": 31
+    },
+    "Telecom & Internet": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 23
+      },
+      "total": 23
+    },
+    "Treasury & Wallet Transfers": {
+      "chosen": "Variable",
+      "counts": {
+        "Variable": 11
+      },
+      "total": 11
+    },
+    "Accounting & Compliance": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 11
+      },
+      "total": 11
+    },
+    "Debt Service": {
+      "chosen": "Fixed",
+      "counts": {
+        "Fixed": 29
+      },
+      "total": 29
+    },
+    "Miscellaneous": {
+      "chosen": null,
+      "counts": {
+        "Variable": 230
+      },
+      "total": 230
+    }
+  },
+  "validation": {
+    "overall_dict_hit_rate": 1.0,
+    "overall_dict_cyrillic_rows": 3038,
+    "overall_category_agreement": 0.9145,
+    "overall_compared": 3042,
+    "overall_predicted_misc": 966,
+    "overall_predicted_misc_share": 0.3176,
+    "reference_misc_counts": {
+      "1": 0,
+      "2": 525,
+      "3": 230
+    },
+    "reference_misc_share_report3": 0.175,
+    "per_report": {
+      "1": {
+        "rows": 254,
+        "dict_hit_rate": 1.0,
+        "cyrillic_rows": 250,
+        "category_agreement": 0.8661,
+        "compared": 254,
+        "predicted_misc": 32,
+        "predicted_misc_share": 0.126
+      },
+      "2": {
+        "rows": 1474,
+        "dict_hit_rate": 1.0,
+        "cyrillic_rows": 1474,
+        "category_agreement": 0.8745,
+        "compared": 1474,
+        "predicted_misc": 710,
+        "predicted_misc_share": 0.4817
+      },
+      "3": {
+        "rows": 1314,
+        "dict_hit_rate": 1.0,
+        "cyrillic_rows": 1314,
+        "category_agreement": 0.9688,
+        "compared": 1314,
+        "predicted_misc": 224,
+        "predicted_misc_share": 0.1705
+      }
+    }
+  }
+}

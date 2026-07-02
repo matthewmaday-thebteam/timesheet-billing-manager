@@ -1,0 +1,175 @@
+match_type,pattern,category_id,category_name,priority,hits_in_reference,provenance
+exact,Национална Агенция за Приходите,2,Payroll Taxes,100,64,raw_cyrillic
+exact,СТАНИСЛАВ ВАСИЛЕВ ПЕЙКОВ,1,Payroll,100,38,raw_cyrillic
+exact,Милен Димитров Анастасов,1,Payroll,100,36,raw_cyrillic
+exact,АСПАРУХ РУМЕНОВ МАНЧЕВ,1,Payroll,100,34,raw_cyrillic
+exact,ДИМАНА БОЖИДАРОВА ТРОЕВА,1,Payroll,100,32,raw_cyrillic
+exact,Теодора Дилинска,1,Payroll,100,32,raw_cyrillic
+exact,Таня Иванова Ангелинова,1,Payroll,100,31,raw_cyrillic
+exact,ТОШИТОМО БГ ООД,5,Vehicle & Mobility,100,31,raw_cyrillic
+exact,АТАНАС МАРИОВ МАРИНОВ,1,Payroll,100,30,raw_cyrillic
+exact,Валери Николаев Стоянов,1,Payroll,100,30,raw_cyrillic
+exact,КАЛИН ЕМИЛОВ ТОМАНОВ,1,Payroll,100,30,raw_cyrillic
+exact,UNICREDIT BULBANK,14,Debt Service,100,28,raw_cyrillic
+exact,МЕЙН АСЕМБЛИ ЕООД,5,Vehicle & Mobility,100,27,raw_cyrillic
+exact,ЗАСТРАХОВАТЕЛНА КОМПАНИЯ УНИКА ЖИВОТ АД,8,Employee Benefits,100,26,raw_cyrillic
+exact,ТЕОДОР МАРИАНОВ ДИМИТРОВ,1,Payroll,100,26,raw_cyrillic
+exact,Надя Бориславова Василева,1,Payroll,100,25,raw_cyrillic
+exact,ФРАНК ШЕПАЦ,1,Payroll,100,25,raw_cyrillic
+exact,ДОБРОМИР ВАСИЛЕВ ПЕТРЕВСКИ,1,Payroll,100,23,raw_cyrillic
+exact,Станимир Христов Димитров,1,Payroll,100,21,raw_cyrillic
+exact,ТОДОР ЦВЕТКОВ ТОДОРОВ,1,Payroll,100,20,raw_cyrillic
+exact,ЕЛЕКТРОХОЛД ПРОДАЖБИ ЕАД,10,Utilities & Facilities,100,15,raw_cyrillic
+exact,КАМЕН БОРИСЛАВОВ КАМЕНОВ,1,Payroll,100,15,raw_cyrillic
+exact,МАТЮ ДЖИ МАДЕЙ,1,Payroll,100,15,raw_cyrillic
+exact,ОРБИН ЕООД,7,Contractors & Agency Fees,100,15,raw_cyrillic
+exact,Тошитомо БГ ООД,5,Vehicle & Mobility,100,15,raw_cyrillic
+exact,БЕНЕФИТ СИСТЕМС БЪЛГАРИЯ ООД,8,Employee Benefits,100,14,raw_cyrillic
+exact,КАТАЛИСТ ЕООД,5,Vehicle & Mobility,100,14,raw_cyrillic
+exact,КАТАЛИСТ ИНТЕРАКТИВ ЕООД,7,Contractors & Agency Fees,100,14,raw_cyrillic
+exact,Оптимум Акаунтинг ЕООД,13,Accounting & Compliance,100,14,raw_cyrillic
+exact,РАДОСЛАВ ТОНЕВ ВАРТАНЯНОВ,1,Payroll,100,13,raw_cyrillic
+exact,УниКредит Булбанк АД,10,Utilities & Facilities,100,13,raw_cyrillic
+exact,Wise Europe SA,12,Treasury & Wallet Transfers,100,11,raw_cyrillic
+exact,АЛЕКСАНДЪР АЛЕКСАНДРОВ КЕРЕМИДАРОВ,1,Payroll,100,10,raw_cyrillic
+exact,Интра Бизнес Сървисиз ЕООД,9,Office Operations,100,10,raw_cyrillic
+exact,Столична Община Р-н Лозенец,10,Utilities & Facilities,100,10,raw_cyrillic
+exact,Иван Стоянов Статев,1,Payroll,100,7,raw_cyrillic
+exact,Пейпър Конвъртинг ЕООД,6,Office Supplies & Food,100,6,raw_cyrillic
+exact,Wise Europe SA/NV,12,Treasury & Wallet Transfers,100,5,raw_cyrillic
+exact,Ивайло Станимиров Колев,1,Payroll,100,5,raw_cyrillic
+exact,ВИМАКС КЛИМА ООД,9,Office Operations,100,4,raw_cyrillic
+exact,Димитър Димитров Парпулов,1,Payroll,100,4,raw_cyrillic
+exact,Мартин Русев,1,Payroll,100,4,raw_cyrillic
+exact,ХРИСТО ПАВЛОВ ДЖАМБОВ,1,Payroll,100,4,raw_cyrillic
+exact,КООПЕРАЦИЯ ПАНДА,6,Office Supplies & Food,100,2,raw_cyrillic
+exact,АБИС АЛБА ЕООД,6,Office Supplies & Food,100,1,raw_cyrillic
+exact,КлаудСорс ООД,7,Contractors & Agency Fees,100,1,raw_cyrillic
+exact,КОНСУЛТАНТСКА КЪЩА АМРИТА ООД,13,Accounting & Compliance,100,1,raw_cyrillic
+exact,Мит фрукт 2020 ЕООД,6,Office Supplies & Food,100,1,raw_cyrillic
+exact,ТД на НОИ София-окръг,9,Office Operations,100,1,raw_cyrillic
+exact,Хот Колор ЕООД,9,Office Operations,100,1,raw_cyrillic
+exact,Natsionalna Agentsiya za Prihodite,2,Payroll Taxes,200,64,romanized_en
+exact,OPENAI *CHATGPT SUBSCR,3,Software & AI Tools,200,59,romanized_en
+exact,EMAILOCTOPUS,3,Software & AI Tools,200,53,romanized_en
+exact,TAGGABLE PHOTOS,3,Software & AI Tools,200,46,romanized_en
+exact,CLAUDE.AI SUBSCRIPTION,3,Software & AI Tools,200,41,romanized_en
+exact,FIGMA,3,Software & AI Tools,200,39,romanized_en
+exact,STANISLAV VASILEV PEYKOV,1,Payroll,200,38,romanized_en
+exact,Milen Dimitrov Anastasov,1,Payroll,200,36,romanized_en
+exact,ASPARUH RUMENOV MANChEV,1,Payroll,200,34,romanized_en
+exact,DIMANA BOZhIDAROVA TROEVA,1,Payroll,200,32,romanized_en
+exact,Teodora Dilinska,1,Payroll,200,32,romanized_en
+exact,Tanya Ivanova Angelinova,1,Payroll,200,31,romanized_en
+exact,TOShITOMO BG OOD,5,Vehicle & Mobility,200,31,romanized_en
+exact,ATANAS MARIOV MARINOV,1,Payroll,200,30,romanized_en
+exact,KALIN EMILOV TOMANOV,1,Payroll,200,30,romanized_en
+exact,Valeri Nikolaev Stoyanov,1,Payroll,200,30,romanized_en
+exact,A1 BULGARIA LTD,11,Telecom & Internet,200,27,romanized_en
+exact,MEYN ASEMBLI EOOD,5,Vehicle & Mobility,200,27,romanized_en
+exact,MIDJOURNEY INC.,3,Software & AI Tools,200,27,romanized_en
+exact,WWW.TWILIO.COM,3,Software & AI Tools,200,27,romanized_en
+exact,APR*APPRIVER,3,Software & AI Tools,200,26,romanized_en
+exact,BAMBOOHR HRIS,3,Software & AI Tools,200,26,romanized_en
+exact,INTUIT *QBOOKS ONLINE,3,Software & AI Tools,200,26,romanized_en
+exact,TEODOR MARIANOV DIMITROV,1,Payroll,200,26,romanized_en
+exact,ZASTRAHOVATELNA KOMPANIYa UNIKA ZhIVOT AD,8,Employee Benefits,200,26,romanized_en
+exact,FRANK ShEPATs,1,Payroll,200,25,romanized_en
+exact,Nadya Borislavova Vasileva,1,Payroll,200,25,romanized_en
+exact,SUPERHOSTING.BG BGN,11,Telecom & Internet,200,24,romanized_en
+exact,DOBROMIR VASILEV PETREVSKI,1,Payroll,200,23,romanized_en
+exact,EPAY OFFICE1.BG,9,Office Operations,200,22,romanized_en
+exact,KAFFEKAPSLEN,6,Office Supplies & Food,200,21,romanized_en
+exact,Stanimir Hristov Dimitrov,1,Payroll,200,21,romanized_en
+exact,DROPBOX,3,Software & AI Tools,200,20,romanized_en
+exact,INVEST - BG EOOD,5,Vehicle & Mobility,200,20,romanized_en
+exact,TODOR TsVETKOV TODOROV,1,Payroll,200,20,romanized_en
+exact,ELEKTROHOLD PRODAZhBI EAD,10,Utilities & Facilities,200,15,romanized_en
+exact,KAMEN BORISLAVOV KAMENOV,1,Payroll,200,15,romanized_en
+exact,MATYu DZhI MADEY,1,Payroll,200,15,romanized_en
+exact,ORBIN EOOD,7,Contractors & Agency Fees,200,15,romanized_en
+exact,Toshitomo BG OOD,5,Vehicle & Mobility,200,15,romanized_en
+exact,BENEFIT SISTEMS BALGARIYa OOD,8,Employee Benefits,200,14,romanized_en
+exact,KATALIST EOOD,5,Vehicle & Mobility,200,14,romanized_en
+exact,KATALIST INTERAKTIV EOOD,7,Contractors & Agency Fees,200,14,romanized_en
+exact,Optimum Akaunting EOOD,13,Accounting & Compliance,200,14,romanized_en
+exact,RADOSLAV TONEV VARTANYaNOV,1,Payroll,200,13,romanized_en
+exact,UniKredit Bulbank AD,10,Utilities & Facilities,200,13,romanized_en
+exact,CLICKUP,3,Software & AI Tools,200,11,romanized_en
+exact,ALEKSANDAR ALEKSANDROV KEREMIDAROV,1,Payroll,200,10,romanized_en
+exact,Intra Biznes Sarvisiz EOOD,9,Office Operations,200,10,romanized_en
+exact,Stolichna Obshtina R-n Lozenets,10,Utilities & Facilities,200,10,romanized_en
+exact,UNICREDIT BULBANK AD,14,Debt Service,200,10,romanized_en
+exact,FIGMA MONTHLY RENEWAL,3,Software & AI Tools,200,8,romanized_en
+exact,OPENAI,3,Software & AI Tools,200,8,romanized_en
+exact,Ivan Stoyanov Statev,1,Payroll,200,7,romanized_en
+exact,Peypar Konvarting EOOD,6,Office Supplies & Food,200,6,romanized_en
+exact,IKEA BULGARIA,6,Office Supplies & Food,200,5,romanized_en
+exact,Ivaylo Stanimirov Kolev,1,Payroll,200,5,romanized_en
+exact,Dimitar Dimitrov Parpulov,1,Payroll,200,4,romanized_en
+exact,HRISTO PAVLOV DZhAMBOV,1,Payroll,200,4,romanized_en
+exact,Martin Rusev,1,Payroll,200,4,romanized_en
+exact,S PLYUS S-S. TIMEVA EOO,6,Office Supplies & Food,200,4,romanized_en
+exact,VIMAKS KLIMA OOD,9,Office Operations,200,4,romanized_en
+exact,HIGHLEVEL INC.,3,Software & AI Tools,200,3,romanized_en
+exact,RELUME.IO,3,Software & AI Tools,200,3,romanized_en
+exact,ANTHROPIC,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*151WMP267V1K,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*195YPL8VNXYG,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*2K6LZV4LDK81,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*44CTPN732ZMY,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*5XYYCLN86W1F,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*77FK5B3998XF,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*7L462D8N84TH,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*7N6GYM1HBPDD,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*85LXG4R6VN8Q,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*91FND589SXKW,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*9L7964HZKC89,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*BBMBQGVTVBWV,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*CSF9GNLSB92Y,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*D17Y7ZQBXSK5,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*FCRH7W37L8TY,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*H24JXYJCLZD8,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*H2DDRM6Y74P8,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*HVNFS5HLXS24,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*JKG32PN2S7X6,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*LV71DZFC7H16,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*MVQ1N3R19H4G,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*N9N97BTRMT3T,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*T9V1F26PZKBG,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*VXV7VD69H81H,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*W1N1F2MD5WWM,3,Software & AI Tools,200,2,romanized_en
+exact,DROPBOX*XC2P789Q2VHV,3,Software & AI Tools,200,2,romanized_en
+exact,ISTYLE.BG,5,Vehicle & Mobility,200,2,romanized_en
+exact,KOOPERATsIYa PANDA,6,Office Supplies & Food,200,2,romanized_en
+exact,MICROSOFT-G082412259,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G086826006,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G091453138,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G095987214,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G101135623,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G106515158,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G112474622,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G117933017,3,Software & AI Tools,200,2,romanized_en
+exact,MICROSOFT-G123023626,3,Software & AI Tools,200,2,romanized_en
+exact,ABIS ALBA EOOD,6,Office Supplies & Food,200,1,romanized_en
+exact,ANTHROPIC SAN FRANCISCO USA 710472,3,Software & AI Tools,200,1,romanized_en
+exact,BORICA AD,4,Bank & Transfer Fees,200,1,romanized_en
+exact,DROPBOX*2GYWV9D1B4NN,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*3N2VFZLNNDFV,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*C2B6GZ32DQZ9,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*CQVNVTSF5B4L,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*FHGWH1J4WQVG,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*KN2LZ7VXBHZN,3,Software & AI Tools,200,1,romanized_en
+exact,DROPBOX*KY219T357P5Y,3,Software & AI Tools,200,1,romanized_en
+exact,HIGHLEVEL * TRIAL OVER,3,Software & AI Tools,200,1,romanized_en
+exact,Hot Kolor EOOD,9,Office Operations,200,1,romanized_en
+exact,KlaudSors OOD,7,Contractors & Agency Fees,200,1,romanized_en
+exact,KONSULTANTSKA KAShtA AMRITA OOD,13,Accounting & Compliance,200,1,romanized_en
+exact,MICROSOFT-G134242947,3,Software & AI Tools,200,1,romanized_en
+exact,MICROSOFT-G139754016,3,Software & AI Tools,200,1,romanized_en
+exact,MICROSOFT-G145720617,3,Software & AI Tools,200,1,romanized_en
+exact,Mit frukt 2020 EOOD,6,Office Supplies & Food,200,1,romanized_en
+exact,OMNIA PHARM,9,Office Operations,200,1,romanized_en
+exact,SUMUP *EBAG.BG,6,Office Supplies & Food,200,1,romanized_en
+exact,SUMUP *EBAG.BG SOFIIA BGR 010066,6,Office Supplies & Food,200,1,romanized_en
+exact,TD na NOI Sofiya-okrag,9,Office Operations,200,1,romanized_en

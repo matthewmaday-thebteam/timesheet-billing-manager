@@ -1,0 +1,17 @@
+{
+  "Payroll": "Fixed",
+  "Payroll Taxes": "Fixed",
+  "Software & AI Tools": "Fixed",
+  "Bank & Transfer Fees": "Variable",
+  "Vehicle & Mobility": null,
+  "Office Supplies & Food": "Variable",
+  "Contractors & Agency Fees": "Variable",
+  "Employee Benefits": "Fixed",
+  "Office Operations": "Variable",
+  "Utilities & Facilities": "Fixed",
+  "Telecom & Internet": "Fixed",
+  "Treasury & Wallet Transfers": "Variable",
+  "Accounting & Compliance": "Fixed",
+  "Debt Service": "Fixed",
+  "Miscellaneous": null
+}

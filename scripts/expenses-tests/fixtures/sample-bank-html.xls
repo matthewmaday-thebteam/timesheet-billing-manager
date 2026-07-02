@@ -1,0 +1,29 @@
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<table>
+<tr>
+<td>Сметка</td><td>Дата/Час</td><td>Дата на плащане</td><td>Референция</td><td>Вальор</td><td>Сума във валута на сметката</td><td>Сума във валута на операцията</td><td>Обменен курс</td><td>Тип</td><td>IBAN Бенефициент</td><td>Бенефициент</td><td>IBAN Наредител</td><td>Наредител</td><td>Описание на операцията</td><td>Основание за плащане</td><td>Още пояснения</td>
+</tr>
+<tr>
+<td>AC00001EUR</td><td>30.12.2025 15:10:53</td><td>30.12.2025 15:25:43</td><td>REF0001</td><td>26.12.2025</td><td>35.25</td><td>35.25</td><td>1.000000 EUR / EUR</td><td>ДТ</td><td>BENIBAN1</td><td>ТЕСТ ДОСТАВЧИК ЕООД</td><td>PAYIBAN0</td><td>ФИРМА ООД</td><td>Операция с карта</td><td>Такса за обслужване</td>
+</tr>
+<tr>
+<td>AC00001EUR</td><td>15.01.2026 09:00:00</td><td>15.01.2026 09:05:00</td><td>REF0002</td><td>15.01.2026</td><td>273.00</td><td>297.00</td><td>1.087900 USD / EUR</td><td>ДТ</td><td>BENIBAN2</td><td>CLOUD VENDOR LTD</td><td>PAYIBAN0</td><td>FIRMA OOD</td><td>CLOUD SERVICES SUBSCRIPTION</td>
+</tr>
+<tr>
+<td>AC00002BGN</td><td>05.02.2026 12:00:00</td><td>05.02.2026 12:01:00</td><td>REF0003</td><td>05.02.2026</td><td>100.00</td><td>100.00</td><td>0.511300 EUR / BGN</td><td>ДТ</td><td>BENIBAN3</td><td>Доставчик Три</td><td>PAYIBAN0</td><td>ФИРМА ООД</td><td>Плащане към контрагент</td>
+</tr>
+<tr>
+<td>AC00002BGN</td><td>06.02.2026 19:11:04</td><td>06.02.2026 19:11:08</td><td>REF0004</td><td>06.02.2026</td><td>29.00</td><td>ДТ</td><td></td><td></td><td>PAYIBAN0</td><td></td><td>Дължима периодична такса</td>
+</tr>
+<tr>
+<td>AC00001EUR</td><td>20.02.2026 10:00:00</td><td>20.02.2026 10:00:00</td><td>REF0005</td><td>20.02.2026</td><td>0.00</td><td>0.00</td><td>1.000000 EUR / EUR</td><td>КТ</td><td>BENIBAN5</td><td></td><td>PAYIBAN0</td><td></td><td>Коригираща операция</td>
+</tr>
+<tr>
+<td>AC00001EUR</td><td>31.01.2026 23:59:00</td><td>02.02.2026 08:00:00</td><td>REF0006</td><td>31.01.2026</td><td>10.00</td><td>10.00</td><td>1.000000 EUR / EUR</td><td>ДТ</td><td>BENIBAN6</td><td>SOME VENDOR</td><td>PAYIBAN0</td><td>FIRMA OOD</td><td>CARD PAYMENT LATIN</td>
+</tr>
+</table>
+</body>
+</html>

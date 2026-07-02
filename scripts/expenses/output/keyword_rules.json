@@ -1,0 +1,314 @@
+[
+  {
+    "keyword": "OPENAI",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 67,
+    "force_review": false
+  },
+  {
+    "keyword": "CHATGPT",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 59,
+    "force_review": false
+  },
+  {
+    "keyword": "FIGMA",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 47,
+    "force_review": false
+  },
+  {
+    "keyword": "CLAUDE.AI",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 43,
+    "force_review": false
+  },
+  {
+    "keyword": "CURSOR",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 28,
+    "force_review": false
+  },
+  {
+    "keyword": "MICROSOFT",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 27,
+    "force_review": false
+  },
+  {
+    "keyword": "TWILIO",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 27,
+    "force_review": false
+  },
+  {
+    "keyword": "GITHUB",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 22,
+    "force_review": false
+  },
+  {
+    "keyword": "GODADDY",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 10,
+    "hits_in_reference": 9,
+    "force_review": false
+  },
+  {
+    "keyword": "DROPBOX",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 79,
+    "force_review": false
+  },
+  {
+    "keyword": "OPENAI *CHATGPT SUBSCR",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 59,
+    "force_review": false
+  },
+  {
+    "keyword": "EMAILOCTOPUS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 53,
+    "force_review": false
+  },
+  {
+    "keyword": "TAGGABLE PHOTOS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 46,
+    "force_review": false
+  },
+  {
+    "keyword": "CLAUDE.AI SUBSCRIPTION",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 43,
+    "force_review": false
+  },
+  {
+    "keyword": "A1 BULGARIA LTD",
+    "category_id": 11,
+    "category_name": "Telecom & Internet",
+    "priority": 15,
+    "hits_in_reference": 27,
+    "force_review": false
+  },
+  {
+    "keyword": "MIDJOURNEY INC.",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 27,
+    "force_review": false
+  },
+  {
+    "keyword": "WWW.TWILIO.COM",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 27,
+    "force_review": false
+  },
+  {
+    "keyword": "APR*APPRIVER",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 26,
+    "force_review": false
+  },
+  {
+    "keyword": "BAMBOOHR HRIS",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 26,
+    "force_review": false
+  },
+  {
+    "keyword": "INTUIT *QBOOKS ONLINE",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 26,
+    "force_review": false
+  },
+  {
+    "keyword": "SUPERHOSTING.BG BGN",
+    "category_id": 11,
+    "category_name": "Telecom & Internet",
+    "priority": 15,
+    "hits_in_reference": 24,
+    "force_review": false
+  },
+  {
+    "keyword": "EPAY OFFICE1.BG",
+    "category_id": 9,
+    "category_name": "Office Operations",
+    "priority": 15,
+    "hits_in_reference": 22,
+    "force_review": false
+  },
+  {
+    "keyword": "KAFFEKAPSLEN",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 15,
+    "hits_in_reference": 21,
+    "force_review": false
+  },
+  {
+    "keyword": "INVEST - BG EOOD",
+    "category_id": 5,
+    "category_name": "Vehicle & Mobility",
+    "priority": 15,
+    "hits_in_reference": 20,
+    "force_review": false
+  },
+  {
+    "keyword": "CLICKUP",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 11,
+    "force_review": false
+  },
+  {
+    "keyword": "UNICREDIT BULBANK",
+    "category_id": 14,
+    "category_name": "Debt Service",
+    "priority": 15,
+    "hits_in_reference": 10,
+    "force_review": true
+  },
+  {
+    "keyword": "UNICREDIT BULBANK AD",
+    "category_id": 14,
+    "category_name": "Debt Service",
+    "priority": 15,
+    "hits_in_reference": 10,
+    "force_review": true
+  },
+  {
+    "keyword": "FIGMA MONTHLY RENEWAL",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 8,
+    "force_review": false
+  },
+  {
+    "keyword": "IKEA BULGARIA",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 15,
+    "hits_in_reference": 5,
+    "force_review": false
+  },
+  {
+    "keyword": "S PLYUS S-S. TIMEVA EOO",
+    "category_id": 6,
+    "category_name": "Office Supplies & Food",
+    "priority": 15,
+    "hits_in_reference": 4,
+    "force_review": false
+  },
+  {
+    "keyword": "ANTHROPIC",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 3,
+    "force_review": false
+  },
+  {
+    "keyword": "HIGHLEVEL INC.",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 3,
+    "force_review": false
+  },
+  {
+    "keyword": "RELUME.IO",
+    "category_id": 3,
+    "category_name": "Software & AI Tools",
+    "priority": 15,
+    "hits_in_reference": 3,
+    "force_review": false
+  },
+  {
+    "keyword": "AZV-COMMISSION",
+    "category_id": 4,
+    "category_name": "Bank & Transfer Fees",
+    "priority": 20,
+    "hits_in_reference": 92,
+    "force_review": false
+  },
+  {
+    "keyword": "ТАКСИ ПОЛУЧЕНИ ВАЛУТНИ",
+    "category_id": 4,
+    "category_name": "Bank & Transfer Fees",
+    "priority": 20,
+    "hits_in_reference": 64,
+    "force_review": false
+  },
+  {
+    "keyword": "AGENT SERVIC",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 20,
+    "hits_in_reference": 26,
+    "force_review": false
+  },
+  {
+    "keyword": "MAIN ASSEMBLY",
+    "category_id": 7,
+    "category_name": "Contractors & Agency Fees",
+    "priority": 20,
+    "hits_in_reference": 26,
+    "force_review": false
+  },
+  {
+    "keyword": "SALARY",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 30,
+    "hits_in_reference": 754,
+    "force_review": false
+  },
+  {
+    "keyword": "ЗАПЛАТА",
+    "category_id": 1,
+    "category_name": "Payroll",
+    "priority": 30,
+    "hits_in_reference": 390,
+    "force_review": false
+  }
+]

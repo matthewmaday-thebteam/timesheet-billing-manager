@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DateFilterProvider } from './contexts/DateFilterContext';
 import { MainHeader, type NavRoute } from './components/MainHeader';
@@ -29,6 +29,9 @@ import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
 import { StyleReviewPage } from './design-system/style-review/StyleReviewPage';
+
+// Lazy-loaded so the SheetJS-backed upload path stays out of the main bundle.
+const ExpensesPage = lazy(() => import('./components/pages/ExpensesPage'));
 
 type AuthView = 'login' | 'forgot-password' | 'reset-password';
 
@@ -90,6 +93,19 @@ function AuthenticatedApp() {
         return <RevenuePage />;
       case 'billings':
         return <BillingsPage />;
+      case 'expenses':
+        return (
+          <Suspense
+            fallback={
+              <div className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-center">
+                <Spinner size="md" />
+                <span className="ml-3 text-xs text-vercel-gray-400">Loading expenses...</span>
+              </div>
+            }
+          >
+            <ExpensesPage />
+          </Suspense>
+        );
       case 'eom-reports':
         return <EOMReportsPage />;
       case 'users':

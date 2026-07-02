@@ -1,0 +1,40 @@
+keyword,category_id,category_name,priority,hits_in_reference,force_review
+OPENAI,3,Software & AI Tools,10,67,False
+CHATGPT,3,Software & AI Tools,10,59,False
+FIGMA,3,Software & AI Tools,10,47,False
+CLAUDE.AI,3,Software & AI Tools,10,43,False
+CURSOR,3,Software & AI Tools,10,28,False
+MICROSOFT,3,Software & AI Tools,10,27,False
+TWILIO,3,Software & AI Tools,10,27,False
+GITHUB,3,Software & AI Tools,10,22,False
+GODADDY,3,Software & AI Tools,10,9,False
+DROPBOX,3,Software & AI Tools,15,79,False
+OPENAI *CHATGPT SUBSCR,3,Software & AI Tools,15,59,False
+EMAILOCTOPUS,3,Software & AI Tools,15,53,False
+TAGGABLE PHOTOS,3,Software & AI Tools,15,46,False
+CLAUDE.AI SUBSCRIPTION,3,Software & AI Tools,15,43,False
+A1 BULGARIA LTD,11,Telecom & Internet,15,27,False
+MIDJOURNEY INC.,3,Software & AI Tools,15,27,False
+WWW.TWILIO.COM,3,Software & AI Tools,15,27,False
+APR*APPRIVER,3,Software & AI Tools,15,26,False
+BAMBOOHR HRIS,3,Software & AI Tools,15,26,False
+INTUIT *QBOOKS ONLINE,3,Software & AI Tools,15,26,False
+SUPERHOSTING.BG BGN,11,Telecom & Internet,15,24,False
+EPAY OFFICE1.BG,9,Office Operations,15,22,False
+KAFFEKAPSLEN,6,Office Supplies & Food,15,21,False
+INVEST - BG EOOD,5,Vehicle & Mobility,15,20,False
+CLICKUP,3,Software & AI Tools,15,11,False
+UNICREDIT BULBANK,14,Debt Service,15,10,True
+UNICREDIT BULBANK AD,14,Debt Service,15,10,True
+FIGMA MONTHLY RENEWAL,3,Software & AI Tools,15,8,False
+IKEA BULGARIA,6,Office Supplies & Food,15,5,False
+S PLYUS S-S. TIMEVA EOO,6,Office Supplies & Food,15,4,False
+ANTHROPIC,3,Software & AI Tools,15,3,False
+HIGHLEVEL INC.,3,Software & AI Tools,15,3,False
+RELUME.IO,3,Software & AI Tools,15,3,False
+AZV-COMMISSION,4,Bank & Transfer Fees,20,92,False
+ТАКСИ ПОЛУЧЕНИ ВАЛУТНИ,4,Bank & Transfer Fees,20,64,False
+AGENT SERVIC,7,Contractors & Agency Fees,20,26,False
+MAIN ASSEMBLY,7,Contractors & Agency Fees,20,26,False
+SALARY,1,Payroll,30,754,False
+ЗАПЛАТА,1,Payroll,30,390,False
