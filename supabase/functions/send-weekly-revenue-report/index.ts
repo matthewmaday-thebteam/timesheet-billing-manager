@@ -118,6 +118,13 @@ function getPriorWeekRange(refDate?: Date): { weekStart: string; weekEnd: string
   };
 }
 
+/** Shift a YYYY-MM-DD date string by a whole number of days (UTC-safe). */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Build week label: "Mar 23" from a weekStart date string (YYYY-MM-DD). */
 function buildWeekLabel(weekStart: string): string {
   const monthAbbrevs = [
@@ -145,6 +152,47 @@ function buildMonthLabel(dateStr: string): string {
 function toSummaryMonth(dateStr: string): string {
   const [yearStr, monthStr] = dateStr.split('-');
   return `${yearStr}-${monthStr}-01`;
+}
+
+// =============================================================================
+// Zero-week classification
+// =============================================================================
+// Replicated from src/lib/weeklyReports/classifyZeroWeek.ts — Deno cannot
+// import from src/, so this follows the same convention as the billing helpers
+// replicated from src/utils/billing.ts above. The unit tests in
+// scripts/weekly-report-tests/classifyZeroWeek.test.ts are the specification;
+// keep the two copies in sync.
+// =============================================================================
+
+/** How many weeks of prior history to weigh when judging an empty week. */
+const PRIOR_HISTORY_WEEKS = 4;
+
+/** Alert type raised when a report-enabled company produces no report. */
+const WEEKLY_REPORT_ALERT_TYPE = 'weekly_report_not_sent';
+
+type ZeroWeekClassification = 'expected' | 'anomalous';
+
+/** How many of the prior weeks actually reported hours. */
+function countWeeksWithHours(priorWeekHours: readonly number[]): number {
+  return priorWeekHours.reduce((count, hours) => (hours > 0 ? count + 1 : count), 0);
+}
+
+/** Total hours across the prior weeks, rounded to 2dp for display. */
+function sumPriorWeekHours(priorWeekHours: readonly number[]): number {
+  const total = priorWeekHours.reduce((sum, hours) => sum + (hours > 0 ? hours : 0), 0);
+  return Math.round(total * 100) / 100;
+}
+
+/**
+ * Classify a company-week that produced no timesheet entries.
+ *
+ * Any prior week with hours makes this week's silence anomalous — that is the
+ * 2026-09-10 signature. No prior week with hours, including no history at all
+ * (a newly enabled company), is an expected zero: a paused client or a
+ * company-wide holiday must never be alerted on.
+ */
+function classifyZeroWeek(priorWeekHours: readonly number[]): ZeroWeekClassification {
+  return countWeeksWithHours(priorWeekHours) >= 1 ? 'anomalous' : 'expected';
 }
 
 // =============================================================================
@@ -192,7 +240,8 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseServiceKey =
+      Deno.env.get('NEW_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const token = authHeader.replace('Bearer ', '');
 
     // If the token IS the service role key, it's a cron/server call — trusted
@@ -315,6 +364,7 @@ serve(async (req) => {
     // =========================================================================
 
     const allProjectInternalIds = reportProjects.map((p) => p.id);
+    const companyUUIDs = Array.from(companyMap.keys());
 
     const [
       summaryResult,
@@ -322,6 +372,7 @@ serve(async (req) => {
       allProjectsResult,
       groupMembersResult,
       pmResult,
+      priorReportsResult,
     ] = await Promise.all([
       // 2a. Billing summary for the month containing the week
       supabase
@@ -363,6 +414,16 @@ serve(async (req) => {
           )
         `)
         .in('project_id', allProjectInternalIds),
+
+      // 2f. Prior-week report history, for classifying an empty week.
+      // Rides along in this Promise.all so it costs no extra round-trip.
+      // Served by idx_weekly_reports_company (071:57).
+      supabase
+        .from('weekly_reports')
+        .select('company_id, week_start, total_hours')
+        .in('company_id', companyUUIDs)
+        .gte('week_start', addDays(weekStart, -7 * PRIOR_HISTORY_WEEKS))
+        .lt('week_start', weekStart),
     ]);
 
     if (summaryResult.error) throw summaryResult.error;
@@ -370,6 +431,9 @@ serve(async (req) => {
     if (allProjectsResult.error) throw allProjectsResult.error;
     if (groupMembersResult.error) throw groupMembersResult.error;
     if (pmResult.error) throw pmResult.error;
+    // priorReportsResult is deliberately NOT thrown on. It feeds the zero-week
+    // classifier only, and a diagnostic query must never stop a client email.
+    // Handled below, where an unavailable history is treated as suspicious.
 
     // =========================================================================
     // STEP 3: Build lookup maps
@@ -497,13 +561,129 @@ serve(async (req) => {
     const reports: ReportResult[] = [];
     const errors: string[] = [];
 
+    // --- Prior-week history per company (drives zero-week classification) ---
+    const priorWeekHoursByCompany = new Map<string, number[]>();
+    let priorHistoryAvailable = true;
+
+    if (priorReportsResult.error) {
+      // An unknown history is not an empty history. Treat it as suspicious
+      // below rather than classifying every empty week as expected — silence
+      // is precisely what hid the 2026-09-10 incident for four weeks.
+      priorHistoryAvailable = false;
+      const msg = priorReportsResult.error.message;
+      console.error(`[send-weekly-revenue-report] Prior-week history lookup failed: ${msg}`);
+      errors.push(`Prior-week history lookup failed: ${msg}`);
+    } else {
+      for (const row of priorReportsResult.data || []) {
+        const historyCompanyId = row.company_id as string;
+        const hours = Number(row.total_hours) || 0;
+        const existing = priorWeekHoursByCompany.get(historyCompanyId);
+        if (existing) existing.push(hours);
+        else priorWeekHoursByCompany.set(historyCompanyId, [hours]);
+      }
+    }
+
+    // --- Distinguishable alert labels ---
+    // Two `companies` rows can legitimately share a display name (confirmed
+    // intentional). The dashboard renders only alert.title
+    // (src/components/Dashboard.tsx:477-505), so a shared name needs a
+    // company_id prefix or the two alerts are indistinguishable.
+    const displayNameCounts = new Map<string, number>();
+    for (const group of companyMap.values()) {
+      displayNameCounts.set(
+        group.companyDisplayName,
+        (displayNameCounts.get(group.companyDisplayName) || 0) + 1,
+      );
+    }
+    const alertLabel = (group: CompanyGroup): string => (
+      (displayNameCounts.get(group.companyDisplayName) || 0) > 1
+        ? `${group.companyDisplayName} [${group.companyUUID.slice(0, 8)}]`
+        : group.companyDisplayName
+    );
+
+    /** Companies that produced a report this run — drives alert auto-resolve. */
+    const reportedCompanyIds = new Set<string>();
+
+    /**
+     * Raise a weekly_report_not_sent alert.
+     *
+     * Never throws and never blocks a client email: an alerting failure is
+     * logged and swallowed, matching the non-blocking convention at
+     * sync-clickup-timesheets/index.ts:1216-1228.
+     *
+     * sync_alerts carries UNIQUE (alert_type, entity_id) WHERE resolved_at IS
+     * NULL (078:36-38), so the existence check comes first — the same shape as
+     * every other alert block in this codebase.
+     */
+    const raiseReportNotSentAlert = async (
+      alertCompanyId: string,
+      entityName: string,
+      title: string,
+      metadata: Record<string, unknown>,
+    ): Promise<void> => {
+      try {
+        const { data: existingAlert } = await supabase
+          .from('sync_alerts')
+          .select('id')
+          .eq('alert_type', WEEKLY_REPORT_ALERT_TYPE)
+          .eq('entity_id', alertCompanyId)
+          .is('resolved_at', null)
+          .maybeSingle();
+
+        if (existingAlert) return;
+
+        const { error: alertError } = await supabase
+          .from('sync_alerts')
+          .insert({
+            alert_type: WEEKLY_REPORT_ALERT_TYPE,
+            severity: 'error',
+            title,
+            entity_type: 'company',
+            entity_id: alertCompanyId,
+            entity_name: entityName,
+            metadata,
+          });
+
+        if (alertError) {
+          console.error(
+            `[send-weekly-revenue-report] Alert insert failed for ${alertCompanyId}: ${alertError.message}`,
+          );
+        }
+      } catch (alertErr) {
+        const msg = alertErr instanceof Error ? alertErr.message : String(alertErr);
+        console.error(
+          `[send-weekly-revenue-report] Alert write failed for ${alertCompanyId} (non-blocking): ${msg}`,
+        );
+      }
+    };
+
     for (const [companyUUID, companyGroup] of companyMap) {
       try {
         // --- Check for PM emails ---
         const pmInfo = pmEmailsByCompany.get(companyUUID);
         if (!generateOnly && (!pmInfo || pmInfo.emails.length === 0)) {
+          const label = alertLabel(companyGroup);
           console.warn(
             `[send-weekly-revenue-report] No PM emails for company "${companyGroup.companyDisplayName}" — skipping`,
+          );
+
+          // A company with send_weekly_report = true and no PM email is
+          // unconditionally a configuration error — there is no
+          // legitimate-zero analogue here — so this branch always alerts.
+          // No weekly_reports row is written: no CSV was produced.
+          // This branch continues, so the no-entries branch below cannot also
+          // alert for the same company in the same run — which matters,
+          // because sync_alerts allows one active alert per (type, entity).
+          await raiseReportNotSentAlert(
+            companyUUID,
+            label,
+            `Weekly report not sent for "${label}" week of ${weekLabel} — no project manager email on file (configuration error)`,
+            {
+              reason: 'no_pm_emails',
+              week_start: weekStart,
+              week_end: weekEnd,
+              project_count: companyGroup.projectIds.length,
+            },
           );
           continue;
         }
@@ -575,11 +755,86 @@ serve(async (req) => {
           companyTaskCount += tasks.length;
         }
 
-        // Skip companies with no timesheet entries this week
+        // -------------------------------------------------------------------
+        // No timesheet entries for this company this week
+        // -------------------------------------------------------------------
+        // Until 2026-09 this was a bare `continue`: no row written, no error
+        // appended, and a successful return. A ClickUp permission change
+        // blanked four weeks of attribution and nothing surfaced it. Both
+        // halves of the fix matter — the zero-marker row (its ABSENCE is what
+        // hid the incident) and, when the silence is out of character for this
+        // company, a loud alert.
         if (companyProjects.length === 0) {
-          console.log(
-            `[send-weekly-revenue-report] No entries for "${companyGroup.companyDisplayName}" week of ${weekLabel} — skipping`,
-          );
+          const priorWeeks = priorWeekHoursByCompany.get(companyUUID) || [];
+          const priorWeeksWithHours = countWeeksWithHours(priorWeeks);
+          const prior4wkHours = sumPriorWeekHours(priorWeeks);
+          // An unavailable history fails loud, never silent.
+          const classification: ZeroWeekClassification = priorHistoryAvailable
+            ? classifyZeroWeek(priorWeeks)
+            : 'anomalous';
+
+          // Zero-marker row, written in BOTH cases. ignoreDuplicates makes
+          // this INSERT ... ON CONFLICT DO NOTHING on the same
+          // (company_id, week_start) key, so a marker can never overwrite a
+          // real, delivered report row with zeros and a null storage_path.
+          // v_weekly_report_availability.has_report requires
+          // storage_path IS NOT NULL (migration 134), so markers never read as
+          // reports on the dashboard.
+          const { error: markerError } = await supabase
+            .from('weekly_reports')
+            .upsert({
+              company_id: companyUUID,
+              company_name: companyGroup.companyDisplayName,
+              week_start: weekStart,
+              week_end: weekEnd,
+              report_year: parseInt(weekStart.split('-')[0], 10),
+              report_month: parseInt(weekStart.split('-')[1], 10),
+              total_hours: 0,
+              total_revenue_cents: 0,
+              project_count: 0,
+              task_count: 0,
+              storage_path: null,
+              file_size_bytes: null,
+              generated_at: new Date().toISOString(),
+              sent_at: null,
+              sent_to: null,
+            }, {
+              onConflict: 'company_id,week_start',
+              ignoreDuplicates: true,
+            });
+          if (markerError) {
+            console.error(
+              `[send-weekly-revenue-report] Zero-marker upsert error for "${companyGroup.companyDisplayName}": ${markerError.message}`,
+            );
+          }
+
+          if (classification === 'anomalous') {
+            const label = alertLabel(companyGroup);
+            const title =
+              `No timesheet entries for "${label}" week of ${weekLabel} — report not sent ` +
+              `(this company had ${prior4wkHours.toFixed(2)} h in the prior ${PRIOR_HISTORY_WEEKS} weeks)`;
+
+            console.error(`[send-weekly-revenue-report] ${title}`);
+            errors.push(title);
+
+            await raiseReportNotSentAlert(companyUUID, label, title, {
+              reason: 'no_entries',
+              week_start: weekStart,
+              week_end: weekEnd,
+              prior_weeks_with_hours: priorWeeksWithHours,
+              prior_4wk_hours: prior4wkHours,
+            });
+          } else {
+            // Expected zero: a paused client, a company-wide holiday, or a
+            // project that has only just opted in. Logged, never alerted —
+            // a legitimately quiet client must not be spammed.
+            console.log(
+              `[send-weekly-revenue-report] No entries for "${companyGroup.companyDisplayName}" ` +
+              `week of ${weekLabel} — expected zero (no hours in the prior ${PRIOR_HISTORY_WEEKS} weeks), ` +
+              `zero-marker row written`,
+            );
+          }
+
           continue;
         }
 
@@ -731,6 +986,8 @@ serve(async (req) => {
           console.error(`[send-weekly-revenue-report] Upsert error: ${upsertError.message}`);
         }
 
+        reportedCompanyIds.add(companyUUID);
+
         reports.push({
           company: companyGroup.companyDisplayName,
           weekLabel,
@@ -748,6 +1005,38 @@ serve(async (req) => {
         );
         errors.push(`${companyGroup.companyDisplayName}: ${msg}`);
       }
+    }
+
+    // =========================================================================
+    // STEP 6: Auto-resolve alerts for companies that reported this run
+    // =========================================================================
+    // Without this, a paused client that resumes — or a config error that gets
+    // fixed — leaves a stale alert on the dashboard forever. Same shape as
+    // sync-clickup-timesheets/index.ts:1131-1148. Non-blocking, and every
+    // client email has already been sent by the time this runs.
+    try {
+      const { data: activeAlerts } = await supabase
+        .from('sync_alerts')
+        .select('id, entity_id')
+        .eq('alert_type', WEEKLY_REPORT_ALERT_TYPE)
+        .is('resolved_at', null);
+
+      for (const alert of (activeAlerts || [])) {
+        if (alert.entity_id && reportedCompanyIds.has(alert.entity_id)) {
+          await supabase
+            .from('sync_alerts')
+            .update({
+              resolved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', alert.id);
+        }
+      }
+    } catch (resolveErr) {
+      const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+      console.error(
+        `[send-weekly-revenue-report] Alert auto-resolve failed (non-blocking): ${msg}`,
+      );
     }
 
     return jsonResponse({ success: true, reports, errors });

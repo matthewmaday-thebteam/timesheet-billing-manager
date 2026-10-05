@@ -188,6 +188,20 @@ interface CompanyReportResult {
   totalRevenueCents?: number;
   projectCount?: number;
   fileSizeBytes?: number;
+  /**
+   * Structured detail for a 'failed' result, carried into the
+   * `eom_report_failed` alert so the drift is readable without parsing `error`.
+   * Populated by the round-trip integrity guard; every other failure path
+   * carries `error` alone and is reported with reason 'other'.
+   */
+  failure?: {
+    reason: 'rounding_integrity';
+    projectExternalId: string;
+    canonicalProjectId: string;
+    summaryRoundedMinutes: number;
+    taskRowSumMinutes: number;
+    driftMinutes: number;
+  };
 }
 
 // =============================================================================
@@ -688,7 +702,22 @@ async function generateCompanyReport(
         taskRowSumMinutes: taskRoundedMinutesSum,
         tmtRowsFound: rawTasks ? rawTasks.size : 0,
       });
-      return { companyId, companyName, year, month, status: 'failed', error: errMsg };
+      return {
+        companyId,
+        companyName,
+        year,
+        month,
+        status: 'failed',
+        error: errMsg,
+        failure: {
+          reason: 'rounding_integrity',
+          projectExternalId: externalId,
+          canonicalProjectId,
+          summaryRoundedMinutes,
+          taskRowSumMinutes: taskRoundedMinutesSum,
+          driftMinutes: summaryRoundedMinutes - taskRoundedMinutesSum,
+        },
+      };
     }
   }
 
@@ -1131,6 +1160,148 @@ serve(async (req) => {
       }, 400);
     }
 
+    // =========================================================================
+    // ALERT: eom_report_failed — make a per-company failure visible
+    // =========================================================================
+    // generateCompanyReport() reports a failure as a per-company RESULT. Before
+    // this block that result went into the response body and nowhere else:
+    // NeoCurrency's July 2026 report failed the round-trip drift guard on
+    // 2026-09-01 and nobody learned of it for over two weeks, by which time
+    // every other company had reached generation_number 2 and July was still
+    // sitting at 1.
+    //
+    // The guard itself is CORRECT and is untouched here — it protected billing
+    // by refusing to write numbers that do not tie back to
+    // project_monthly_summary. Only its silence is fixed.
+    //
+    // Placed here, once, over `results`: generateCompanyReport has ten distinct
+    // `status: 'failed'` returns across three invocation modes, and a single
+    // pass over the collected results covers every one of them without editing
+    // the generator or changing what it writes.
+    //
+    // entity_id is `<company uuid>:<YYYY-MM>`, NOT the bare company uuid.
+    // sync_alerts enforces UNIQUE (alert_type, entity_id) WHERE resolved_at IS
+    // NULL (078_create_sync_alerts.sql:36-38), so a bare company uuid would let
+    // a successful August run resolve — or mask — a still-broken July. The
+    // company uuid is carried in metadata and the name in entity_name.
+    //
+    // Non-blocking: an alerting failure must never break a report run.
+    // =========================================================================
+    let alertResult: Record<string, unknown> = { action: 'eom_alert_not_attempted' };
+
+    try {
+      const nowISO = new Date().toISOString();
+      let alertsCreated = 0;
+      let alertsRefreshed = 0;
+      let alertsUnchanged = 0;
+      let alertsResolved = 0;
+      let alertWriteFailures = 0;
+
+      for (const r of results) {
+        // 'skipped' is neither a failure nor a success — it must not raise an
+        // alert and must not resolve one.
+        if (r.status === 'skipped') continue;
+
+        // One try/catch per alert write: a company whose write fails must not
+        // take the rest of the run's alerts down with it.
+        try {
+          const monthKey = `${r.year}-${String(r.month).padStart(2, '0')}`;
+          const entityId = `${r.companyId}:${monthKey}`;
+
+          const { data: existingAlert } = await supabase
+            .from('sync_alerts')
+            .select('id, title')
+            .eq('alert_type', 'eom_report_failed')
+            .eq('entity_id', entityId)
+            .is('resolved_at', null)
+            .maybeSingle();
+
+          if (r.status === 'failed') {
+            const title =
+              `End-of-month report for ${r.companyName} (${monthKey}) FAILED to generate — ` +
+              `no CSV was written, no eom_reports row was updated and nobody was notified: ` +
+              `${r.error || 'unknown error'}`;
+
+            const metadata = {
+              company_id: r.companyId,
+              company_name: r.companyName,
+              report_year: r.year,
+              report_month: r.month,
+              report_month_key: monthKey,
+              failure_reason: r.failure?.reason || 'other',
+              error_message: r.error || null,
+              project_external_id: r.failure?.projectExternalId ?? null,
+              canonical_project_id: r.failure?.canonicalProjectId ?? null,
+              summary_rounded_minutes: r.failure?.summaryRoundedMinutes ?? null,
+              task_row_sum_minutes: r.failure?.taskRowSumMinutes ?? null,
+              drift_minutes: r.failure?.driftMinutes ?? null,
+            };
+
+            if (!existingAlert) {
+              // Respects UNIQUE (alert_type, entity_id) WHERE resolved_at IS NULL
+              // — a bare insert on a duplicate would throw.
+              await supabase.from('sync_alerts').insert({
+                alert_type: 'eom_report_failed',
+                severity: 'error',
+                title,
+                entity_type: 'company',
+                entity_id: entityId,
+                entity_name: r.companyName,
+                metadata,
+              });
+              alertsCreated++;
+            } else if (existingAlert.title !== title) {
+              // The failure changed — resurface it even if it was dismissed.
+              await supabase
+                .from('sync_alerts')
+                .update({
+                  title,
+                  entity_name: r.companyName,
+                  metadata,
+                  dismissed_at: null,
+                  dismissed_by: null,
+                  updated_at: nowISO,
+                })
+                .eq('id', existingAlert.id);
+              alertsRefreshed++;
+            } else {
+              alertsUnchanged++;
+            }
+
+            console.error(`[generate-eom-report] ERROR: ${title}`);
+          } else if (existingAlert) {
+            // A later successful generation for the SAME company-month clears it.
+            await supabase
+              .from('sync_alerts')
+              .update({ resolved_at: nowISO, updated_at: nowISO })
+              .eq('id', existingAlert.id);
+            alertsResolved++;
+          }
+        } catch (writeError) {
+          alertWriteFailures++;
+          console.error(
+            `[generate-eom-report] Alert write failed for company ${r.companyId} (non-blocking):`,
+            writeError instanceof Error ? writeError.message : String(writeError),
+          );
+        }
+      }
+
+      alertResult = {
+        action: 'eom_alerts_complete',
+        alerts_created: alertsCreated,
+        alerts_refreshed: alertsRefreshed,
+        alerts_unchanged: alertsUnchanged,
+        alerts_resolved: alertsResolved,
+        alert_write_failures: alertWriteFailures,
+      };
+    } catch (alertError) {
+      alertResult = {
+        action: 'eom_alerts_failed',
+        error: alertError instanceof Error ? alertError.message : String(alertError),
+      };
+      console.error('[generate-eom-report] Alert write error (non-blocking):', alertResult.error);
+    }
+
     // --- Build response summary ---
     const generated = results.filter(r => r.status === 'generated').length;
     const failed = results.filter(r => r.status === 'failed').length;
@@ -1141,6 +1312,7 @@ serve(async (req) => {
       generated,
       failed,
       skipped,
+      alerts: alertResult,
       results: results.map(r => ({
         companyId: r.companyId,
         companyName: r.companyName,
