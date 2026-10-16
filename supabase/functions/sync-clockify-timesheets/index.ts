@@ -38,6 +38,58 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// --- BEGIN PURE RANGE CHUNKER ---
+/**
+ * Splits an ISO date range into contiguous chunks that each lie inside one UTC
+ * calendar month, so no chunk spans more than 31 days.
+ *
+ * Why: Clockify's April 2026 plan change caps a detailed report on the Free
+ * plan at one month (31 days), enforced per workspace. This workspace started
+ * getting 400 Bad Request on 2026-10-12 because the automated window (14-day
+ * lookback + current month) is about 45 days long.
+ *
+ * The first chunk starts at startISO exactly; each chunk ends at the last
+ * millisecond of its month or at endISO, whichever is earlier; the next chunk
+ * starts 1 ms later (the first millisecond of the following month). Invalid
+ * input (unparseable, or end before start) is returned as a single untouched
+ * chunk so the API reports the problem exactly as it did before.
+ */
+function splitRangeByCalendarMonth(
+  startISO: string,
+  endISO: string,
+): Array<{ start: string; end: string }> {
+  const startMs = Date.parse(startISO);
+  const endMs = Date.parse(endISO);
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+    return [{ start: startISO, end: endISO }];
+  }
+
+  const chunks: Array<{ start: string; end: string }> = [];
+  let chunkStartMs = startMs;
+  let chunkStartISO = startISO;
+
+  while (true) {
+    const chunkStartDate = new Date(chunkStartMs);
+    const nextMonthStartMs = Date.UTC(
+      chunkStartDate.getUTCFullYear(),
+      chunkStartDate.getUTCMonth() + 1,
+      1,
+      0, 0, 0, 0,
+    );
+    const monthEndMs = nextMonthStartMs - 1;
+
+    if (endMs <= monthEndMs) {
+      chunks.push({ start: chunkStartISO, end: endISO });
+      return chunks;
+    }
+
+    chunks.push({ start: chunkStartISO, end: new Date(monthEndMs).toISOString() });
+    chunkStartMs = nextMonthStartMs;
+    chunkStartISO = new Date(nextMonthStartMs).toISOString();
+  }
+}
+// --- END PURE RANGE CHUNKER ---
+
 serve(async (req) => {
   // --- CORS preflight ---
   if (req.method === 'OPTIONS') {
@@ -161,79 +213,131 @@ serve(async (req) => {
     // STEP 2: Paginated fetch from Clockify Reports API (n8n Node 2)
     // =========================================================================
     // POST /v1/workspaces/{id}/reports/detailed
-    // 1000 entries per page, 50-page safety limit
+    // The window is split into calendar-month chunks (Free plan caps a
+    // detailed report at 31 days). Per chunk: 1000 entries per page,
+    // 50-page safety limit. Any error stops the whole fetch.
     // =========================================================================
     const clockifyUrl = `https://reports.api.clockify.me/v1/workspaces/${clockifyWorkspaceId}/reports/detailed`;
     const PAGE_SIZE = 1000;
     const MAX_PAGES = 50;
 
-    let allTimeEntries: Array<Record<string, unknown>> = [];
-    let page = 1;
+    const chunks = splitRangeByCalendarMonth(rangeStartISO, rangeEndISO);
+    const allTimeEntries: Array<Record<string, unknown>> = [];
+    const seenEntryIds = new Set<string>();
+    let duplicatesDropped = 0;
+    let pagesFetched = 0; // successful pages, summed across all chunks
     let fetchComplete = true;
     let hitSafetyLimit = false;
-    const fetchErrors: Array<{ type: string; page: number; message: string }> = [];
+    const fetchErrors: Array<{
+      type: string;
+      page: number;
+      chunk_start: string;
+      chunk_end: string;
+      message: string;
+    }> = [];
 
-    console.log(`[sync-clockify] Starting paginated fetch from Clockify...`);
+    console.log(
+      `[sync-clockify] Starting paginated fetch from Clockify in ${chunks.length} chunk(s): ` +
+      chunks.map((c) => `${c.start}..${c.end}`).join(', '),
+    );
+
+    let page = 1; // page within the current chunk
+    let currentChunk = chunks[0];
 
     try {
-      while (true) {
-        const requestBody = {
-          dateRangeStart: rangeStartISO,
-          dateRangeEnd: rangeEndISO,
-          exportType: 'JSON',
-          detailedFilter: {
-            page,
-            pageSize: PAGE_SIZE,
-          },
-        };
+      chunkLoop:
+      for (const chunk of chunks) {
+        currentChunk = chunk;
+        page = 1;
 
-        let res: Record<string, unknown>;
-        try {
-          const response = await fetch(clockifyUrl, {
-            method: 'POST',
-            headers: {
-              'X-Api-Key': clockifyApiKey,
-              'Content-Type': 'application/json',
+        while (true) {
+          const requestBody = {
+            dateRangeStart: chunk.start,
+            dateRangeEnd: chunk.end,
+            exportType: 'JSON',
+            detailedFilter: {
+              page,
+              pageSize: PAGE_SIZE,
             },
-            body: JSON.stringify(requestBody),
-          });
+          };
 
-          if (!response.ok) {
-            throw new Error(`Clockify API returned ${response.status}: ${response.statusText}`);
+          let res: Record<string, unknown>;
+          try {
+            const response = await fetch(clockifyUrl, {
+              method: 'POST',
+              headers: {
+                'X-Api-Key': clockifyApiKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+              let errBody = '';
+              try {
+                errBody = (await response.text()).slice(0, 500);
+              } catch {
+                /* ignore */
+              }
+              throw new Error(
+                `Clockify API returned ${response.status}: ${response.statusText}${errBody ? ` -- ${errBody}` : ''}`,
+              );
+            }
+
+            res = await response.json();
+          } catch (apiErr) {
+            // API call failed — mark as incomplete and stop fetching entirely
+            fetchComplete = false;
+            fetchErrors.push({
+              type: 'api_error',
+              page,
+              chunk_start: chunk.start,
+              chunk_end: chunk.end,
+              message: apiErr instanceof Error ? apiErr.message : 'Unknown API error',
+            });
+            break chunkLoop;
           }
 
-          res = await response.json();
-        } catch (apiErr) {
-          // API call failed — mark as incomplete
-          fetchComplete = false;
-          fetchErrors.push({
-            type: 'api_error',
-            page,
-            message: apiErr instanceof Error ? apiErr.message : 'Unknown API error',
-          });
-          break; // Stop pagination on error
-        }
+          pagesFetched += 1;
+          const batch = (res?.timeentries as Array<Record<string, unknown>>) || [];
 
-        const batch = (res?.timeentries as Array<Record<string, unknown>>) || [];
-        allTimeEntries = allTimeEntries.concat(batch);
+          // Defensive de-dupe by entry id (chunks are disjoint, so this should be a no-op)
+          for (const entry of batch) {
+            const rawId = entry._id ?? entry.id;
+            if (rawId !== undefined && rawId !== null) {
+              const entryId = String(rawId);
+              if (seenEntryIds.has(entryId)) {
+                duplicatesDropped += 1;
+                continue;
+              }
+              seenEntryIds.add(entryId);
+            }
+            allTimeEntries.push(entry);
+          }
 
-        console.log(`[sync-clockify] Page ${page}: fetched ${batch.length} entries (total: ${allTimeEntries.length})`);
+          console.log(
+            `[sync-clockify] Chunk ${chunk.start}..${chunk.end} page ${page}: fetched ${batch.length} entries ` +
+            `(total: ${allTimeEntries.length}, pages: ${pagesFetched})`,
+          );
 
-        // Stop when the page returned fewer than PAGE_SIZE entries (natural end)
-        if (batch.length < PAGE_SIZE) break;
+          // Stop when the page returned fewer than PAGE_SIZE entries (natural end of chunk)
+          if (batch.length < PAGE_SIZE) break;
 
-        page += 1;
+          page += 1;
 
-        // Safety break (prevents infinite loops if API acts weird)
-        if (page > MAX_PAGES) {
-          hitSafetyLimit = true;
-          fetchComplete = false;
-          fetchErrors.push({
-            type: 'safety_limit',
-            page,
-            message: `Hit ${MAX_PAGES}-page safety limit — possible infinite loop or unusually large dataset`,
-          });
-          break;
+          // Safety break (prevents infinite loops if API acts weird)
+          if (page > MAX_PAGES) {
+            hitSafetyLimit = true;
+            fetchComplete = false;
+            fetchErrors.push({
+              type: 'safety_limit',
+              page,
+              chunk_start: chunk.start,
+              chunk_end: chunk.end,
+              message: `Hit ${MAX_PAGES}-page safety limit — possible infinite loop or unusually large dataset`,
+            });
+            break chunkLoop;
+          }
         }
       }
     } catch (outerErr) {
@@ -242,13 +346,16 @@ serve(async (req) => {
       fetchErrors.push({
         type: 'unexpected_error',
         page,
+        chunk_start: currentChunk.start,
+        chunk_end: currentChunk.end,
         message: outerErr instanceof Error ? outerErr.message : 'Unexpected error during fetch',
       });
     }
 
     console.log(
-      `[sync-clockify] Fetch complete: ${fetchComplete}, ` +
-      `pages: ${page}, entries: ${allTimeEntries.length}, errors: ${fetchErrors.length}`,
+      `[sync-clockify] Fetch complete: ${fetchComplete}, chunks: ${chunks.length}, ` +
+      `pages: ${pagesFetched}, entries: ${allTimeEntries.length}, ` +
+      `duplicates dropped: ${duplicatesDropped}, errors: ${fetchErrors.length}`,
     );
 
     // =========================================================================
@@ -765,7 +872,7 @@ serve(async (req) => {
               entity_name: 'Clockify Workspace',
               metadata: {
                 sync_run_id: syncRunId,
-                pages_fetched: page,
+                pages_fetched: pagesFetched,
                 entries_fetched: allTimeEntries.length,
                 hit_safety_limit: hitSafetyLimit,
                 errors: fetchErrors,
@@ -1085,9 +1192,12 @@ serve(async (req) => {
       range_end: rangeEndISO,
       fetch: {
         complete: fetchComplete,
-        pages_fetched: page,
+        pages_fetched: pagesFetched,
         page_size: PAGE_SIZE,
+        chunks: chunks.length,
+        chunk_ranges: chunks,
         total_entries: allTimeEntries.length,
+        duplicates_dropped: duplicatesDropped,
         hit_safety_limit: hitSafetyLimit,
         error_count: fetchErrors.length,
         errors: fetchErrors,
