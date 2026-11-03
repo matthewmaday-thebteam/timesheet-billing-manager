@@ -315,6 +315,14 @@ BEGIN
 END;
 $function$;
 
+-- Restore sync_project_carryover's pre-135 ACL
+-- ({=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}).
+REVOKE ALL ON FUNCTION public.sync_project_carryover(UUID, DATE, NUMERIC, NUMERIC, NUMERIC) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.sync_project_carryover(UUID, DATE, NUMERIC, NUMERIC, NUMERIC) TO PUBLIC, anon, authenticated, service_role;
+
+DROP FUNCTION IF EXISTS public.billing_fixed_billing_alerts(DATE);
+DROP FUNCTION IF EXISTS public.billing_alert_eom_stale_company(UUID, DATE, TEXT, JSONB);
+DROP FUNCTION IF EXISTS public.accept_billing_variance(UUID, DATE, TEXT, TEXT);
 DROP FUNCTION IF EXISTS public.billing_fixed_billing_targets(DATE);
 DROP FUNCTION IF EXISTS public.billing_milestone_override_targets(DATE);
 DROP FUNCTION IF EXISTS public.billing_lock_gate(UUID, DATE, TEXT, JSONB);

@@ -41,7 +41,7 @@ SELECT t.eq((SELECT ARRAY_AGG(entity_id ORDER BY entity_id) FROM sync_alerts WHE
 
 -- Accepted variance on Feb suppresses its alert on re-check.
 DELETE FROM sync_alerts;
-INSERT INTO billing_accepted_variances (project_id, month, reason, decided_by) VALUES (t.pid('extN'), '2027-02-01', 'leave them', 'owner');
+SELECT accept_billing_variance(t.pid('extN'), '2027-02-01', 'leave them', 'owner');
 INSERT INTO recalculation_queue (project_id, queue_month, reason) VALUES (t.pid('extN'), '2027-02-01', 'sync_update');
 SELECT drain_recalculation_queue();
 SELECT t.eq(t.alerts('invoiced_month_source_changed'), 0, 'accepted chain month stays silent');
@@ -55,11 +55,14 @@ VALUES (t.pid('extK'), '2027-01-01', 10, 10, TRUE);
 SELECT drain_recalculation_queue();
 SELECT drain_recalculation_queue();
 INSERT INTO billing_month_locks (company_id, month, reason) VALUES (t.cid('cK'), '2027-02-01', 'test: Feb closed manually');
-CREATE TEMP TABLE k_feb AS SELECT t.month_state(t.pid('extK'), '2027-02-01') AS s;
+CREATE TEMP TABLE k_feb AS SELECT t.month_state(t.pid('extK'), '2027-02-01') AS s, t.month_state(t.pid('extK'), '2027-01-01') AS jan;
 DELETE FROM sync_alerts;
 SELECT t.upsert('k1', 'extK', '2027-01-05', 1080, 'cK');  -- Jan 18h -> carry would be 8
 SELECT drain_recalculation_queue();
-SELECT t.eq((t.pms(t.pid('extK'), '2027-01-01')).carryover_out_hours, 8.00, 'open Jan recalculated (carryover out 8)');
+-- All-or-nothing: Jan's new carryover would rewrite locked Feb's carryover-in,
+-- so Jan is not written either (PMS and carryover row stay consistent).
+SELECT t.eq(t.month_state(t.pid('extK'), '2027-01-01'), (SELECT jan FROM k_feb), 'open Jan NOT written (PMS + carryover unchanged)');
+SELECT t.eq((t.pms(t.pid('extK'), '2027-01-01')).carryover_out_hours, 5.00, 'Jan PMS carryover out still matches the carryover row (5)');
 SELECT t.eq((SELECT carryover_hours FROM project_carryover_hours WHERE project_id = t.pid('extK') AND source_month = '2027-01-01'),
             5.00, 'carryover row into locked Feb NOT rewritten');
 SELECT t.eq(t.month_state(t.pid('extK'), '2027-02-01'), (SELECT s FROM k_feb), 'locked Feb byte-identical');
@@ -67,3 +70,9 @@ SELECT t.ok(NOT EXISTS (SELECT 1 FROM recalculation_queue WHERE project_id = t.p
             'no cascade queued into locked Feb');
 SELECT t.eq((SELECT metadata->>'reason' FROM sync_alerts WHERE alert_type = 'invoiced_month_source_changed'
               AND entity_id = t.pid('extK')::TEXT || ':2027-02'), 'carryover_cascade', 'Feb alerted with reason carryover_cascade');
+-- Unlocking Feb lets the open month through, consistently.
+DELETE FROM billing_month_locks WHERE company_id = t.cid('cK');
+INSERT INTO recalculation_queue (project_id, queue_month, reason) VALUES (t.pid('extK'), '2027-01-01', 'manual');
+SELECT drain_recalculation_queue();
+SELECT t.eq((t.pms(t.pid('extK'), '2027-01-01')).carryover_out_hours, 8.00, 'after unlock: Jan carryover out 8');
+SELECT t.eq((t.pms(t.pid('extK'), '2027-02-01')).carryover_in_hours, 8.00, 'after unlock: Feb carryover in 8 (cascade)');

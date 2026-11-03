@@ -87,6 +87,25 @@ SELECT t.ok((SELECT (s::TEXT) = (b::TEXT) FROM project_monthly_summary s JOIN t_
 
 SELECT t.check_fixtures('after mass recalc');
 
+-- Open months: billing values unchanged except the two known open drifts
+-- (luxus Oct Luxus Site Audit -> $0, FFF Nov -> task totals).
+SELECT t.eq((SELECT COALESCE(ARRAY_AGG(p.project_name || ' ' || TO_CHAR(b.summary_month, 'YYYY-MM') ORDER BY p.project_name), '{}')
+               FROM t_before.pms b
+               JOIN projects p ON p.id = b.project_id
+               LEFT JOIN project_monthly_summary s ON s.id = b.id
+              WHERE billing_month_lock_reason(b.company_id, b.summary_month) IS NULL
+                AND NOT EXISTS (SELECT 1 FROM project_group_members m WHERE m.member_project_id = b.project_id)
+                AND (s.rounded_minutes, s.billed_hours, s.billed_revenue_cents, s.carryover_in_hours,
+                     s.carryover_out_hours, s.minimum_padding_hours, s.milestone_override_cents)
+                    IS DISTINCT FROM
+                    (b.rounded_minutes, b.billed_hours, b.billed_revenue_cents, b.carryover_in_hours,
+                     b.carryover_out_hours, b.minimum_padding_hours, b.milestone_override_cents)),
+            ARRAY['Fluffy Feather Farm 2026-11', 'Luxus Site Audit 2026-10'],
+            'open months unchanged except FFF Nov and Luxus Site Audit Oct');
+SELECT t.eq((SELECT COUNT(*)::INT FROM project_monthly_summary s
+              WHERE billing_month_lock_reason(s.company_id, s.summary_month) IS NULL
+                AND NOT EXISTS (SELECT 1 FROM t_before.pms b WHERE b.id = s.id)), 0, 'no new open-month summary rows');
+
 -- Alerts: exactly the locked drift we know about (accepted ones silent).
 SELECT t.eq((SELECT ARRAY_AGG(p.project_name || ' ' || SPLIT_PART(a.entity_id, ':', 2) ORDER BY p.project_name, a.entity_id)
                FROM sync_alerts a JOIN projects p ON p.id::TEXT = SPLIT_PART(a.entity_id, ':', 1)

@@ -9,11 +9,12 @@
 --
 --   1. Serialises drains: pg_advisory_xact_lock on a fixed key (shared with
 --      reconcile_billing_months, migration 139).
---   2. Ensures task_monthly_totals is fresh for every month with pending
---      work BEFORE recalculating (validate_task_monthly_totals_vs_rollups ->
---      populate_task_monthly_totals per stale month -> re-validate). Still
---      stale => `tmt_rebuild_failed` alert and return 0 with the queue left
---      pending (never recalculate from known-bad totals).
+--   2. Ensures task_monthly_totals is fresh for each month the first time an
+--      item of that month is claimed (validate_task_monthly_totals_vs_rollups
+--      -> populate_task_monthly_totals for that month -> re-validate). A month
+--      still stale => `tmt_rebuild_failed` alert for that month and its items
+--      stay pending; every other month proceeds (never recalculate from
+--      known-bad totals, never let one bad month block the rest).
 --   3. Claims items oldest month first (carryover order), as before.
 --   4. Member project items are retargeted to the group primary
 --      (outcome 'retargeted').
@@ -21,15 +22,18 @@
 --      (billing_alert_locked_month: alert only on an actual change, never for
 --      an accepted variance) applies. Under the explicit owner override the
 --      month is recalculated (outcome 'recalculated_override').
---   6. Each recalc runs in its own sub-transaction: a failure rolls back that
---      project-month only, records outcome 'failed' + error, raises
---      `recalc_failed`, and the drain continues.
+--   6. The WHOLE per-item body (canonical lookup, retarget, freshness, lock
+--      check + alert, recalculation, EOM check) runs in one sub-transaction:
+--      any error rolls back that item only, records outcome 'failed' + error,
+--      raises `recalc_failed`, and the drain continues.
 --   7. A recalc that changes an open month which already has an eom_reports
 --      row raises `eom_report_stale` (the report is NOT regenerated).
 --   8. Cascade depth limit (unchanged rule) raises `recalc_cascade_limit`
 --      instead of only a WARNING.
 --
 --   recalculation_queue gains nullable `outcome` and `error` columns.
+--   drain_recalculation_queue_authenticated (UI wrapper, SECURITY DEFINER)
+--   loses EXECUTE for PUBLIC/anon; authenticated keeps it.
 --   Return value: number of project-months handled (any outcome), matching
 --   the previous "processed" meaning closely enough for the sync logs.
 --
@@ -73,10 +77,11 @@ AS $function$
 $function$;
 
 -- Ensure task_monthly_totals matches rollups for p_months. Rebuilds each
--- stale month in full. Returns the number of months STILL stale afterwards
--- (0 = fresh); when > 0 a `tmt_rebuild_failed` alert has been raised.
+-- stale month in full and re-validates. Returns the months STILL stale
+-- afterwards (empty = fresh); each raises a `tmt_rebuild_failed` alert
+-- (entity 'task_monthly_totals:<YYYY-MM>').
 CREATE OR REPLACE FUNCTION public.billing_ensure_tmt_fresh(p_months DATE[], p_context TEXT)
-RETURNS INTEGER
+RETURNS DATE[]
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
@@ -90,7 +95,7 @@ BEGIN
     v_months := ARRAY(SELECT DISTINCT DATE_TRUNC('month', m)::DATE
                         FROM UNNEST(p_months) AS u(m) WHERE m IS NOT NULL ORDER BY 1);
     IF cardinality(v_months) = 0 THEN
-        RETURN 0;
+        RETURN '{}';
     END IF;
 
     v_stale := ARRAY(
@@ -99,7 +104,7 @@ BEGIN
          WHERE v.summary_month = ANY(v_months)
          ORDER BY 1);
     IF cardinality(v_stale) = 0 THEN
-        RETURN 0;
+        RETURN '{}';
     END IF;
 
     FOREACH v_month IN ARRAY v_stale LOOP
@@ -114,19 +119,18 @@ BEGIN
          WHERE v.summary_month = ANY(v_stale)
          ORDER BY 1);
 
-    IF cardinality(v_still) > 0 THEN
+    FOREACH v_month IN ARRAY v_still LOOP
         PERFORM raise_billing_alert(
             'tmt_rebuild_failed',
-            'task_monthly_totals',
-            FORMAT('task_monthly_totals still disagrees with timesheet rollups after rebuild (%s); billing recalculation halted',
-                   ARRAY_TO_STRING(ARRAY(SELECT TO_CHAR(m, 'YYYY-MM') FROM UNNEST(v_still) m), ', ')),
-            JSONB_BUILD_OBJECT('entity_type', 'table', 'context', p_context,
-                               'months', TO_JSONB(v_still), 'rebuilt_months', TO_JSONB(v_stale)),
+            'task_monthly_totals:' || TO_CHAR(v_month, 'YYYY-MM'),
+            FORMAT('task_monthly_totals for %s still disagrees with timesheet rollups after rebuild; billing recalculation for that month halted',
+                   TO_CHAR(v_month, 'YYYY-MM')),
+            JSONB_BUILD_OBJECT('entity_type', 'month', 'context', p_context,
+                               'month', TO_CHAR(v_month, 'YYYY-MM')),
             'error');
-        RETURN cardinality(v_still);
-    END IF;
+    END LOOP;
 
-    RETURN 0;
+    RETURN v_still;
 END;
 $function$;
 
@@ -149,65 +153,18 @@ AS $function$
        AND s.summary_month = DATE_TRUNC('month', p_month)::DATE;
 $function$;
 
--- Raise `eom_report_stale` if (project's canonical company, month) already
--- has an EOM report. Entity: '<canonical company uuid>:<YYYY-MM>'. Changed
--- projects accumulate in metadata.projects.
+-- Project-grain wrapper over billing_alert_eom_stale_company (migration 135).
 CREATE OR REPLACE FUNCTION public.billing_alert_eom_stale(
     p_project_id UUID, p_month DATE, p_before JSONB, p_after JSONB)
 RETURNS BOOLEAN
-LANGUAGE plpgsql
+LANGUAGE sql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $function$
-DECLARE
-    v_month    DATE := DATE_TRUNC('month', p_month)::DATE;
-    v_company  UUID;
-    v_report   RECORD;
-    v_entity   TEXT;
-    v_projects JSONB;
-BEGIN
-    SELECT vcc.canonical_company_id INTO v_company
-      FROM projects p
-      JOIN v_company_canonical vcc ON vcc.company_id = p.company_id
-     WHERE p.id = p_project_id;
-    IF v_company IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    SELECT e.id, e.generated_at, e.company_name INTO v_report
-      FROM eom_reports e
-     WHERE e.company_id IN (SELECT f.company_id FROM billing_company_family(v_company) f)
-       AND e.report_year = EXTRACT(YEAR FROM v_month)::INTEGER
-       AND e.report_month = EXTRACT(MONTH FROM v_month)::INTEGER
-     ORDER BY e.generated_at DESC
-     LIMIT 1;
-    IF NOT FOUND THEN
-        RETURN FALSE;
-    END IF;
-
-    v_entity := v_company::TEXT || ':' || TO_CHAR(v_month, 'YYYY-MM');
-
-    SELECT COALESCE(a.metadata->'projects', '{}'::JSONB) INTO v_projects
-      FROM sync_alerts a
-     WHERE a.alert_type = 'eom_report_stale' AND a.entity_id = v_entity AND a.resolved_at IS NULL;
-    v_projects := COALESCE(v_projects, '{}'::JSONB)
-               || JSONB_BUILD_OBJECT(p_project_id::TEXT,
-                                     JSONB_BUILD_OBJECT('before', p_before, 'after', p_after));
-
-    PERFORM raise_billing_alert(
-        'eom_report_stale',
-        v_entity,
-        FORMAT('EOM report %s %s is stale: %s project summar%s recalculated after it was generated; regenerate before invoicing',
-               v_report.company_name, TO_CHAR(v_month, 'YYYY-MM'),
-               (SELECT COUNT(*) FROM JSONB_OBJECT_KEYS(v_projects)),
-               CASE WHEN (SELECT COUNT(*) FROM JSONB_OBJECT_KEYS(v_projects)) = 1 THEN 'y' ELSE 'ies' END),
-        JSONB_BUILD_OBJECT('entity_type', 'company_month', 'entity_name', v_report.company_name,
-                           'company_id', v_company, 'month', TO_CHAR(v_month, 'YYYY-MM'),
-                           'eom_report_id', v_report.id, 'eom_generated_at', v_report.generated_at,
-                           'projects', v_projects),
-        'warning');
-    RETURN TRUE;
-END;
+    SELECT billing_alert_eom_stale_company(
+        (SELECT p.company_id FROM projects p WHERE p.id = p_project_id),
+        p_month, p_project_id::TEXT,
+        JSONB_BUILD_OBJECT('before', p_before, 'after', p_after));
 $function$;
 
 CREATE OR REPLACE FUNCTION public.drain_recalculation_queue(p_max_depth integer DEFAULT 12)
@@ -219,6 +176,8 @@ DECLARE
     v_item          RECORD;
     v_processed     INTEGER := 0;
     v_cascade_depth INTEGER := 0;
+    v_checked       DATE[] := '{}';   -- months whose TMT freshness was established
+    v_bad_months    DATE[] := '{}';   -- months still stale after rebuild: skipped
     v_canonical     UUID;
     v_lock          TEXT;
     v_outcome       TEXT;
@@ -226,24 +185,19 @@ DECLARE
     v_before        JSONB;
     v_after         JSONB;
     v_key           TEXT;
+    v_hit_limit     BOOLEAN := FALSE;
 BEGIN
     -- (1) One drain at a time (sync functions, UI wrapper, reconcile).
     PERFORM pg_advisory_xact_lock(billing_drain_lock_key());
 
-    -- (2) Never recalculate from stale task totals.
-    IF billing_ensure_tmt_fresh(
-           ARRAY(SELECT DISTINCT q.queue_month FROM recalculation_queue q WHERE q.processed_at IS NULL),
-           'drain_recalculation_queue') > 0 THEN
-        RAISE WARNING 'drain_recalculation_queue: task_monthly_totals stale after rebuild; queue left pending';
-        RETURN 0;
-    END IF;
-
-    -- (3) Oldest month first - critical for carryover.
+    -- (3) Oldest month first - critical for carryover. Months whose task
+    -- totals cannot be made fresh are left pending.
     LOOP
         SELECT q.id, q.project_id, q.queue_month, q.reason
           INTO v_item
           FROM recalculation_queue q
          WHERE q.processed_at IS NULL
+           AND q.queue_month <> ALL(v_bad_months)
          ORDER BY q.queue_month ASC, q.queued_at ASC
          LIMIT 1
          FOR UPDATE SKIP LOCKED;
@@ -254,79 +208,94 @@ BEGIN
         v_outcome := NULL;
         v_error := NULL;
 
-        -- (4) Member -> primary.
-        v_canonical := billing_canonical_project(v_item.project_id);
-        IF v_canonical IS NULL THEN
+        -- (6) Everything for this item in one sub-transaction.
+        BEGIN
+            -- (2) TMT freshness, once per month.
+            IF NOT (v_item.queue_month = ANY(v_checked)) THEN
+                IF cardinality(billing_ensure_tmt_fresh(ARRAY[v_item.queue_month], 'drain_recalculation_queue')) > 0 THEN
+                    v_outcome := 'tmt_stale';
+                ELSE
+                    v_checked := v_checked || v_item.queue_month;
+                END IF;
+            END IF;
+
+            IF v_outcome IS NULL THEN
+                -- (4) Member -> primary.
+                v_canonical := billing_canonical_project(v_item.project_id);
+                IF v_canonical IS NULL THEN
+                    RAISE EXCEPTION 'project % not found', v_item.project_id;
+                ELSIF v_canonical <> v_item.project_id THEN
+                    INSERT INTO recalculation_queue (project_id, queue_month, reason)
+                    VALUES (v_canonical, v_item.queue_month, v_item.reason)
+                    ON CONFLICT (project_id, queue_month) WHERE processed_at IS NULL
+                    DO NOTHING;
+                    v_outcome := 'retargeted';
+                    v_error := 'retargeted to ' || v_canonical::TEXT;
+                END IF;
+            END IF;
+
+            IF v_outcome IS NULL THEN
+                -- (8) Safety: prevent runaway cascades (rule unchanged).
+                IF v_item.reason = 'cascade' THEN
+                    v_cascade_depth := v_cascade_depth + 1;
+                    IF v_cascade_depth > p_max_depth THEN
+                        PERFORM raise_billing_alert('recalc_cascade_limit', v_key,
+                            FORMAT('Carryover cascade depth limit (%s) reached at %s; remaining queue left pending',
+                                   p_max_depth, v_key),
+                            JSONB_BUILD_OBJECT('entity_type', 'project_month', 'project_id', v_item.project_id,
+                                               'month', TO_CHAR(v_item.queue_month, 'YYYY-MM'),
+                                               'max_depth', p_max_depth),
+                            'error');
+                        RAISE WARNING 'Cascade depth limit reached (%) for project %',
+                            p_max_depth, v_item.project_id;
+                        v_hit_limit := TRUE;
+                    END IF;
+                ELSE
+                    v_cascade_depth := 0;
+                END IF;
+            END IF;
+
+            IF v_outcome IS NULL AND NOT v_hit_limit THEN
+                -- (5) Locked month: keep and alert.
+                v_lock := billing_project_month_lock_reason(v_item.project_id, v_item.queue_month);
+                IF v_lock IS NOT NULL AND NOT billing_locked_recalc_override() THEN
+                    PERFORM billing_alert_locked_month(v_item.project_id, v_item.queue_month,
+                                                       v_item.reason, v_lock, NULL);
+                    v_outcome := 'skipped_locked';
+                ELSE
+                    v_before := billing_pms_fingerprint(v_item.project_id, v_item.queue_month);
+                    PERFORM recalculate_project_month(v_item.project_id, v_item.queue_month);
+                    v_outcome := CASE WHEN v_lock IS NULL THEN 'recalculated' ELSE 'recalculated_override' END;
+
+                    -- (7) Open month already reported => stale EOM report.
+                    IF v_outcome = 'recalculated' THEN
+                        v_after := billing_pms_fingerprint(v_item.project_id, v_item.queue_month);
+                        IF v_after IS DISTINCT FROM v_before THEN
+                            PERFORM billing_alert_eom_stale(v_item.project_id, v_item.queue_month,
+                                                            v_before, v_after);
+                        END IF;
+                    END IF;
+                END IF;
+            END IF;
+        EXCEPTION WHEN OTHERS THEN
+            -- A TMT rebuild done inside this item was rolled back with it.
+            v_checked := ARRAY_REMOVE(v_checked, v_item.queue_month);
             v_outcome := 'failed';
-            v_error := 'project not found';
+            v_error := SQLSTATE || ': ' || SQLERRM;
             PERFORM raise_billing_alert('recalc_failed', v_key,
-                FORMAT('Recalculation failed for %s: project not found', v_key),
+                FORMAT('Recalculation failed for %s: %s', v_key, LEFT(SQLERRM, 200)),
                 JSONB_BUILD_OBJECT('entity_type', 'project_month', 'project_id', v_item.project_id,
                                    'month', TO_CHAR(v_item.queue_month, 'YYYY-MM'),
                                    'reason', v_item.reason, 'error', v_error),
                 'error');
-        ELSIF v_canonical <> v_item.project_id THEN
-            INSERT INTO recalculation_queue (project_id, queue_month, reason)
-            VALUES (v_canonical, v_item.queue_month, v_item.reason)
-            ON CONFLICT (project_id, queue_month) WHERE processed_at IS NULL
-            DO NOTHING;
-            v_outcome := 'retargeted';
-            v_error := 'retargeted to ' || v_canonical::TEXT;
-        END IF;
+            RAISE WARNING 'drain_recalculation_queue: % failed: %', v_key, v_error;
+        END;
 
-        IF v_outcome IS NULL THEN
-            -- (8) Safety: prevent runaway cascades (rule unchanged).
-            IF v_item.reason = 'cascade' THEN
-                v_cascade_depth := v_cascade_depth + 1;
-                IF v_cascade_depth > p_max_depth THEN
-                    PERFORM raise_billing_alert('recalc_cascade_limit', v_key,
-                        FORMAT('Carryover cascade depth limit (%s) reached at %s; remaining queue left pending',
-                               p_max_depth, v_key),
-                        JSONB_BUILD_OBJECT('entity_type', 'project_month', 'project_id', v_item.project_id,
-                                           'month', TO_CHAR(v_item.queue_month, 'YYYY-MM'),
-                                           'max_depth', p_max_depth),
-                        'error');
-                    RAISE WARNING 'Cascade depth limit reached (%) for project %',
-                        p_max_depth, v_item.project_id;
-                    EXIT;
-                END IF;
-            ELSE
-                v_cascade_depth := 0;
-            END IF;
+        EXIT WHEN v_hit_limit;          -- item and the rest stay pending
 
-            -- (5) Locked month: keep and alert.
-            v_lock := billing_project_month_lock_reason(v_item.project_id, v_item.queue_month);
-            IF v_lock IS NOT NULL AND NOT billing_locked_recalc_override() THEN
-                PERFORM billing_alert_locked_month(v_item.project_id, v_item.queue_month,
-                                                   v_item.reason, v_lock, NULL);
-                v_outcome := 'skipped_locked';
-            ELSE
-                -- (6) Isolated recalculation.
-                v_before := billing_pms_fingerprint(v_item.project_id, v_item.queue_month);
-                BEGIN
-                    PERFORM recalculate_project_month(v_item.project_id, v_item.queue_month);
-                    v_outcome := CASE WHEN v_lock IS NULL THEN 'recalculated' ELSE 'recalculated_override' END;
-                EXCEPTION WHEN OTHERS THEN
-                    v_outcome := 'failed';
-                    v_error := SQLSTATE || ': ' || SQLERRM;
-                    PERFORM raise_billing_alert('recalc_failed', v_key,
-                        FORMAT('Recalculation failed for %s: %s', v_key, LEFT(SQLERRM, 200)),
-                        JSONB_BUILD_OBJECT('entity_type', 'project_month', 'project_id', v_item.project_id,
-                                           'month', TO_CHAR(v_item.queue_month, 'YYYY-MM'),
-                                           'reason', v_item.reason, 'error', v_error),
-                        'error');
-                    RAISE WARNING 'drain_recalculation_queue: % failed: %', v_key, v_error;
-                END;
-
-                -- (7) Open month already reported => stale EOM report.
-                IF v_outcome = 'recalculated' THEN
-                    v_after := billing_pms_fingerprint(v_item.project_id, v_item.queue_month);
-                    IF v_after IS DISTINCT FROM v_before THEN
-                        PERFORM billing_alert_eom_stale(v_item.project_id, v_item.queue_month,
-                                                        v_before, v_after);
-                    END IF;
-                END IF;
-            END IF;
+        IF v_outcome = 'tmt_stale' THEN  -- month's items stay pending
+            v_bad_months := v_bad_months || v_item.queue_month;
+            CONTINUE;
         END IF;
 
         -- Mark ALL pending items for this project+month as processed.
@@ -349,9 +318,11 @@ REVOKE ALL ON FUNCTION public.billing_drain_lock_key() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.billing_ensure_tmt_fresh(DATE[], TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.billing_pms_fingerprint(UUID, DATE) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.billing_alert_eom_stale(UUID, DATE, JSONB, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.drain_recalculation_queue_authenticated(INTEGER) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.billing_drain_lock_key() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.billing_ensure_tmt_fresh(DATE[], TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.billing_pms_fingerprint(UUID, DATE) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.billing_alert_eom_stale(UUID, DATE, JSONB, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.drain_recalculation_queue_authenticated(INTEGER) TO authenticated, service_role;
 
 COMMIT;

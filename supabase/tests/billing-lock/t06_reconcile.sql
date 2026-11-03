@@ -13,11 +13,11 @@ UPDATE timesheet_daily_rollups SET total_minutes = 180, rounded_minutes = 180 WH
 DELETE FROM timesheet_daily_rollups WHERE task_id = 'tPXa';                                            -- Mar (open) deleted at source
 SET session_replication_role = origin;
 SELECT populate_task_monthly_totals('ws', '2027-01-01', '2027-03-31');
-INSERT INTO billing_accepted_variances (project_id, month, reason, decided_by) VALUES (t.pid('extP2'), '2027-01-01', 'test', 'owner');
 SET session_replication_role = replica;
 UPDATE timesheet_daily_rollups SET total_minutes = 90, rounded_minutes = 90 WHERE task_id = 'tP2a';    -- Jan (locked, accepted)
 SET session_replication_role = origin;
 SELECT populate_task_monthly_totals('ws', '2027-01-01', '2027-01-31');
+SELECT accept_billing_variance(t.pid('extP2'), '2027-01-01', 'test', 'owner');
 
 SELECT t.eq((SELECT ARRAY_AGG(project_name || ':' || TO_CHAR(summary_month, 'YYYY-MM') || ':' || is_locked || ':' || is_accepted ORDER BY project_name, summary_month)
                FROM v_billing_month_drift),
@@ -94,6 +94,18 @@ SELECT t.eq((SELECT (r->>'persisting')::INT FROM real4), 1, 'persisting = 1');
 SELECT t.eq(t.alerts('reconcile_drift_persisting'), 1, 'reconcile_drift_persisting alert');
 SELECT t.eq(t.alerts('recalc_failed'), 1, 'and the underlying recalc_failed alert');
 DROP TRIGGER t_boom ON project_monthly_summary;
+
+-- Accepted variance whose source moves again is no longer accepted.
+SELECT t.eq((reconcile_billing_months('2027-01-01', '2027-01-01', FALSE)->>'accepted')::INT, 1, 'P2 Jan accepted while unchanged');
+SET session_replication_role = replica;
+UPDATE timesheet_daily_rollups SET total_minutes = 120, rounded_minutes = 120 WHERE task_id = 'tP2a';
+SET session_replication_role = origin;
+SELECT populate_task_monthly_totals('ws', '2027-01-01', '2027-01-31');
+CREATE TEMP TABLE real5 AS SELECT reconcile_billing_months('2027-01-01', '2027-01-01', TRUE) r;
+SELECT t.eq((SELECT (r->>'accepted')::INT * 10 + (r->>'locked_alerts')::INT FROM real5), 2, 'dry run: moved source no longer accepted');
+SELECT t.eq((reconcile_billing_months('2027-01-01', '2027-01-01', FALSE)->>'locked_alerts')::INT, 2, 'real run alerts it');
+SELECT t.ok(EXISTS (SELECT 1 FROM sync_alerts WHERE alert_type = 'invoiced_month_source_changed' AND entity_id = t.pid('extP2')::TEXT || ':2027-01'),
+            'alert raised for the formerly accepted month');
 
 -- Scheduled wrapper: an exception becomes a reconcile_failed alert.
 SELECT t.eq((run_scheduled_billing_reconcile()->>'status'), 'ok', 'scheduled wrapper runs a full real reconcile');

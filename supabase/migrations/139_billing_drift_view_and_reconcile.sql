@@ -21,7 +21,8 @@
 --       1. task_monthly_totals vs rollups: stale months are rebuilt (real run)
 --          or only reported (dry run). Still stale => status 'failed'.
 --       2. Each drifted project-month in range:
---            locked + accepted  -> counted in `accepted`, no alert
+--            locked + accepted  -> counted in `accepted`, no alert (only while
+--                                  the accepted minutes/revenue still match)
 --            locked             -> invoiced_month_source_changed alert
 --                                  (`locked_alerts`)
 --            open               -> queued, reason 'reconcile_drift'
@@ -101,7 +102,9 @@ SELECT c.project_id,
        l.lock_reason,
        l.lock_reason IS NOT NULL AS is_locked,
        EXISTS (SELECT 1 FROM billing_accepted_variances a
-                WHERE a.project_id = c.project_id AND a.month = c.summary_month) AS is_accepted
+                WHERE a.project_id = c.project_id AND a.month = c.summary_month
+                  AND a.accepted_pms_min = COALESCE(c.pms_min, 0)
+                  AND a.accepted_tmt_min = COALESCE(c.tmt_min, 0)) AS is_accepted
   FROM calc c
   JOIN projects p ON p.id = c.project_id
   LEFT JOIN v_company_canonical vcc ON vcc.company_id = p.company_id
@@ -155,7 +158,7 @@ BEGIN
                        FROM validate_task_monthly_totals_vs_rollups(v_from, v_to) v
                       ORDER BY 1);
     IF NOT p_dry_run AND cardinality(v_stale) > 0 THEN
-        v_still := billing_ensure_tmt_fresh(v_stale, 'reconcile_billing_months');
+        v_still := cardinality(billing_ensure_tmt_fresh(v_stale, 'reconcile_billing_months'));
         IF v_still > 0 THEN
             RETURN JSONB_BUILD_OBJECT(
                 'status', 'failed', 'dry_run', p_dry_run, 'from', v_from, 'to', v_to,
@@ -173,16 +176,23 @@ BEGIN
            AND (v_to IS NULL OR d.summary_month <= v_to)
          ORDER BY d.summary_month, d.company_name, d.project_name
     LOOP
-        IF r.is_locked AND r.is_accepted THEN
-            v_action := 'accepted';
-            v_accepted := v_accepted + 1;
-        ELSIF r.is_locked THEN
-            v_action := 'locked_alert';
-            v_locked_alerts := v_locked_alerts + 1;
-            IF NOT p_dry_run THEN
-                PERFORM billing_alert_locked_month(
+        IF r.is_locked THEN
+            -- Real run: the shared alert rule decides (an accepted variance
+            -- suppresses only while minutes AND revenue still match what was
+            -- accepted). Dry run: the view's minute-level acceptance flag.
+            IF p_dry_run THEN
+                v_action := CASE WHEN r.is_accepted THEN 'accepted' ELSE 'locked_alert' END;
+            ELSIF billing_alert_locked_month(
                     r.project_id, r.summary_month, 'reconcile_drift', r.lock_reason,
-                    JSONB_BUILD_OBJECT('drift_pms_min', r.pms_min, 'drift_tmt_min', r.tmt_min));
+                    JSONB_BUILD_OBJECT('drift_pms_min', r.pms_min, 'drift_tmt_min', r.tmt_min)) THEN
+                v_action := 'locked_alert';
+            ELSE
+                v_action := 'accepted';
+            END IF;
+            IF v_action = 'accepted' THEN
+                v_accepted := v_accepted + 1;
+            ELSE
+                v_locked_alerts := v_locked_alerts + 1;
             END IF;
         ELSE
             v_action := 'recalc';

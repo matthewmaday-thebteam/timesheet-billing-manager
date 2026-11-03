@@ -45,6 +45,30 @@ SELECT t.eq((SELECT COUNT(*)::INT FROM sync_alerts WHERE alert_type = 'eom_repor
             'luxus Oct already has an EOM report -> eom_report_stale (not regenerated)');
 SELECT t.eq((SELECT COUNT(*)::INT FROM v_billing_month_drift WHERE NOT is_locked), 0, 'no open drift left');
 
+-- FFF Nov now equals its task totals and is priced consistently.
+SELECT t.eq((SELECT s.rounded_minutes::BIGINT FROM project_monthly_summary s JOIN projects p ON p.id = s.project_id
+              WHERE p.project_name = 'Fluffy Feather Farm' AND s.summary_month = '2026-11-01'),
+            (SELECT SUM(t.rounded_entry_minutes)::BIGINT FROM task_monthly_totals t JOIN projects p ON p.id = t.project_id
+              WHERE p.project_name = 'Fluffy Feather Farm' AND t.summary_month = '2026-11-01'),
+            'FFF Nov rounded minutes = task totals (entry mode)');
+SELECT t.ok((SELECT s.billed_revenue_cents = ROUND(s.billed_hours * s.rate_used * 100) AND s.billed_hours = s.rounded_hours
+               FROM project_monthly_summary s JOIN projects p ON p.id = s.project_id
+              WHERE p.project_name = 'Fluffy Feather Farm' AND s.summary_month = '2026-11-01'),
+            'FFF Nov revenue = billed hours x rate');
+
+-- Every other open month untouched (billing values).
+SELECT t.eq((SELECT COALESCE(ARRAY_AGG(p.project_name || ' ' || TO_CHAR(b.summary_month, 'YYYY-MM') ORDER BY p.project_name), '{}')
+               FROM t_before.pms b
+               JOIN projects p ON p.id = b.project_id
+               LEFT JOIN project_monthly_summary s ON s.id = b.id
+              WHERE billing_month_lock_reason(b.company_id, b.summary_month) IS NULL
+                AND (s.rounded_minutes, s.billed_hours, s.billed_revenue_cents, s.carryover_in_hours,
+                     s.carryover_out_hours, s.minimum_padding_hours, s.milestone_override_cents)
+                    IS DISTINCT FROM
+                    (b.rounded_minutes, b.billed_hours, b.billed_revenue_cents, b.carryover_in_hours,
+                     b.carryover_out_hours, b.minimum_padding_hours, b.milestone_override_cents)),
+            ARRAY['Fluffy Feather Farm 2026-11', 'Luxus Site Audit 2026-10'],
+            'open months unchanged except FFF Nov and Luxus Site Audit Oct');
 -- Locked months untouched by the reconcile.
 SELECT t.eq((SELECT COUNT(*)::INT FROM t_before.pms b
               WHERE billing_month_lock_reason(b.company_id, b.summary_month) IS NOT NULL

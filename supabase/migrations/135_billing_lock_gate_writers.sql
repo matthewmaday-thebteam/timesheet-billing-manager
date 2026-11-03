@@ -18,8 +18,10 @@
 --   Locked month => no write; an `invoiced_month_source_changed` alert is
 --   raised (entity_id '<canonical project uuid>:<YYYY-MM>') ONLY when the
 --   would-be result actually differs from what is stored, and never for a
---   project-month listed in billing_accepted_variances. A carryover cascade
---   that would change a locked month's carryover-in stops there and alerts.
+--   project-month listed in billing_accepted_variances whose accepted values
+--   still match. A carryover change that would alter a locked next month's
+--   carryover-in blocks the WHOLE recalculation of the (open) month — PMS and
+--   carryover stay consistent — and alerts on the locked month.
 --
 --   Deliberate manual override (owner only, never automation):
 --       BEGIN;
@@ -30,6 +32,18 @@
 --   `postgres` (SQL editor / psql). API sessions log in as `authenticator`
 --   and can never activate it. Every overridden write raises a
 --   `locked_month_override_recalc` alert as an audit trail.
+--
+--   recalculate_fixed_billing_month also raises `eom_report_stale` when an
+--   OPEN company-month that already has an EOM report gets a different
+--   milestone override or fixed-billing total. Its alerting runs in the
+--   SECURITY DEFINER helper billing_fixed_billing_alerts(month), because the
+--   function itself runs as the admin editing billing_transactions.
+--
+--   accept_billing_variance(project, month, reason, decided_by) records an
+--   owner decision with the current comparison values (service_role / SQL).
+--
+--   Grants: sync_project_carryover (no callers in src/ or edge functions) is
+--   narrowed to service_role; the gate/compare helpers are service_role only.
 --
 --   Function bodies are the LIVE prod definitions (pg_get_functiondef,
 --   2026-11-03; identical md5 to the prod catalog) with the gate inserted.
@@ -155,14 +169,22 @@ BEGIN
         RAISE EXCEPTION 'billing_alert_locked_month: project % not found', p_project_id;
     END IF;
 
+    v_cmp := billing_project_month_compare(v_canonical, v_month);
+
+    -- An accepted variance silences the month only while the comparison is
+    -- still exactly what the owner accepted.
     IF EXISTS (
         SELECT 1 FROM billing_accepted_variances a
          WHERE a.project_id = v_canonical AND a.month = v_month
+           AND (a.accepted_pms_min, a.accepted_tmt_min,
+                a.accepted_pms_revenue_cents, a.accepted_source_revenue_cents)
+               IS NOT DISTINCT FROM
+               (COALESCE((v_cmp->>'pms_min')::INTEGER, 0), COALESCE((v_cmp->>'tmt_min')::INTEGER, 0),
+                COALESCE((v_cmp->>'pms_billed_revenue_cents')::BIGINT, 0),
+                COALESCE((v_cmp->>'new_billed_revenue_cents')::BIGINT, 0))
     ) THEN
         RETURN FALSE;
     END IF;
-
-    v_cmp := billing_project_month_compare(v_canonical, v_month);
     IF p_extra IS NULL AND NOT (v_cmp->>'changed')::BOOLEAN THEN
         RETURN FALSE;
     END IF;
@@ -255,8 +277,44 @@ END;
 $function$;
 
 -- ----------------------------------------------------------------------------
--- 5. recalculate_project_month — live body + gate (month itself, and the
---    carryover cascade into the next month)
+-- 4b. Record an owner decision: accept the CURRENT comparison of a locked
+--     project-month (service_role / SQL only).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.accept_billing_variance(
+    p_project_id UUID, p_month DATE, p_reason TEXT, p_decided_by TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_month     DATE := DATE_TRUNC('month', p_month)::DATE;
+    v_canonical UUID := billing_canonical_project(p_project_id);
+    v_cmp       JSONB;
+BEGIN
+    IF v_canonical IS NULL THEN
+        RAISE EXCEPTION 'accept_billing_variance: project % not found', p_project_id;
+    END IF;
+    v_cmp := billing_project_month_compare(v_canonical, v_month);
+
+    INSERT INTO billing_accepted_variances (
+        project_id, month, reason, decided_by, decided_at,
+        accepted_pms_min, accepted_tmt_min, accepted_pms_revenue_cents, accepted_source_revenue_cents)
+    VALUES (
+        v_canonical, v_month, p_reason, p_decided_by, NOW(),
+        COALESCE((v_cmp->>'pms_min')::INTEGER, 0), COALESCE((v_cmp->>'tmt_min')::INTEGER, 0),
+        COALESCE((v_cmp->>'pms_billed_revenue_cents')::BIGINT, 0), COALESCE((v_cmp->>'new_billed_revenue_cents')::BIGINT, 0))
+    ON CONFLICT (project_id, month) DO UPDATE SET
+        reason = EXCLUDED.reason, decided_by = EXCLUDED.decided_by, decided_at = EXCLUDED.decided_at,
+        accepted_pms_min = EXCLUDED.accepted_pms_min, accepted_tmt_min = EXCLUDED.accepted_tmt_min,
+        accepted_pms_revenue_cents = EXCLUDED.accepted_pms_revenue_cents,
+        accepted_source_revenue_cents = EXCLUDED.accepted_source_revenue_cents;
+END;
+$function$;
+
+-- ----------------------------------------------------------------------------
+-- 5. recalculate_project_month — live body + gate (the month itself, and an
+--    all-or-nothing gate on the carryover into the next month)
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.recalculate_project_month(p_project_id uuid, p_month date)
  RETURNS void
@@ -304,6 +362,39 @@ BEGIN
         -- between the guard above and the call. Match prior no-op behavior.
         RETURN;
     END IF;
+
+    -- Billing lock gate for the carryover cascade (migration 135). This
+    -- month's carryover-out is the next month's carryover-in. If step (d)
+    -- would rewrite it and the next month is locked, NOTHING is written for
+    -- this month either (all-or-nothing: the PMS row and the carryover row
+    -- never disagree); the alert is raised on the locked next month.
+    -- Condition mirrors step (d) exactly.
+    DECLARE
+        v_gate_old_carryover NUMERIC(10,2);
+        v_gate_next_month DATE := (v_month + INTERVAL '1 month')::DATE;
+    BEGIN
+        SELECT COALESCE(SUM(pch.carryover_hours), 0)
+        INTO v_gate_old_carryover
+        FROM project_carryover_hours pch
+        WHERE pch.project_id = p_project_id
+            AND pch.source_month = v_month;
+
+        IF v.carryover_out_hours IS DISTINCT FROM v_gate_old_carryover
+           AND ((v.carryover_enabled_config AND v.carryover_out_hours > 0)
+                OR v_gate_old_carryover > 0)
+           AND NOT billing_lock_gate(
+                p_project_id, v_gate_next_month, 'carryover_cascade',
+                JSONB_BUILD_OBJECT(
+                    'source_month', TO_CHAR(v_month, 'YYYY-MM'),
+                    'carryover_in_stored_hours', v_gate_old_carryover,
+                    'carryover_in_new_hours', v.carryover_out_hours,
+                    'title_detail', FORMAT('carryover in from %s would change %sh -> %sh; %s not recalculated either',
+                        TO_CHAR(v_month, 'YYYY-MM'), v_gate_old_carryover, v.carryover_out_hours,
+                        TO_CHAR(v_month, 'YYYY-MM'))))
+        THEN
+            RETURN;
+        END IF;
+    END;
 
     -- (b) STEP 7 (migration 095 L255-260): company-grain invoiced revenue.
     SELECT COALESCE(SUM(bt.amount_cents), 0)
@@ -386,22 +477,6 @@ BEGIN
             AND pch.source_month = v_month;
 
         IF v.carryover_out_hours IS DISTINCT FROM v_old_carryover_out THEN
-            -- Billing lock gate (migration 135): this month's carryover-out is
-            -- the next month's carryover-in. If the next month is locked the
-            -- cascade stops here: nothing is written or queued for it, and an
-            -- invoiced_month_source_changed alert is raised for it instead.
-            IF NOT billing_lock_gate(
-                p_project_id, v_next_month, 'carryover_cascade',
-                JSONB_BUILD_OBJECT(
-                    'source_month', TO_CHAR(v_month, 'YYYY-MM'),
-                    'carryover_in_stored_hours', v_old_carryover_out,
-                    'carryover_in_new_hours', v.carryover_out_hours,
-                    'title_detail', FORMAT('carryover in from %s would change %sh -> %sh',
-                        TO_CHAR(v_month, 'YYYY-MM'), v_old_carryover_out, v.carryover_out_hours))
-            ) THEN
-                RETURN;
-            END IF;
-
             IF v.carryover_enabled_config AND v.carryover_out_hours > 0 THEN
                 INSERT INTO project_carryover_hours (
                     project_id, carryover_month, source_month,
@@ -557,56 +632,115 @@ AS $function$
     GROUP BY b.company_id;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.recalculate_fixed_billing_month(p_month date)
- RETURNS void
- LANGUAGE plpgsql
- SET search_path TO 'public'
+-- Company-month EOM staleness: raise `eom_report_stale` for (canonical
+-- company of p_company_id, month) if an EOM report exists. p_key identifies
+-- what changed (project uuid or 'fixed:<company>'); changes accumulate in
+-- metadata.changes. Internal (called from SECURITY DEFINER code only).
+CREATE OR REPLACE FUNCTION public.billing_alert_eom_stale_company(
+    p_company_id UUID, p_month DATE, p_key TEXT, p_change JSONB)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_month   DATE := DATE_TRUNC('month', p_month)::DATE;
+    v_company UUID;
+    v_report  RECORD;
+    v_entity  TEXT;
+    v_changes JSONB;
+    v_n       INTEGER;
+BEGIN
+    SELECT vcc.canonical_company_id INTO v_company
+      FROM v_company_canonical vcc WHERE vcc.company_id = p_company_id;
+    IF v_company IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    SELECT e.id, e.generated_at, e.company_name INTO v_report
+      FROM eom_reports e
+     WHERE e.company_id IN (SELECT f.company_id FROM billing_company_family(v_company) f)
+       AND e.report_year = EXTRACT(YEAR FROM v_month)::INTEGER
+       AND e.report_month = EXTRACT(MONTH FROM v_month)::INTEGER
+     ORDER BY e.generated_at DESC
+     LIMIT 1;
+    IF NOT FOUND THEN
+        RETURN FALSE;
+    END IF;
+
+    v_entity := v_company::TEXT || ':' || TO_CHAR(v_month, 'YYYY-MM');
+
+    SELECT COALESCE(a.metadata->'changes', '{}'::JSONB) INTO v_changes
+      FROM sync_alerts a
+     WHERE a.alert_type = 'eom_report_stale' AND a.entity_id = v_entity AND a.resolved_at IS NULL;
+    v_changes := COALESCE(v_changes, '{}'::JSONB) || JSONB_BUILD_OBJECT(p_key, p_change);
+    SELECT COUNT(*) INTO v_n FROM JSONB_OBJECT_KEYS(v_changes);
+
+    PERFORM raise_billing_alert(
+        'eom_report_stale',
+        v_entity,
+        FORMAT('EOM report %s %s is stale: %s billing input%s changed after it was generated; regenerate before invoicing',
+               v_report.company_name, TO_CHAR(v_month, 'YYYY-MM'), v_n, CASE WHEN v_n = 1 THEN '' ELSE 's' END),
+        JSONB_BUILD_OBJECT('entity_type', 'company_month', 'entity_name', v_report.company_name,
+                           'company_id', v_company, 'month', TO_CHAR(v_month, 'YYYY-MM'),
+                           'eom_report_id', v_report.id, 'eom_generated_at', v_report.generated_at,
+                           'changes', v_changes),
+        'warning');
+    RETURN TRUE;
+END;
+$function$;
+
+-- All alerting for recalculate_fixed_billing_month, evaluated BEFORE its
+-- writes (same targets). SECURITY DEFINER so a SECURITY INVOKER caller (an
+-- authenticated admin editing billing_transactions) can raise alerts; takes
+-- only the month and derives everything else itself, so it cannot be used to
+-- inject arbitrary alert text.
+--   locked company-month + value would change -> invoiced_month_source_changed
+--   owner override active + locked months      -> locked_month_override_recalc
+--   open company-month + value would change + EOM report exists -> eom_report_stale
+CREATE OR REPLACE FUNCTION public.billing_fixed_billing_alerts(p_month DATE)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
 AS $function$
 DECLARE
   v_month DATE := DATE_TRUNC('month', p_month)::DATE;
-  -- Billing lock gate (migration 135): companies (every family member
-  -- included) whose month is locked, and whether the month is date-locked
-  -- (which also covers rows with a NULL company).
   v_override BOOLEAN := billing_locked_recalc_override();
   v_locked UUID[];
   v_date_locked BOOLEAN;
   r RECORD;
 BEGIN
-  v_locked := ARRAY(
-    SELECT c.id FROM companies c
-    WHERE billing_month_lock_reason(c.id, v_month) IS NOT NULL
-  );
+  v_locked := ARRAY(SELECT c.id FROM companies c WHERE billing_month_lock_reason(c.id, v_month) IS NOT NULL);
   v_date_locked := billing_month_lock_reason(NULL, v_month) IS NOT NULL;
 
-  IF v_override THEN
-    IF cardinality(v_locked) > 0 OR v_date_locked THEN
-      PERFORM raise_billing_alert(
-        'locked_month_override_recalc',
-        'fixed_billing:' || TO_CHAR(v_month, 'YYYY-MM'),
-        FORMAT('Locked month %s fixed/milestone billing recalculated by manual override', TO_CHAR(v_month, 'YYYY-MM')),
-        JSONB_BUILD_OBJECT('entity_type', 'month', 'month', TO_CHAR(v_month, 'YYYY-MM'),
-                           'reason', 'recalculate_fixed_billing_month',
-                           'session_user', session_user::TEXT, 'at', NOW()),
-        'warning');
-    END IF;
-    v_locked := '{}';
-    v_date_locked := FALSE;
-  ELSE
-    -- Locked rows are never written; alert where the value would change.
-    FOR r IN
-      SELECT pms.project_id, pms.milestone_override_cents AS stored_cents, sub.total_cents AS new_cents
-      FROM project_monthly_summary pms
-      LEFT JOIN billing_milestone_override_targets(v_month) sub ON sub.project_id = pms.project_id
-      WHERE pms.summary_month = v_month
-        AND COALESCE(pms.company_id = ANY(v_locked), v_date_locked)
-        AND (
-          (sub.project_id IS NOT NULL AND pms.milestone_override_cents IS DISTINCT FROM sub.total_cents)
-          OR (sub.project_id IS NULL AND pms.milestone_override_cents IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM billings b
-                              WHERE b.linked_project_id = pms.project_id
-                                AND b.type = 'revenue_milestone'))
-        )
-    LOOP
+  IF v_override AND (cardinality(v_locked) > 0 OR v_date_locked) THEN
+    PERFORM raise_billing_alert(
+      'locked_month_override_recalc',
+      'fixed_billing:' || TO_CHAR(v_month, 'YYYY-MM'),
+      FORMAT('Locked month %s fixed/milestone billing recalculated by manual override', TO_CHAR(v_month, 'YYYY-MM')),
+      JSONB_BUILD_OBJECT('entity_type', 'month', 'month', TO_CHAR(v_month, 'YYYY-MM'),
+                         'reason', 'recalculate_fixed_billing_month',
+                         'session_user', session_user::TEXT, 'at', NOW()),
+      'warning');
+  END IF;
+
+  -- Milestone overrides that would change.
+  FOR r IN
+    SELECT pms.project_id, pms.company_id, pms.milestone_override_cents AS stored_cents, sub.total_cents AS new_cents,
+           COALESCE(pms.company_id = ANY(v_locked), v_date_locked) AND NOT v_override AS is_locked
+    FROM project_monthly_summary pms
+    LEFT JOIN billing_milestone_override_targets(v_month) sub ON sub.project_id = pms.project_id
+    WHERE pms.summary_month = v_month
+      AND (
+        (sub.project_id IS NOT NULL AND pms.milestone_override_cents IS DISTINCT FROM sub.total_cents)
+        OR (sub.project_id IS NULL AND pms.milestone_override_cents IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM billings b
+                            WHERE b.linked_project_id = pms.project_id
+                              AND b.type = 'revenue_milestone'))
+      )
+  LOOP
+    IF r.is_locked THEN
       PERFORM billing_alert_locked_month(
         r.project_id, v_month, 'fixed_billing_milestone',
         billing_project_month_lock_reason(r.project_id, v_month),
@@ -615,19 +749,25 @@ BEGIN
           'milestone_override_new_cents', r.new_cents,
           'title_detail', FORMAT('milestone override would change %s -> %s cents',
                                  COALESCE(r.stored_cents::TEXT, 'none'), COALESCE(r.new_cents::TEXT, 'none'))));
-    END LOOP;
+    ELSE
+      PERFORM billing_alert_eom_stale_company(r.company_id, v_month, r.project_id::TEXT,
+        JSONB_BUILD_OBJECT('milestone_override_cents', JSONB_BUILD_OBJECT('before', r.stored_cents, 'after', r.new_cents)));
+    END IF;
+  END LOOP;
 
-    FOR r IN
-      SELECT COALESCE(t.company_id, f.company_id) AS company_id,
-             f.fixed_billing_cents AS stored_cents, t.fixed_billing_cents AS new_cents,
-             f.fixed_billing_count AS stored_count, t.fixed_billing_count AS new_count
-      FROM billing_fixed_billing_targets(v_month) t
-      FULL JOIN (SELECT * FROM monthly_fixed_billing_summary WHERE summary_month = v_month) f
-        ON f.company_id = t.company_id
-      WHERE COALESCE(COALESCE(t.company_id, f.company_id) = ANY(v_locked), v_date_locked)
-        AND (f.fixed_billing_cents, f.fixed_billing_count)
-            IS DISTINCT FROM (t.fixed_billing_cents, t.fixed_billing_count)
-    LOOP
+  -- Fixed billing totals that would change.
+  FOR r IN
+    SELECT COALESCE(t.company_id, f.company_id) AS company_id,
+           f.fixed_billing_cents AS stored_cents, t.fixed_billing_cents AS new_cents,
+           f.fixed_billing_count AS stored_count, t.fixed_billing_count AS new_count,
+           COALESCE(COALESCE(t.company_id, f.company_id) = ANY(v_locked), v_date_locked) AND NOT v_override AS is_locked
+    FROM billing_fixed_billing_targets(v_month) t
+    FULL JOIN (SELECT * FROM monthly_fixed_billing_summary WHERE summary_month = v_month) f
+      ON f.company_id = t.company_id
+    WHERE (f.fixed_billing_cents, f.fixed_billing_count)
+          IS DISTINCT FROM (t.fixed_billing_cents, t.fixed_billing_count)
+  LOOP
+    IF r.is_locked THEN
       PERFORM raise_billing_alert(
         'invoiced_month_source_changed',
         r.company_id::TEXT || ':' || TO_CHAR(v_month, 'YYYY-MM'),
@@ -643,7 +783,40 @@ BEGIN
           'reason', 'recalculate_fixed_billing_month',
           'lock_reason', billing_month_lock_reason(r.company_id, v_month)),
         'warning');
-    END LOOP;
+    ELSE
+      PERFORM billing_alert_eom_stale_company(r.company_id, v_month, 'fixed:' || r.company_id::TEXT,
+        JSONB_BUILD_OBJECT('fixed_billing_cents', JSONB_BUILD_OBJECT('before', r.stored_cents, 'after', r.new_cents)));
+    END IF;
+  END LOOP;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.recalculate_fixed_billing_month(p_month date)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_month DATE := DATE_TRUNC('month', p_month)::DATE;
+  -- Billing lock gate (migration 135): companies (every family member
+  -- included) whose month is locked, and whether the month is date-locked
+  -- (which also covers rows with a NULL company). Empty under the explicit
+  -- owner override.
+  v_locked UUID[];
+  v_date_locked BOOLEAN;
+BEGIN
+  -- Alerts first (locked changes, override audit, stale EOM reports).
+  PERFORM billing_fixed_billing_alerts(v_month);
+
+  IF billing_locked_recalc_override() THEN
+    v_locked := '{}';
+    v_date_locked := FALSE;
+  ELSE
+    v_locked := ARRAY(
+      SELECT c.id FROM companies c
+      WHERE billing_month_lock_reason(c.id, v_month) IS NOT NULL
+    );
+    v_date_locked := billing_month_lock_reason(NULL, v_month) IS NOT NULL;
   END IF;
 
   -- ========================================================================
@@ -729,23 +902,31 @@ END;
 $function$;
 
 -- ----------------------------------------------------------------------------
--- 7. Privileges for the new helpers
+-- 7. Privileges for the new helpers (+ tighten sync_project_carryover, which
+--    nothing in src/ or supabase/functions calls)
 -- ----------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.billing_locked_recalc_override() FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.billing_project_month_compare(UUID, DATE) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.billing_project_month_compare(UUID, DATE) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.billing_alert_locked_month(UUID, DATE, TEXT, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.billing_lock_gate(UUID, DATE, TEXT, JSONB) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.billing_lock_gate(UUID, DATE, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accept_billing_variance(UUID, DATE, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.billing_milestone_override_targets(DATE) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.billing_fixed_billing_targets(DATE) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.billing_alert_eom_stale_company(UUID, DATE, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.billing_fixed_billing_alerts(DATE) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.sync_project_carryover(UUID, DATE, NUMERIC, NUMERIC, NUMERIC) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.billing_locked_recalc_override() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.billing_project_month_compare(UUID, DATE) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.billing_project_month_compare(UUID, DATE) TO service_role;
 GRANT EXECUTE ON FUNCTION public.billing_alert_locked_month(UUID, DATE, TEXT, TEXT, JSONB) TO service_role;
--- billing_lock_gate is invoked from SECURITY INVOKER writers
--- (recalculate_project_month, recalculate_fixed_billing_month) which keep
--- their existing grants, so their callers need EXECUTE on it.
-GRANT EXECUTE ON FUNCTION public.billing_lock_gate(UUID, DATE, TEXT, JSONB) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.billing_lock_gate(UUID, DATE, TEXT, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.accept_billing_variance(UUID, DATE, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.billing_milestone_override_targets(DATE) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.billing_fixed_billing_targets(DATE) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.billing_alert_eom_stale_company(UUID, DATE, TEXT, JSONB) TO service_role;
+-- recalculate_fixed_billing_month (SECURITY INVOKER) runs from the
+-- billing_transactions trigger as the editing admin (authenticated).
+GRANT EXECUTE ON FUNCTION public.billing_fixed_billing_alerts(DATE) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.sync_project_carryover(UUID, DATE, NUMERIC, NUMERIC, NUMERIC) TO service_role;
 
 COMMIT;

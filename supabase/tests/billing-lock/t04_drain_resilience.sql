@@ -26,6 +26,24 @@ SELECT t.eq((t.pms(t.pid('extP1'), '2027-01-01')).rounded_minutes, 75, 'other it
 SELECT t.eq((t.pms(t.pid('extPX'), '2027-03-01')).rounded_minutes, 75, 'later item after the failure recalculated');
 DROP TRIGGER t_boom ON project_monthly_summary;
 
+-- Failure on the LOCKED-month path (lock check / alert) is isolated too ------
+SELECT t.invoice(t.cid('cA'), '2027-01-01');                 -- Jan locked, Feb+ open
+CREATE TEMP TABLE saved_fn AS
+    SELECT pg_get_functiondef('billing_alert_locked_month(uuid,date,text,text,jsonb)'::regprocedure) AS def;
+CREATE OR REPLACE FUNCTION public.billing_alert_locked_month(p_project_id UUID, p_month DATE, p_reason TEXT,
+    p_lock_reason TEXT, p_extra JSONB DEFAULT NULL) RETURNS BOOLEAN LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'injected failure on locked path'; END $$;
+DELETE FROM sync_alerts;
+SELECT t.upsert('tP2a', 'extP2', '2027-01-12', 60);           -- locked Jan item (will fail)
+SELECT t.upsert('tPMb', 'extPM', '2027-02-06', 45);           -- open Feb item (PG)
+SELECT t.eq(drain_recalculation_queue(), 2, 'drain survives a failing locked item');
+SELECT t.eq((SELECT outcome FROM recalculation_queue WHERE project_id = t.pid('extP2') AND queue_month = '2027-01-01' ORDER BY queued_at DESC LIMIT 1),
+            'failed', 'locked item failing in the alert path -> outcome failed');
+SELECT t.eq(t.alerts('recalc_failed'), 1, 'recalc_failed alert for the locked item');
+SELECT t.eq((t.pms(t.pid('extPG'), '2027-02-01')).rounded_minutes, 45, 'open item after it still recalculated');
+DO $$ BEGIN EXECUTE (SELECT def FROM saved_fn); END $$;
+DELETE FROM billing_month_locks; DELETE FROM qbo_invoice_log;  -- reopen Jan for the rest of the file
+
 -- Stale TMT is rebuilt before recalculating ----------------------------------
 -- Change a rollup with triggers bypassed, then queue the month by hand: TMT is
 -- now stale and only the drain's freshness step can fix it.
@@ -46,9 +64,12 @@ BEGIN
 END $$;
 CREATE TRIGGER t_swallow BEFORE INSERT ON task_monthly_totals FOR EACH ROW EXECUTE FUNCTION t.swallow();
 SELECT t.upsert('tP1c', 'extP1', '2027-03-10', 135);
-SELECT t.eq(drain_recalculation_queue(), 0, 'drain returns 0 when TMT cannot be made fresh');
+SELECT t.upsert('tP2a', 'extP2', '2027-01-12', 75);           -- a healthy month queued too
+SELECT t.eq(drain_recalculation_queue(), 1, 'drain processes the healthy month only');
 SELECT t.eq(t.alerts('tmt_rebuild_failed'), 1, 'tmt_rebuild_failed alert');
-SELECT t.eq(t.pending(), ARRAY['extP1:2027-03:sync_update'], 'queue left pending');
+SELECT t.eq((SELECT entity_id FROM sync_alerts WHERE alert_type = 'tmt_rebuild_failed'), 'task_monthly_totals:2027-03', 'alert is per month');
+SELECT t.eq(t.pending(), ARRAY['extP1:2027-03:sync_update'], 'only the stale month''s items left pending');
+SELECT t.eq((t.pms(t.pid('extP2'), '2027-01-01')).rounded_minutes, 75, 'healthy month recalculated despite the stale month');
 SELECT t.eq((t.pms(t.pid('extP1'), '2027-03-01')).rounded_minutes, 90, 'March not recalculated from bad totals');
 DROP TRIGGER t_swallow ON task_monthly_totals;
 SELECT drain_recalculation_queue();

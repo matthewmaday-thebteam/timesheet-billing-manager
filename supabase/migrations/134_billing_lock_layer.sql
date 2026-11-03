@@ -20,11 +20,19 @@
 --         month's change would leak into an already-invoiced later month.
 --     (b) month <= billing_settings.billing_closed_through (owner: months
 --         through 2026-09 were invoiced outside Manifest for some customers).
---     (c) a manual billing_month_locks row exists for any family company.
+--     (c) a billing_month_locks row exists for any family company: a
+--         'manual' row locks exactly its month; a 'qbo_invoice' row (written by
+--         trigger trg_qbo_invoice_log_billing_lock whenever an invoice is
+--         'sent' or has a QBO invoice id, and backfilled here; NOT for
+--         'pending', which locks only while pending via (a)) locks its month
+--         and every earlier month. The lock therefore survives later edits or
+--         deletion of the qbo_invoice_log row it came from.
 --
 --   billing_accepted_variances records owner-accepted differences between a
---   locked month's stored summary and its current source data, so they do not
---   alert (NeoCurrency 2026-07 carryover hours: "leave them"; FoodCycler
+--   locked month's stored summary and its source data, together with the
+--   exact values accepted (stored/source minutes and revenue). It suppresses
+--   alerts only while the comparison still yields those values; any further
+--   source change alerts again (NeoCurrency 2026-07 carryover hours: "leave them"; FoodCycler
 --   Hypercare 2026-06: "it was paid" — both owner decisions of 2026-10-05).
 --
 -- Public contract (shared with the edge-function work; do not change shapes):
@@ -65,13 +73,14 @@ CREATE TABLE IF NOT EXISTS public.billing_month_locks (
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE RESTRICT,
     month      DATE NOT NULL CHECK (month = DATE_TRUNC('month', month)::DATE),
     reason     TEXT NOT NULL CHECK (BTRIM(reason) <> ''),
+    source     TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'qbo_invoice')),
     created_by TEXT NOT NULL DEFAULT CURRENT_USER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_billing_month_locks_company_month UNIQUE (company_id, month)
 );
 
 COMMENT ON TABLE public.billing_month_locks IS
-    'Manual (company, month) billing locks. Applies to the company''s whole canonical family (migration 134).';
+    'Billing locks per (company, month), applied to the company''s whole canonical family. source=manual locks that month only; source=qbo_invoice (trigger-maintained, never deleted automatically) locks that month and every earlier month (migration 134).';
 
 CREATE TABLE IF NOT EXISTS public.billing_accepted_variances (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,22 +89,36 @@ CREATE TABLE IF NOT EXISTS public.billing_accepted_variances (
     reason     TEXT NOT NULL CHECK (BTRIM(reason) <> ''),
     decided_by TEXT NOT NULL CHECK (BTRIM(decided_by) <> ''),
     decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- The comparison accepted (billing_project_month_compare at decision
+    -- time). Suppression holds only while these still match exactly.
+    accepted_pms_min              INTEGER NOT NULL,
+    accepted_tmt_min              INTEGER NOT NULL,
+    accepted_pms_revenue_cents    BIGINT  NOT NULL,
+    accepted_source_revenue_cents BIGINT  NOT NULL,
     CONSTRAINT uq_billing_accepted_variances_project_month UNIQUE (project_id, month)
 );
 
 COMMENT ON TABLE public.billing_accepted_variances IS
     'Owner-accepted differences between a locked month''s stored summary and its source data. Suppresses invoiced_month_source_changed alerts for that canonical project-month (migration 134).';
 
--- Seeds (owner decisions of 2026-10-05). Project uuids resolved read-only from
--- prod on 2026-11-03; the FK makes the insert fail loudly if either is absent.
-INSERT INTO public.billing_accepted_variances (project_id, month, reason, decided_by, decided_at)
+-- Seeds (owner decisions of 2026-10-05). Project uuids and accepted values
+-- read-only from prod on 2026-11-03 (stored PMS rounded minutes / revenue vs
+-- what the engine would compute from task_monthly_totals today). The FK makes
+-- the insert fail loudly if either project is absent. If prod source data for
+-- these months changes before deploy, these values no longer match and the
+-- months alert again — by design (see DEPLOY.md, step 2).
+INSERT INTO public.billing_accepted_variances (
+    project_id, month, reason, decided_by, decided_at,
+    accepted_pms_min, accepted_tmt_min, accepted_pms_revenue_cents, accepted_source_revenue_cents)
 VALUES
     ('a93b6d26-89b3-4a04-b13e-dd07b838928c', DATE '2026-07-01',
      'NeoCurrency July 2026 carryover hours: "leave them" (PMS rounded 1,444.50h, carryover out 556.20h kept as invoiced)',
-     'owner', TIMESTAMPTZ '2026-10-05 00:00:00+00'),
+     'owner', TIMESTAMPTZ '2026-10-05 00:00:00+00',
+     86670, 80805, 6148000, 6148000),
     ('eec6792f-214b-4796-8d5b-d02660b35962', DATE '2026-06-01',
      'FoodCycler Hypercare June 2026: "it was paid"',
-     'owner', TIMESTAMPTZ '2026-10-05 00:00:00+00')
+     'owner', TIMESTAMPTZ '2026-10-05 00:00:00+00',
+     0, 750, 0, 112500)
 ON CONFLICT (project_id, month) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
@@ -203,19 +226,11 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF EXISTS (
-        SELECT 1
-          FROM billing_month_locks l
-         WHERE l.month = v_month
-           AND l.company_id IN (SELECT f.company_id FROM billing_company_family(p_company_id) f)
-    ) THEN
-        RETURN 'manual_lock';
-    END IF;
-
+    -- (a) live invoice log: sent / pending / has a QBO invoice id
     SELECT MAKE_DATE(q.report_year, q.report_month, 1), q.status
       INTO v_invoice_month, v_invoice_state
       FROM qbo_invoice_log q
-     WHERE q.status IN ('sent', 'pending')
+     WHERE (q.status IN ('sent', 'pending') OR q.qbo_invoice_id IS NOT NULL)
        AND q.company_id IN (SELECT f.company_id FROM billing_company_family(p_company_id) f)
        AND MAKE_DATE(q.report_year, q.report_month, 1) >= v_month
      ORDER BY MAKE_DATE(q.report_year, q.report_month, 1)
@@ -223,6 +238,20 @@ BEGIN
 
     IF FOUND THEN
         RETURN 'invoice_' || v_invoice_state || ':' || TO_CHAR(v_invoice_month, 'YYYY-MM');
+    END IF;
+
+    -- (c) persisted locks (manual: exact month; qbo_invoice: month and earlier)
+    SELECT CASE WHEN l.source = 'manual' THEN 'manual_lock'
+                ELSE 'invoice_lock:' || TO_CHAR(l.month, 'YYYY-MM') END
+      INTO v_invoice_state
+      FROM billing_month_locks l
+     WHERE l.company_id IN (SELECT f.company_id FROM billing_company_family(p_company_id) f)
+       AND (l.month = v_month OR (l.source = 'qbo_invoice' AND l.month >= v_month))
+     ORDER BY (l.month = v_month) DESC, l.month
+     LIMIT 1;
+
+    IF FOUND THEN
+        RETURN v_invoice_state;
     END IF;
 
     RETURN NULL;
@@ -271,6 +300,44 @@ SET search_path TO 'public'
 AS $function$
     SELECT billing_project_month_lock_reason(p_project_id, p_month) IS NOT NULL;
 $function$;
+
+-- ----------------------------------------------------------------------------
+-- 3b. Persist invoice locks independently of the (mutable) invoice log
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.billing_lock_from_qbo_invoice()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+    -- Persist only once an invoice exists in QuickBooks. 'pending' locks
+    -- while it is pending (read live by billing_month_lock_reason) but is not
+    -- persisted: a pending send that fails must not lock the month forever.
+    IF NEW.status = 'sent' OR NEW.qbo_invoice_id IS NOT NULL THEN
+        INSERT INTO billing_month_locks (company_id, month, reason, source, created_by)
+        VALUES (NEW.company_id, MAKE_DATE(NEW.report_year, NEW.report_month, 1),
+                'qbo_invoice ' || COALESCE(NEW.invoice_number, NEW.qbo_invoice_id, NEW.id::TEXT) || ' ' || NEW.status,
+                'qbo_invoice', 'trigger:qbo_invoice_log')
+        ON CONFLICT (company_id, month) DO NOTHING;
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_qbo_invoice_log_billing_lock ON public.qbo_invoice_log;
+CREATE TRIGGER trg_qbo_invoice_log_billing_lock
+    AFTER INSERT OR UPDATE ON public.qbo_invoice_log
+    FOR EACH ROW EXECUTE FUNCTION public.billing_lock_from_qbo_invoice();
+
+-- Backfill from the existing log.
+INSERT INTO public.billing_month_locks (company_id, month, reason, source, created_by)
+SELECT q.company_id, MAKE_DATE(q.report_year, q.report_month, 1),
+       'qbo_invoice ' || COALESCE(q.invoice_number, q.qbo_invoice_id, q.id::TEXT) || ' ' || q.status,
+       'qbo_invoice', 'migration 134 backfill'
+  FROM public.qbo_invoice_log q
+ WHERE q.status = 'sent' OR q.qbo_invoice_id IS NOT NULL
+ON CONFLICT (company_id, month) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
 -- 4. Alerting
@@ -356,6 +423,7 @@ REVOKE ALL ON FUNCTION public.is_company_month_locked(UUID, DATE) FROM PUBLIC, a
 REVOKE ALL ON FUNCTION public.billing_project_month_lock_reason(UUID, DATE) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.is_billing_month_locked(UUID, DATE) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.raise_billing_alert(TEXT, TEXT, TEXT, JSONB, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.billing_lock_from_qbo_invoice() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.billing_company_family(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.billing_canonical_project(UUID) TO authenticated, service_role;

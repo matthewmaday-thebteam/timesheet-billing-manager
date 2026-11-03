@@ -63,6 +63,11 @@ BEGIN
 END;
 $function$;
 
+-- Restore drain_recalculation_queue_authenticated's pre-138 ACL
+-- ({=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}).
+REVOKE ALL ON FUNCTION public.drain_recalculation_queue_authenticated(INTEGER) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.drain_recalculation_queue_authenticated(INTEGER) TO PUBLIC, anon, authenticated, service_role;
+
 DROP FUNCTION IF EXISTS public.billing_alert_eom_stale(UUID, DATE, JSONB, JSONB);
 DROP FUNCTION IF EXISTS public.billing_pms_fingerprint(UUID, DATE);
 DROP FUNCTION IF EXISTS public.billing_ensure_tmt_fresh(DATE[], TEXT);

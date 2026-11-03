@@ -10,6 +10,8 @@
 
 BEGIN;
 
+DROP TRIGGER IF EXISTS trg_qbo_invoice_log_billing_lock ON public.qbo_invoice_log;
+DROP FUNCTION IF EXISTS public.billing_lock_from_qbo_invoice();
 DROP FUNCTION IF EXISTS public.raise_billing_alert(TEXT, TEXT, TEXT, JSONB, TEXT);
 DROP FUNCTION IF EXISTS public.is_billing_month_locked(UUID, DATE);
 DROP FUNCTION IF EXISTS public.billing_project_month_lock_reason(UUID, DATE);

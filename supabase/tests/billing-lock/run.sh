@@ -72,7 +72,7 @@ dropdb bl_rt
 # --- (2) synthetic tests ------------------------------------------------------
 fresh_db bl_migrated "$SCHEMA_TEMPLATE" && seed_base bl_migrated && apply_files bl_migrated "${MIGRATIONS[@]}"
 for f in "$HERE"/t$FILTER*.sql; do
-  [[ "$(basename "$f")" =~ ^t[0-9] ]] || continue
+  [ -e "$f" ] && [[ "$(basename "$f")" =~ ^t[0-9] ]] || continue
   fresh_db bl_case bl_migrated
   run_test bl_case "$f"
   dropdb bl_case
@@ -82,7 +82,7 @@ dropdb bl_migrated
 # --- (3) snapshot verification ---------------------------------------------
 if [ -n "$SNAPSHOT_TEMPLATE" ]; then
   for f in "$HERE"/s$FILTER*.sql; do
-    [[ "$(basename "$f")" =~ ^s[0-9] ]] || continue
+    [ -e "$f" ] && [[ "$(basename "$f")" =~ ^s[0-9] ]] || continue
     fresh_db bl_snap "$SNAPSHOT_TEMPLATE"
     "${PSQL[@]}" -d bl_snap -c "INSERT INTO cron.job (jobname, schedule, command) VALUES ('generate-eom-reports', '0 6 1 * *', 'select 1') ON CONFLICT (jobname) DO NOTHING" >/dev/null
     "${PSQL[@]}" -d bl_snap -f "$HERE/lib/assert.sql" >/dev/null
