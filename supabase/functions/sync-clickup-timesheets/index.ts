@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { makeRaiseBillingAlert, raiseDrainFailureAlert } from '../_shared/billingAlerts.ts';
 
 // =============================================================================
 // Edge Function: sync-clickup-timesheets
@@ -828,6 +829,19 @@ serve(async (req) => {
           message: 'Recalculation RPC call failed. Summary table may be stale until next sync.',
         };
         console.error(`[sync-clickup] Recalculation failed: ${(err as Error).message}`);
+
+        // Raise recalc_drain_failed so a stale summary is visible beyond this
+        // response. The alert outcome (incl. a failed alert write) is merged
+        // into recalcResult, which lands in the response and sync_runs.summary.
+        const drainAlert = await raiseDrainFailureAlert(makeRaiseBillingAlert(supabase), {
+          syncType: 'clickup_timesheets',
+          syncRunId,
+          errorMessage: String(recalcResult.error),
+        });
+        recalcResult = { ...recalcResult, ...drainAlert };
+        if (!drainAlert.alert_raised) {
+          console.error(`[sync-clickup] recalc_drain_failed alert write FAILED: ${drainAlert.alert_error}`);
+        }
       }
     }
 

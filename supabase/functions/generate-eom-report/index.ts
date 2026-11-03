@@ -1,6 +1,27 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // jwtVerify no longer needed — auth uses supabase.auth.getUser() pattern
+import { makeRaiseBillingAlert } from '../_shared/billingAlerts.ts';
+import type { RaiseBillingAlertFn, RpcClient } from '../_shared/billingAlerts.ts';
+import {
+  checkMonthLock,
+  lockedRegenerateRefusal,
+  makeIsCompanyMonthLocked,
+  MONTH_LOCKED_SKIP_MESSAGE,
+  MONTH_LOCKED_SKIP_REASON,
+} from './_lib/monthLock.ts';
+import type { IsMonthLockedFn } from './_lib/monthLock.ts';
+import {
+  makeReconcileBillingMonths,
+  partitionByLock,
+  planBackfill,
+  reconcileRangeFor,
+  runBackfillReconcile,
+} from './_lib/backfillPlan.ts';
+import type { AvailabilityRow, BackfillReconcileResult } from './_lib/backfillPlan.ts';
+import { syncEomFailureAlerts } from './_lib/eomAlerts.ts';
+import type { EomAlertSummary, OpenAlertStore, RoundingIntegrityFailure } from './_lib/eomAlerts.ts';
 
 // =============================================================================
 // Edge Function: generate-eom-report
@@ -11,13 +32,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // POST body variants:
 //   { year, month }                — generate for ALL companies for that month
 //   { year, month, companyId }     — generate for ONE company
-//   { backfill: true }             — generate for ALL eligible months/companies
+//   { backfill: true }             — generate MISSING reports only: past
+//                                    company-months with has_report = false
+//                                    (1st-of-month cron path)
 //
 // Validation: Reports can only be generated after the 1st of the following
 // month (Europe/Sofia timezone). Backfill mode relaxes this for past months.
 //
+// Invoiced-month lock (is_company_month_locked): a locked company-month's
+// report is never overwritten. Backfill and all-company runs skip it; an
+// explicit single-company regenerate gets a 409. See _lib/monthLock.ts.
+//
+// Failures raise eom_report_failed (per company-month) and a failed pre-
+// backfill reconcile_billing_months raises eom_reconcile_failed. See _lib/.
+//
 // Read-only guarantee: ZERO writes to any source data table.
-// Only writes to eom_reports table and eom-reports storage bucket.
+// Only writes to eom_reports table and eom-reports storage bucket — plus
+// sync_alerts (via raise_billing_alert) and, on the backfill path only, the
+// reconcile_billing_months RPC, which the DB layer owns.
 // =============================================================================
 
 const corsHeaders = {
@@ -188,6 +220,10 @@ interface CompanyReportResult {
   totalRevenueCents?: number;
   projectCount?: number;
   fileSizeBytes?: number;
+  /** Why a 'skipped' result was skipped, when it is not "no billing data". */
+  skipReason?: typeof MONTH_LOCKED_SKIP_REASON;
+  /** Structured detail for a rounding-integrity 'failed' result (eom_report_failed metadata). */
+  failure?: RoundingIntegrityFailure;
 }
 
 // =============================================================================
@@ -469,6 +505,59 @@ function generateCSV(company: CompanyCSVData, monthLabel: string, year: number, 
 }
 
 // =============================================================================
+// Invoiced-month lock gate
+// =============================================================================
+// null = open, proceed. Otherwise the result to return instead of writing:
+// 'skipped' (month_locked) when locked, 'failed' when the check itself errored.
+async function lockGate(
+  isLocked: IsMonthLockedFn,
+  companyId: string,
+  companyName: string,
+  year: number,
+  month: number,
+): Promise<CompanyReportResult | null> {
+  const lockState = await checkMonthLock(isLocked, { companyId, year, month });
+  if (lockState.kind === 'open') return null;
+  if (lockState.kind === 'error') {
+    return { companyId, companyName, year, month, status: 'failed', error: lockState.message };
+  }
+  return {
+    companyId,
+    companyName,
+    year,
+    month,
+    status: 'skipped',
+    skipReason: MONTH_LOCKED_SKIP_REASON,
+    error: MONTH_LOCKED_SKIP_MESSAGE,
+  };
+}
+
+// =============================================================================
+// sync_alerts adapter for the eom_report_failed resolve path
+// =============================================================================
+function makeOpenAlertStore(supabase: SupabaseClient): OpenAlertStore {
+  return {
+    async findOpenId(alertType, entityId) {
+      const { data, error } = await supabase
+        .from('sync_alerts')
+        .select('id')
+        .eq('alert_type', alertType)
+        .eq('entity_id', entityId)
+        .is('resolved_at', null)
+        .maybeSingle();
+      return { id: (data as { id: string } | null)?.id ?? null, error };
+    },
+    async resolve(id, nowISO) {
+      const { error } = await supabase
+        .from('sync_alerts')
+        .update({ resolved_at: nowISO, updated_at: nowISO })
+        .eq('id', id);
+      return { error };
+    },
+  };
+}
+
+// =============================================================================
 // Core: generate report for a single company-month
 // =============================================================================
 
@@ -478,6 +567,7 @@ async function generateCompanyReport(
   year: number,
   month: number,
   generatedBy: string | null,
+  isLocked: IsMonthLockedFn,
 ): Promise<CompanyReportResult> {
   const monthStr = `${year}-${String(month).padStart(2, '0')}-01`;
 
@@ -501,6 +591,12 @@ async function generateCompanyReport(
 
   const companyName = companyData.display_name || companyData.client_name;
   const companyClientId = companyData.client_id;
+
+  // --- Invoiced-month lock gate, before any computation ---
+  // Checked first so a locked month is reported as locked — not as, say, a
+  // rounding-integrity failure on summaries that moved after invoicing.
+  const lockRefusal = await lockGate(isLocked, companyId, companyName, year, month);
+  if (lockRefusal) return lockRefusal;
 
   // --- Parallel data queries ---
   // Task rows are sourced from task_monthly_totals (mig-093/094/101). The
@@ -688,7 +784,22 @@ async function generateCompanyReport(
         taskRowSumMinutes: taskRoundedMinutesSum,
         tmtRowsFound: rawTasks ? rawTasks.size : 0,
       });
-      return { companyId, companyName, year, month, status: 'failed', error: errMsg };
+      return {
+        companyId,
+        companyName,
+        year,
+        month,
+        status: 'failed',
+        error: errMsg,
+        failure: {
+          reason: 'rounding_integrity',
+          projectExternalId: externalId,
+          canonicalProjectId,
+          summaryRoundedMinutes,
+          taskRowSumMinutes: taskRoundedMinutesSum,
+          driftMinutes: summaryRoundedMinutes - taskRoundedMinutesSum,
+        },
+      };
     }
   }
 
@@ -859,6 +970,11 @@ async function generateCompanyReport(
     };
   }
 
+  // --- Invoiced-month lock re-check, immediately before the first write ---
+  // Closes the window in which the month is invoiced mid-generation.
+  const lockRefusalAtWrite = await lockGate(isLocked, companyId, companyName, year, month);
+  if (lockRefusalAtWrite) return lockRefusalAtWrite;
+
   // --- Upload CSV to storage (do NOT upload partial data) ---
   const storagePath = `${year}/${String(month).padStart(2, '0')}/${companyId}.csv`;
   const csvBytes = new TextEncoder().encode(csvContent);
@@ -1006,6 +1122,11 @@ serve(async (req) => {
     // --- Service-role client for privileged operations ---
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // --- Billing RPCs, bound once (injectable seams; see _lib/ and _shared/) ---
+    const rpcClient: RpcClient = supabase;
+    const raiseAlert: RaiseBillingAlertFn = makeRaiseBillingAlert(rpcClient);
+    const isLocked: IsMonthLockedFn = makeIsCompanyMonthLocked(rpcClient);
+
     // --- Parse request body ---
     const body = await req.json();
     const { year, month, companyId, backfill } = body as {
@@ -1017,43 +1138,85 @@ serve(async (req) => {
 
     // --- Determine mode ---
     const results: CompanyReportResult[] = [];
+    let backfillSummary: Record<string, unknown> | undefined;
+    let reconcileResult: BackfillReconcileResult | undefined;
 
     if (backfill) {
       // =====================================================================
-      // BACKFILL mode: generate for ALL eligible company-months
+      // BACKFILL mode: generate MISSING reports only (has_report = false),
+      // never a locked month. Existing reports are kept; drift on them is
+      // surfaced by reconcile_billing_months, not written over.
       // =====================================================================
-      const { data: eligible, error: eligibleError } = await supabase
+      const { data: availability, error: availabilityError } = await supabase
         .from('v_eom_report_availability')
-        .select('company_id, company_name, report_year, report_month');
+        .select('company_id, company_name, report_year, report_month, has_report');
 
-      if (eligibleError) {
-        return jsonResponse({ error: `Availability query: ${eligibleError.message}` }, 500);
+      if (availabilityError) {
+        return jsonResponse({ error: `Availability query: ${availabilityError.message}` }, 500);
       }
 
-      if (!eligible || eligible.length === 0) {
-        return jsonResponse({
-          message: 'No eligible company-months found for backfill',
-          generated: 0,
-          failed: 0,
-          skipped: 0,
-          results: [],
+      const plan = planBackfill(
+        (availability ?? []) as AvailabilityRow[],
+        (y, m) => isMonthEligible(y, m, true),
+      );
+      const partition = await partitionByLock(plan.candidates, isLocked);
+
+      backfillSummary = {
+        available_company_months: availability?.length ?? 0,
+        already_reported: plan.alreadyReported,
+        not_yet_past: plan.notYetPast,
+        missing: plan.candidates.length,
+        locked_skipped: partition.locked.length,
+        lock_check_errors: partition.lockErrors.length,
+        to_generate: partition.toGenerate.length,
+      };
+
+      // Reconcile the months about to be generated. Failure raises
+      // eom_reconcile_failed and generation continues; the per-company
+      // rounding-integrity guard still refuses any summary that does not tie out.
+      reconcileResult = await runBackfillReconcile(
+        reconcileRangeFor(partition.toGenerate),
+        makeReconcileBillingMonths(rpcClient),
+        raiseAlert,
+      );
+      if (reconcileResult.action === 'reconcile_failed') {
+        console.error(`[generate-eom-report] ${reconcileResult.error}`, {
+          alert_raised: reconcileResult.alert_raised,
+          alert_error: reconcileResult.alert_error,
         });
       }
 
-      // Filter to months that have actually passed (backfill relaxes the 5th rule)
-      const eligibleFiltered = eligible.filter(e =>
-        isMonthEligible(e.report_year, e.report_month, true),
-      );
-
-      for (const row of eligibleFiltered) {
-        const result = await generateCompanyReport(
+      // A failed lock check is a failed company-month (raises eom_report_failed).
+      for (const { row, message } of partition.lockErrors) {
+        results.push({
+          companyId: row.company_id,
+          companyName: row.company_name,
+          year: row.report_year,
+          month: row.report_month,
+          status: 'failed',
+          error: message,
+        });
+      }
+      for (const row of partition.locked) {
+        results.push({
+          companyId: row.company_id,
+          companyName: row.company_name,
+          year: row.report_year,
+          month: row.report_month,
+          status: 'skipped',
+          skipReason: MONTH_LOCKED_SKIP_REASON,
+          error: MONTH_LOCKED_SKIP_MESSAGE,
+        });
+      }
+      for (const row of partition.toGenerate) {
+        results.push(await generateCompanyReport(
           supabase,
           row.company_id,
           row.report_year,
           row.report_month,
           generatedByUserId,
-        );
-        results.push(result);
+          isLocked,
+        ));
       }
     } else if (year && month) {
       // =====================================================================
@@ -1074,8 +1237,13 @@ serve(async (req) => {
       }
 
       if (companyId) {
-        // Single company
-        const result = await generateCompanyReport(supabase, companyId, year, month, generatedByUserId);
+        // Single company (the UI Regenerate button). A locked month is refused
+        // with 409 — its report is the invoiced record.
+        const result = await generateCompanyReport(supabase, companyId, year, month, generatedByUserId, isLocked);
+        if (result.skipReason === MONTH_LOCKED_SKIP_REASON) {
+          const refusal = lockedRegenerateRefusal(result.companyName, year, month);
+          return jsonResponse(refusal.body, refusal.status);
+        }
         results.push(result);
       } else {
         // All companies for this month — query the availability view
@@ -1120,8 +1288,9 @@ serve(async (req) => {
           });
         }
 
+        // Locked companies come back 'skipped' (month_locked) from the gate.
         for (const cid of companyIds) {
-          const result = await generateCompanyReport(supabase, cid, year, month, generatedByUserId);
+          const result = await generateCompanyReport(supabase, cid, year, month, generatedByUserId, isLocked);
           results.push(result);
         }
       }
@@ -1130,6 +1299,14 @@ serve(async (req) => {
         error: 'Invalid request. Provide { year, month } or { year, month, companyId } or { backfill: true }',
       }, 400);
     }
+
+    // --- eom_report_failed: raise per failed company-month, resolve on success ---
+    // Never throws (each write is checked and counted); see _lib/eomAlerts.ts.
+    const alertResult: EomAlertSummary = await syncEomFailureAlerts(results, {
+      raise: raiseAlert,
+      store: makeOpenAlertStore(supabase),
+      nowISO: new Date().toISOString(),
+    });
 
     // --- Build response summary ---
     const generated = results.filter(r => r.status === 'generated').length;
@@ -1141,12 +1318,16 @@ serve(async (req) => {
       generated,
       failed,
       skipped,
+      ...(backfillSummary ? { backfill: backfillSummary } : {}),
+      ...(reconcileResult ? { reconcile: reconcileResult } : {}),
+      alerts: alertResult,
       results: results.map(r => ({
         companyId: r.companyId,
         companyName: r.companyName,
         year: r.year,
         month: r.month,
         status: r.status,
+        ...(r.skipReason ? { skipReason: r.skipReason } : {}),
         ...(r.error ? { error: r.error } : {}),
         ...(r.storagePath ? { storagePath: r.storagePath } : {}),
         ...(r.totalHours !== undefined ? { totalHours: r.totalHours } : {}),
