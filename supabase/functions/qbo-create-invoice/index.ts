@@ -1,5 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { makeRaiseBillingAlert } from '../_shared/billingAlerts.ts';
+import {
+  buildLogWriteFailedAlert,
+  createdButUnloggedResponse,
+  writeInvoiceLogUnlessSent,
+} from './_lib/invoiceLog.ts';
+import type { CreatedInvoiceContext, InvoiceLogStore } from './_lib/invoiceLog.ts';
 
 // =============================================================================
 // Edge Function: qbo-create-invoice
@@ -291,6 +298,46 @@ function buildTaskBreakdownText(
 // Main handler
 // =============================================================================
 
+// qbo_invoice_log adapter: conditional writes that never demote a 'sent' row.
+function makeInvoiceLogStore(sb: SupabaseClient): InvoiceLogStore {
+  return {
+    async updateUnlessSent(key, row) {
+      const { data, error } = await sb
+        .from('qbo_invoice_log')
+        .update(row)
+        .eq('company_id', key.company_id)
+        .eq('report_year', key.report_year)
+        .eq('report_month', key.report_month)
+        .neq('status', 'sent')
+        .select('id');
+      return { count: data?.length ?? 0, error };
+    },
+    async insert(row) {
+      const { error } = await sb.from('qbo_invoice_log').insert(row);
+      return { error };
+    },
+  };
+}
+
+/**
+ * QuickBooks created the invoice but qbo_invoice_log does not record it as
+ * sent: raise qbo_invoice_log_write_failed and return a loud non-2xx.
+ */
+async function respondCreatedButUnlogged(
+  sb: SupabaseClient,
+  ctx: CreatedInvoiceContext,
+  alreadySent: boolean,
+): Promise<Response> {
+  console.error(`[qbo-create-invoice] Invoice ${ctx.qboInvoiceId} created in QBO but not logged as sent: ${ctx.reason}`);
+  const alert = await makeRaiseBillingAlert(sb)(buildLogWriteFailedAlert(ctx));
+  if (!alert.ok) console.error(`[qbo-create-invoice] qbo_invoice_log_write_failed alert write FAILED: ${alert.error}`);
+  const response = createdButUnloggedResponse(ctx, alreadySent, {
+    raised: alert.ok,
+    error: alert.ok ? null : alert.error,
+  });
+  return jsonResponse(response.body, response.status);
+}
+
 serve(async (req) => {
   // --- CORS preflight ---
   if (req.method === 'OPTIONS') {
@@ -300,6 +347,12 @@ serve(async (req) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
+
+  // Hoisted for the catch block: which month this send is for, and the QBO
+  // invoice once it exists, so a late failure can still persist its id.
+  let sendCtx: { companyId: string; year: number; month: number; eomReportId?: string } | null = null;
+  let sendCompanyName: string | null = null;
+  let createdInvoice: { id: string; number: string } | null = null;
 
   try {
     // --- Authenticate caller (user or service_role) ---
@@ -380,6 +433,7 @@ serve(async (req) => {
       }
     }
 
+    sendCtx = { companyId, year, month, eomReportId };
     const monthLabel = `${MONTH_NAMES[month]} ${year}`;
 
     // --- Check for existing sent invoice ---
@@ -404,6 +458,18 @@ serve(async (req) => {
       }, 409);
     }
 
+    // A non-sent row that carries a QBO invoice id means QuickBooks already
+    // has an invoice for this month whose 'sent' write failed — resending
+    // would create a duplicate.
+    if (existingLog && existingLog.qbo_invoice_id) {
+      return jsonResponse({
+        error: `A QuickBooks invoice (Id ${existingLog.qbo_invoice_id}) was already created for ${monthLabel} ` +
+          `but not recorded as sent. Check QuickBooks before sending again.`,
+        existingInvoiceId: existingLog.qbo_invoice_id,
+        existingInvoiceNumber: existingLog.invoice_number,
+      }, 409);
+    }
+
     // --- Look up company ---
     const { data: companyData, error: companyError } = await supabase
       .from('companies')
@@ -416,6 +482,7 @@ serve(async (req) => {
     }
 
     const companyName = companyData.display_name || companyData.client_name;
+    sendCompanyName = companyName;
 
     // --- Look up QBO customer mapping ---
     const { data: mapping, error: mappingError } = await supabase
@@ -980,34 +1047,34 @@ serve(async (req) => {
         }
       }
 
-      // Upsert error record to qbo_invoice_log
-      const { error: logError } = await supabase
-        .from('qbo_invoice_log')
-        .upsert(
-          {
-            company_id: companyId,
-            report_year: year,
-            report_month: month,
-            eom_report_id: eomReportId || null,
-            qbo_customer_id: qboCustomerId,
-            qbo_invoice_id: null,
-            invoice_number: null,
-            total_amount_cents: totalAmountCents,
-            line_item_count: lineItems.length,
-            status: 'error',
-            error_message: errorDetail,
-            sent_at: null,
-            sent_by: sentByUserId,
-          },
-          { onConflict: 'company_id,report_year,report_month' }
-        );
+      // Record the error — never over a 'sent' row, and without clearing a
+      // qbo_invoice_id an earlier attempt may have persisted.
+      const logOutcome = await writeInvoiceLogUnlessSent(makeInvoiceLogStore(supabase), {
+        company_id: companyId,
+        report_year: year,
+        report_month: month,
+        eom_report_id: eomReportId || null,
+        qbo_customer_id: qboCustomerId,
+        total_amount_cents: totalAmountCents,
+        line_item_count: lineItems.length,
+        status: 'error',
+        error_message: errorDetail,
+        sent_at: null,
+        sent_by: sentByUserId,
+      });
 
-      if (logError) {
-        console.error('Failed to log invoice error:', logError.message);
+      if (logOutcome.kind === 'failed') {
+        console.error('Failed to log invoice error:', logOutcome.error);
+      } else if (logOutcome.kind === 'already_sent') {
+        console.error(`Invoice error not logged: ${companyId} ${year}-${month} is already 'sent' (concurrent send)`);
       }
 
       const statusCode = qboResponse.status === 401 ? 401 : 502;
-      return jsonResponse({ error: errorDetail }, statusCode);
+      return jsonResponse({
+        error: errorDetail,
+        ...(logOutcome.kind === 'failed' ? { logWriteError: logOutcome.error } : {}),
+        ...(logOutcome.kind === 'already_sent' ? { alreadySent: true } : {}),
+      }, statusCode);
     }
 
     // --- Success: extract invoice details from QBO response ---
@@ -1021,32 +1088,38 @@ serve(async (req) => {
     }
     const qboInvoiceId = String(invoice.Id);
     const invoiceNumber = String(invoice.DocNumber || '');
+    createdInvoice = { id: qboInvoiceId, number: invoiceNumber };
 
-    // Upsert success record to qbo_invoice_log
-    const { error: logError } = await supabase
-      .from('qbo_invoice_log')
-      .upsert(
-        {
-          company_id: companyId,
-          report_year: year,
-          report_month: month,
-          eom_report_id: eomReportId || null,
-          qbo_customer_id: qboCustomerId,
-          qbo_invoice_id: qboInvoiceId,
-          invoice_number: invoiceNumber,
-          total_amount_cents: totalAmountCents,
-          line_item_count: lineItems.length,
-          status: 'sent',
-          error_message: null,
-          sent_at: new Date().toISOString(),
-          sent_by: sentByUserId,
-        },
-        { onConflict: 'company_id,report_year,report_month' }
-      );
+    // Record success — conditional, so a concurrent send's 'sent' row is
+    // never overwritten (that would lose the other invoice's id).
+    const sentOutcome = await writeInvoiceLogUnlessSent(makeInvoiceLogStore(supabase), {
+      company_id: companyId,
+      report_year: year,
+      report_month: month,
+      eom_report_id: eomReportId || null,
+      qbo_customer_id: qboCustomerId,
+      qbo_invoice_id: qboInvoiceId,
+      invoice_number: invoiceNumber,
+      total_amount_cents: totalAmountCents,
+      line_item_count: lineItems.length,
+      status: 'sent',
+      error_message: null,
+      sent_at: new Date().toISOString(),
+      sent_by: sentByUserId,
+    });
 
-    if (logError) {
-      console.error('Failed to log invoice success:', logError.message);
-      // Don't fail the response — the invoice was created in QBO
+    if (sentOutcome.kind !== 'written') {
+      return await respondCreatedButUnlogged(supabase, {
+        companyId,
+        companyName,
+        year,
+        month,
+        qboInvoiceId,
+        invoiceNumber,
+        reason: sentOutcome.kind === 'failed'
+          ? sentOutcome.error
+          : 'the month was already recorded as sent by a concurrent send',
+      }, sentOutcome.kind === 'already_sent');
     }
 
     return jsonResponse({
@@ -1061,40 +1134,57 @@ serve(async (req) => {
     const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
     console.error('qbo-create-invoice error:', error);
 
-    // Best-effort log to DB so the UI shows the error instead of silently failing
+    // Log to DB so the UI shows the error. Uses the hoisted sendCtx (the
+    // request body is already consumed here). Conditional: never over 'sent'.
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      if (supabaseUrl && supabaseServiceKey) {
-        const body = await req.clone().json().catch(() => ({}));
-        const { companyId, year, month, eomReportId } = body as Record<string, unknown>;
-        if (companyId && year && month) {
-          const sb = createClient(supabaseUrl, supabaseServiceKey);
-          // Look up qbo_customer_id from mapping (needed for NOT NULL constraint)
-          const { data: mapping } = await sb
-            .from('qbo_customer_mappings')
-            .select('qbo_customer_id')
-            .eq('company_id', companyId)
-            .maybeSingle();
+      if (supabaseUrl && supabaseServiceKey && sendCtx) {
+        const { companyId, year, month, eomReportId } = sendCtx;
+        const sb = createClient(supabaseUrl, supabaseServiceKey);
+        // Look up qbo_customer_id from mapping (needed for NOT NULL constraint)
+        const { data: mapping } = await sb
+          .from('qbo_customer_mappings')
+          .select('qbo_customer_id')
+          .eq('company_id', companyId)
+          .maybeSingle();
 
-          await sb.from('qbo_invoice_log').upsert(
-            {
-              company_id: companyId,
-              report_year: year,
-              report_month: month,
-              eom_report_id: eomReportId || null,
-              qbo_customer_id: mapping?.qbo_customer_id || 'unknown',
-              status: 'error',
-              error_message: errorMsg,
-            },
-            { onConflict: 'company_id,report_year,report_month' }
-          );
+        const logOutcome = await writeInvoiceLogUnlessSent(makeInvoiceLogStore(sb), {
+          company_id: companyId,
+          report_year: year,
+          report_month: month,
+          eom_report_id: eomReportId || null,
+          qbo_customer_id: mapping?.qbo_customer_id || 'unknown',
+          status: 'error',
+          error_message: errorMsg,
+          // QBO already created the invoice: persist its id so the month locks.
+          ...(createdInvoice
+            ? { qbo_invoice_id: createdInvoice.id, invoice_number: createdInvoice.number }
+            : {}),
+        });
+        if (logOutcome.kind === 'failed') console.error('Failed to log error to DB:', logOutcome.error);
+
+        if (createdInvoice) {
+          return await respondCreatedButUnlogged(sb, {
+            companyId,
+            companyName: sendCompanyName,
+            year,
+            month,
+            qboInvoiceId: createdInvoice.id,
+            invoiceNumber: createdInvoice.number,
+            reason: `${errorMsg}` +
+              (logOutcome.kind === 'failed' ? ` (error-row write also failed: ${logOutcome.error})` : ''),
+          }, false);
         }
       }
     } catch (logErr) {
       console.error('Failed to log error to DB:', logErr);
     }
 
-    return jsonResponse({ error: errorMsg }, 500);
+    return jsonResponse({
+      error: createdInvoice
+        ? `QuickBooks invoice Id ${createdInvoice.id} WAS created, then the request failed: ${errorMsg}. Do NOT resend.`
+        : errorMsg,
+    }, 500);
   }
 });
