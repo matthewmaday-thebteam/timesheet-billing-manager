@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { parseTimeOffDays } from './_lib/timeOffAmount.ts';
 
 // =============================================================================
 // Edge Function: sync-bamboohr-timeoff
@@ -282,10 +283,7 @@ serve(async (req) => {
           ? reqType.name || 'Unknown'
           : String(reqType || 'Unknown');
         const reqStatus = req.status as { status?: string } | undefined;
-        const reqAmount = req.amount as { amount?: number } | number | undefined;
-        const amount = typeof reqAmount === 'object' && reqAmount !== null
-          ? Number(reqAmount.amount || 0)
-          : Number(reqAmount || 0);
+        const amount = parseTimeOffDays(req.amount, req.id);
         const reqNotes = req.notes as { employee?: string } | undefined;
 
         return {
@@ -383,10 +381,7 @@ serve(async (req) => {
     if (timeOffRequests.length > 0) {
       let totalSourceDays = 0;
       for (const req of timeOffRequests) {
-        const reqAmount = req.amount as { amount?: number } | number | undefined;
-        const amount = typeof reqAmount === 'object' && reqAmount !== null
-          ? Number(reqAmount.amount || 0)
-          : Number(reqAmount || 0);
+        const amount = parseTimeOffDays(req.amount, req.id);
         if (Number.isFinite(amount) && amount > 0) {
           totalSourceDays += amount;
         }
